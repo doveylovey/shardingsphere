@@ -32,6 +32,7 @@ import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sql92.SQL92Sta
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.SQLServerStatement;
 
 import java.util.Collections;
+import java.util.Optional;
 
 /**
  * Common SQL statement context.
@@ -79,61 +80,20 @@ public class CommonSQLStatementContext<T extends SQLStatement> implements SQLSta
     }
     
     /**
+     * Find hint data source name.
+     *
+     * @return dataSource name
+     */
+    public Optional<String> findHintDataSourceName() {
+        return sqlHintExtractor.findHintDataSourceName();
+    }
+    
+    /**
      * Judge whether is hint routed to write data source or not.
      *
      * @return whether is hint routed to write data source or not
      */
     public boolean isHintWriteRouteOnly() {
         return sqlHintExtractor.isHintWriteRouteOnly();
-    }
-    
-    /**
-     * Get hint sharding database value.
-     *
-     * @param tableName table name
-     * @return sharding database value
-     */
-    public Comparable<?> getHintShardingDatabaseValue(final String tableName) {
-        return sqlHintExtractor.getHintShardingDatabaseValue(tableName);
-    }
-    
-    /**
-     * Get hint sharding table value.
-     *
-     * @param tableName table name
-     * @return sharding table value
-     */
-    public Comparable<?> getHintShardingTableValue(final String tableName) {
-        return sqlHintExtractor.getHintShardingTableValue(tableName);
-    }
-    
-    /**
-     * Judge contains hint sharding databases value or not.
-     *
-     * @param tableName table name
-     * @return contains hint sharding databases value or not
-     */
-    public boolean containsHintShardingDatabaseValue(final String tableName) {
-        return sqlHintExtractor.containsHintShardingDatabaseValue(tableName);
-    }
-    
-    /**
-     * Judge contains hint sharding table value or not.
-     *
-     * @param tableName table name
-     * @return Contains hint sharding table value or not
-     */
-    public boolean containsHintShardingTableValue(final String tableName) {
-        return sqlHintExtractor.containsHintShardingTableValue(tableName);
-    }
-    
-    /**
-     * Judge contains hint sharding value or not.
-     *
-     * @param tableName table name
-     * @return Contains hint sharding value or not
-     */
-    public boolean containsHintShardingValue(final String tableName) {
-        return containsHintShardingDatabaseValue(tableName) || containsHintShardingTableValue(tableName);
     }
 }

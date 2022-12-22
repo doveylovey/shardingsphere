@@ -24,6 +24,7 @@ import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatemen
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.AlgorithmDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.CheckMigrationContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.CommitMigrationContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.DropMigrationCheckContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.MigrateTableContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.PasswordContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.PropertiesDefinitionContext;
@@ -47,6 +48,7 @@ import org.apache.shardingsphere.distsql.parser.segment.HostnameAndPortBasedData
 import org.apache.shardingsphere.distsql.parser.segment.URLBasedDataSourceSegment;
 import org.apache.shardingsphere.migration.distsql.statement.CheckMigrationStatement;
 import org.apache.shardingsphere.migration.distsql.statement.CommitMigrationStatement;
+import org.apache.shardingsphere.migration.distsql.statement.DropMigrationCheckStatement;
 import org.apache.shardingsphere.migration.distsql.statement.MigrateTableStatement;
 import org.apache.shardingsphere.migration.distsql.statement.RegisterMigrationSourceStorageUnitStatement;
 import org.apache.shardingsphere.migration.distsql.statement.RollbackMigrationStatement;
@@ -71,7 +73,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
- * SQL statement visitor for migration dist SQL.
+ * SQL statement visitor for migration DistSQL.
  */
 public final class MigrationDistSQLStatementVisitor extends MigrationDistSQLStatementBaseVisitor<ASTNode> implements SQLVisitor {
     
@@ -141,15 +143,10 @@ public final class MigrationDistSQLStatementVisitor extends MigrationDistSQLStat
         String user = getIdentifierValue(ctx.user());
         String password = null == ctx.password() ? "" : getPassword(ctx.password());
         Properties props = getProperties(ctx.propertiesDefinition());
-        DataSourceSegment result = null;
-        if (null != ctx.urlSource()) {
-            result = new URLBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()), getIdentifierValue(ctx.urlSource().url()), user, password, props);
-        }
-        if (null != ctx.simpleSource()) {
-            result = new HostnameAndPortBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()), getIdentifierValue(ctx.simpleSource().hostname()), ctx.simpleSource().port().getText(),
-                    getIdentifierValue(ctx.simpleSource().dbName()), user, password, props);
-        }
-        return result;
+        return null != ctx.urlSource() ? new URLBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()),
+                getIdentifierValue(ctx.urlSource().url()), user, password, props)
+                : new HostnameAndPortBasedDataSourceSegment(getIdentifierValue(ctx.storageUnitName()),
+                        getIdentifierValue(ctx.simpleSource().hostname()), ctx.simpleSource().port().getText(), getIdentifierValue(ctx.simpleSource().dbName()), user, password, props);
     }
     
     private String getPassword(final PasswordContext ctx) {
@@ -199,5 +196,10 @@ public final class MigrationDistSQLStatementVisitor extends MigrationDistSQLStat
     @Override
     public ASTNode visitStopMigrationCheck(final StopMigrationCheckContext ctx) {
         return new StopMigrationCheckStatement(getIdentifierValue(ctx.jobId()));
+    }
+    
+    @Override
+    public ASTNode visitDropMigrationCheck(final DropMigrationCheckContext ctx) {
+        return new DropMigrationCheckStatement(getIdentifierValue(ctx.jobId()));
     }
 }

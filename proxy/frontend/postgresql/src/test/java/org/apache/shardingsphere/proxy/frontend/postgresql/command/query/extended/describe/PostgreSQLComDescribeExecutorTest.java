@@ -40,7 +40,7 @@ import org.apache.shardingsphere.infra.metadata.database.schema.decorator.model.
 import org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine;
 import org.apache.shardingsphere.infra.util.exception.external.sql.type.generic.UnsupportedSQLOperationException;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.JDBCBackendConnection;
+import org.apache.shardingsphere.proxy.backend.communication.BackendConnection;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.backend.session.ServerPreparedStatementRegistry;
@@ -140,7 +140,7 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
     public void assertDescribePortal() throws SQLException {
         when(packet.getType()).thenReturn('P');
         when(packet.getName()).thenReturn("P_1");
-        Portal<?> portal = mock(Portal.class);
+        Portal portal = mock(Portal.class);
         PostgreSQLRowDescriptionPacket expected = mock(PostgreSQLRowDescriptionPacket.class);
         when(portal.describe()).thenReturn(expected);
         when(portalContext.get("P_1")).thenReturn(portal);
@@ -250,6 +250,78 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
     
     @SuppressWarnings("rawtypes")
     @Test
+    public void assertDescribePreparedStatementInsertWithReturningClause() throws SQLException {
+        when(packet.getType()).thenReturn('S');
+        final String statementId = "S_2";
+        when(packet.getName()).thenReturn(statementId);
+        String sql = "insert into t_order (k, c, pad) values (?, ?, ?) "
+                + "returning id, id alias_id, 'anonymous', 'OK' literal_string, 1 literal_int, 4294967296 literal_bigint, 1.1 literal_numeric, t_order.*";
+        SQLStatement sqlStatement = SQL_PARSER_ENGINE.parse(sql, false);
+        List<PostgreSQLColumnType> parameterTypes = new ArrayList<>(sqlStatement.getParameterCount());
+        for (int i = 0; i < sqlStatement.getParameterCount(); i++) {
+            parameterTypes.add(PostgreSQLColumnType.POSTGRESQL_TYPE_UNSPECIFIED);
+        }
+        SQLStatementContext sqlStatementContext = mock(InsertStatementContext.class);
+        when(sqlStatementContext.getSqlStatement()).thenReturn(sqlStatement);
+        connectionSession.getServerPreparedStatementRegistry().addPreparedStatement(statementId, new PostgreSQLServerPreparedStatement(sql, sqlStatementContext, parameterTypes));
+        Collection<DatabasePacket<?>> actualPackets = executor.execute();
+        assertThat(actualPackets.size(), is(2));
+        Iterator<DatabasePacket<?>> actualPacketsIterator = actualPackets.iterator();
+        PostgreSQLParameterDescriptionPacket actualParameterDescription = (PostgreSQLParameterDescriptionPacket) actualPacketsIterator.next();
+        PostgreSQLPacketPayload mockPayload = mock(PostgreSQLPacketPayload.class);
+        actualParameterDescription.write(mockPayload);
+        verify(mockPayload).writeInt2(3);
+        verify(mockPayload).writeInt4(23);
+        verify(mockPayload, times(2)).writeInt4(18);
+        DatabasePacket<?> actualRowDescriptionPacket = actualPacketsIterator.next();
+        assertThat(actualRowDescriptionPacket, is(instanceOf(PostgreSQLRowDescriptionPacket.class)));
+        List<PostgreSQLColumnDescription> actualColumnDescriptions = new ArrayList<>(getColumnDescriptionsFromPacket((PostgreSQLRowDescriptionPacket) actualRowDescriptionPacket));
+        assertThat(actualColumnDescriptions.size(), is(11));
+        assertThat(actualColumnDescriptions.get(0).getColumnName(), is("id"));
+        assertThat(actualColumnDescriptions.get(0).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
+        assertThat(actualColumnDescriptions.get(0).getColumnLength(), is(4));
+        assertThat(actualColumnDescriptions.get(1).getColumnName(), is("alias_id"));
+        assertThat(actualColumnDescriptions.get(1).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
+        assertThat(actualColumnDescriptions.get(1).getColumnLength(), is(4));
+        assertThat(actualColumnDescriptions.get(2).getColumnName(), is("?column?"));
+        assertThat(actualColumnDescriptions.get(2).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_VARCHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(2).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(3).getColumnName(), is("literal_string"));
+        assertThat(actualColumnDescriptions.get(3).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_VARCHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(3).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(4).getColumnName(), is("literal_int"));
+        assertThat(actualColumnDescriptions.get(4).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
+        assertThat(actualColumnDescriptions.get(4).getColumnLength(), is(4));
+        assertThat(actualColumnDescriptions.get(5).getColumnName(), is("literal_bigint"));
+        assertThat(actualColumnDescriptions.get(5).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT8.getValue()));
+        assertThat(actualColumnDescriptions.get(5).getColumnLength(), is(8));
+        assertThat(actualColumnDescriptions.get(6).getColumnName(), is("literal_numeric"));
+        assertThat(actualColumnDescriptions.get(6).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_NUMERIC.getValue()));
+        assertThat(actualColumnDescriptions.get(6).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(7).getColumnName(), is("id"));
+        assertThat(actualColumnDescriptions.get(7).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
+        assertThat(actualColumnDescriptions.get(7).getColumnLength(), is(4));
+        assertThat(actualColumnDescriptions.get(8).getColumnName(), is("k"));
+        assertThat(actualColumnDescriptions.get(8).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
+        assertThat(actualColumnDescriptions.get(8).getColumnLength(), is(4));
+        assertThat(actualColumnDescriptions.get(9).getColumnName(), is("c"));
+        assertThat(actualColumnDescriptions.get(9).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_CHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(9).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(10).getColumnName(), is("pad"));
+        assertThat(actualColumnDescriptions.get(10).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_CHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(10).getColumnLength(), is(-1));
+    }
+    
+    @SuppressWarnings("unchecked")
+    @SneakyThrows({NoSuchFieldException.class, IllegalAccessException.class})
+    private Collection<PostgreSQLColumnDescription> getColumnDescriptionsFromPacket(final PostgreSQLRowDescriptionPacket packet) {
+        Field field = PostgreSQLRowDescriptionPacket.class.getDeclaredField("columnDescriptions");
+        field.setAccessible(true);
+        return (Collection<PostgreSQLColumnDescription>) field.get(packet);
+    }
+    
+    @SuppressWarnings("rawtypes")
+    @Test
     public void assertDescribeSelectPreparedStatement() throws SQLException {
         when(packet.getType()).thenReturn('S');
         String statementId = "S_3";
@@ -288,7 +360,7 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
     }
     
     private void prepareJDBCBackendConnection(final String sql) throws SQLException {
-        JDBCBackendConnection backendConnection = mock(JDBCBackendConnection.class);
+        BackendConnection backendConnection = mock(BackendConnection.class);
         Connection connection = mock(Connection.class, RETURNS_DEEP_STUBS);
         ParameterMetaData parameterMetaData = mock(ParameterMetaData.class);
         when(parameterMetaData.getParameterType(1)).thenReturn(Types.INTEGER);

@@ -82,9 +82,8 @@ public final class OpenGaussComQueryExecutor implements QueryCommandExecutor {
     }
     
     private PostgreSQLRowDescriptionPacket createRowDescriptionPacket(final QueryResponseHeader queryResponseHeader) {
-        Collection<PostgreSQLColumnDescription> columnDescriptions = createColumnDescriptions(queryResponseHeader);
         responseType = ResponseType.QUERY;
-        return new PostgreSQLRowDescriptionPacket(columnDescriptions.size(), columnDescriptions);
+        return new PostgreSQLRowDescriptionPacket(createColumnDescriptions(queryResponseHeader));
     }
     
     private Collection<PostgreSQLColumnDescription> createColumnDescriptions(final QueryResponseHeader queryResponseHeader) {
@@ -96,7 +95,7 @@ public final class OpenGaussComQueryExecutor implements QueryCommandExecutor {
         return result;
     }
     
-    private List<DatabasePacket<?>> createUpdatePacket(final UpdateResponseHeader updateResponseHeader) {
+    private List<DatabasePacket<?>> createUpdatePacket(final UpdateResponseHeader updateResponseHeader) throws SQLException {
         SQLStatement sqlStatement = updateResponseHeader.getSqlStatement();
         if (sqlStatement instanceof CommitStatement || sqlStatement instanceof RollbackStatement) {
             portalContext.closeAll();
