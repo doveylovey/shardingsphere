@@ -32,8 +32,8 @@ import org.apache.shardingsphere.data.pipeline.api.metadata.loader.PipelineTable
 import org.apache.shardingsphere.data.pipeline.cdc.config.job.CDCJobConfiguration;
 import org.apache.shardingsphere.data.pipeline.cdc.config.task.CDCTaskConfiguration;
 import org.apache.shardingsphere.data.pipeline.cdc.context.CDCProcessContext;
-import org.apache.shardingsphere.data.pipeline.cdc.core.importer.connector.CDCImporterConnector;
 import org.apache.shardingsphere.data.pipeline.core.context.InventoryIncrementalJobItemContext;
+import org.apache.shardingsphere.data.pipeline.core.job.progress.persist.PipelineJobProgressPersistService;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.StandardPipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.core.task.IncrementalTask;
 import org.apache.shardingsphere.data.pipeline.core.task.InventoryTask;
@@ -41,6 +41,7 @@ import org.apache.shardingsphere.data.pipeline.spi.importer.connector.ImporterCo
 
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * CDC job item context.
@@ -67,9 +68,15 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
     
     private final PipelineDataSourceManager dataSourceManager;
     
+    private final ImporterConnector importerConnector;
+    
     private final Collection<InventoryTask> inventoryTasks = new LinkedList<>();
     
     private final Collection<IncrementalTask> incrementalTasks = new LinkedList<>();
+    
+    private final AtomicLong processedRecordsCount = new AtomicLong(0);
+    
+    private final AtomicLong inventoryRecordsCount = new AtomicLong(0);
     
     private final LazyInitializer<PipelineDataSourceWrapper> sourceDataSourceLazyInitializer = new LazyInitializer<PipelineDataSourceWrapper>() {
         
@@ -99,7 +106,8 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
     
     @Override
     public void onProgressUpdated(final PipelineJobProgressUpdatedParameter param) {
-        // TODO to be implemented
+        processedRecordsCount.addAndGet(param.getProcessedRecordsCount());
+        PipelineJobProgressPersistService.notifyPersist(jobConfig.getJobId(), shardingItem);
     }
     
     /**
@@ -120,21 +128,21 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
     
     @Override
     public ImporterConnector getImporterConnector() {
-        return new CDCImporterConnector();
+        return importerConnector;
     }
     
     @Override
     public long getProcessedRecordsCount() {
-        throw new UnsupportedOperationException();
+        return processedRecordsCount.get();
     }
     
     @Override
     public void updateInventoryRecordsCount(final long recordsCount) {
-        // TODO to be implemented
+        inventoryRecordsCount.addAndGet(recordsCount);
     }
     
     @Override
     public long getInventoryRecordsCount() {
-        return 0;
+        return inventoryRecordsCount.get();
     }
 }

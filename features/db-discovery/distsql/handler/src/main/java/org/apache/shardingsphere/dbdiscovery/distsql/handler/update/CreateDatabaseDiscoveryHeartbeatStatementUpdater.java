@@ -35,15 +35,14 @@ public final class CreateDatabaseDiscoveryHeartbeatStatementUpdater implements R
     private static final String RULE_TYPE = "database discovery";
     
     @Override
-    public DatabaseDiscoveryRuleConfiguration buildToBeCreatedRuleConfiguration(final CreateDatabaseDiscoveryHeartbeatStatement sqlStatement) {
+    public DatabaseDiscoveryRuleConfiguration buildToBeCreatedRuleConfiguration(final DatabaseDiscoveryRuleConfiguration currentRuleConfig,
+                                                                                final CreateDatabaseDiscoveryHeartbeatStatement sqlStatement) {
         return DatabaseDiscoveryRuleStatementConverter.convertDiscoveryHeartbeat(sqlStatement.getHeartbeats());
     }
     
     @Override
     public void updateCurrentRuleConfiguration(final DatabaseDiscoveryRuleConfiguration currentRuleConfig, final DatabaseDiscoveryRuleConfiguration toBeCreatedRuleConfig) {
-        if (null != currentRuleConfig) {
-            currentRuleConfig.getDiscoveryHeartbeats().putAll(toBeCreatedRuleConfig.getDiscoveryHeartbeats());
-        }
+        currentRuleConfig.getDiscoveryHeartbeats().putAll(toBeCreatedRuleConfig.getDiscoveryHeartbeats());
     }
     
     @Override

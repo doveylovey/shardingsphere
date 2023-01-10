@@ -267,7 +267,7 @@
                             </left>
                             <operator>IS</operator>
                             <right>
-                                <literal-expression value="NOT NULL" start-index="43" stop-index="51" />
+                                <literal-expression value="NOT NULL" start-index="44" stop-index="51" />
                             </right>
                         </binary-operation-expression>
                         <common-expression text="item_id IS NOT NULL" start-index="33" stop-index="51" />
@@ -319,7 +319,7 @@
                             <operator>IS</operator>
                             <right>
                                 <!-- TODO: literal value should be 'NOT NULL' -->
-                                <literal-expression value="NOT NULL" start-index="43" stop-index="51" />
+                                <literal-expression value="NOT NULL" start-index="44" stop-index="51" />
                             </right>
                         </binary-operation-expression>
                         <common-expression text="item_id IS NOT NULL" start-index="33" stop-index="51" />
@@ -1960,7 +1960,15 @@
                                             </left>
                                             <operator>=</operator>
                                             <right>
-                                                <common-expression text="'{&quot;rule2&quot;:&quot;null2&quot;}'::jsonb" start-index="35" stop-index="60" />
+                                                <binary-operation-expression start-index="35" stop-index="60">
+                                                    <left>
+                                                        <literal-expression value="{&quot;rule2&quot;:&quot;null2&quot;}" start-index="35" stop-index="53" />
+                                                    </left>
+                                                    <operator>::</operator>
+                                                    <right>
+                                                        <common-expression text="jsonb" start-index="56" stop-index="60" />
+                                                    </right>
+                                                </binary-operation-expression>
                                                 <parameter-marker-expression parameter-index="0" start-index="35" stop-index="42" />
                                             </right>
                                         </binary-operation-expression>
@@ -2039,11 +2047,27 @@
                                             <right>
                                                 <list-expression start-index="36" stop-index="55" literal-stop-index="91">
                                                     <items>
-                                                        <common-expression text="'{&quot;rule2&quot;:&quot;null2&quot;}'::jsonb" start-index="37" stop-index="62" />
+                                                        <binary-operation-expression start-index="37" stop-index="62">
+                                                            <left>
+                                                                <literal-expression value="{&quot;rule2&quot;:&quot;null2&quot;}" start-index="37" stop-index="55" />
+                                                            </left>
+                                                            <operator>::</operator>
+                                                            <right>
+                                                                <common-expression text="jsonb" start-index="58" stop-index="62" />
+                                                            </right>
+                                                        </binary-operation-expression>
                                                         <parameter-marker-expression parameter-index="0" start-index="37" stop-index="44" />
                                                     </items>
                                                     <items>
-                                                        <common-expression text="'{&quot;rule3&quot;:&quot;null3&quot;}'::jsonb" start-index="65" stop-index="90" />
+                                                        <binary-operation-expression start-index="65" stop-index="90">
+                                                            <left>
+                                                                <literal-expression value="{&quot;rule3&quot;:&quot;null3&quot;}" start-index="65" stop-index="83" />
+                                                            </left>
+                                                            <operator>::</operator>
+                                                            <right>
+                                                                <common-expression text="jsonb" start-index="86" stop-index="90" />
+                                                            </right>
+                                                        </binary-operation-expression>
                                                         <parameter-marker-expression parameter-index="1" start-index="47" stop-index="54" />
                                                     </items>
                                                 </list-expression>
@@ -2132,7 +2156,15 @@
                                         </binary-operation-expression>
                                     </between-expr>
                                     <and-expr>
-                                        <common-expression text="'{&quot;rule3&quot;:&quot;null3&quot;}'::jsonb" start-index="72" stop-index="97" />
+                                        <binary-operation-expression start-index="72" stop-index="97">
+                                            <left>
+                                                <literal-expression value="{&quot;rule3&quot;:&quot;null3&quot;}" start-index="72" stop-index="90" />
+                                            </left>
+                                            <operator>::</operator>
+                                            <right>
+                                                <common-expression text="jsonb" start-index="93" stop-index="97" />
+                                            </right>
+                                        </binary-operation-expression>
                                         <parameter-marker-expression parameter-index="1" start-index="54" stop-index="61" />
                                     </and-expr>
                                 </between-expression>
@@ -4796,18 +4828,6 @@
         </from>
     </select>
 
-    <select sql-case-id="select_with_offset">
-        <projections start-index="7" stop-index="7">
-            <shorthand-projection start-index="7" stop-index="7" />
-        </projections>
-        <from>
-            <simple-table name="t_new_order" start-index="14" stop-index="24" />
-        </from>
-        <limit start-index="26" stop-index="46">
-            <offset value="3" start-index="37" stop-index="37" />
-        </limit>
-    </select>
-
     <select sql-case-id="select_with_null_keyword_in_projection">
         <projections start-index="7" stop-index="31">
             <expression-projection text="null" alias="order_id" start-index="7" stop-index="22">
@@ -4820,5 +4840,21 @@
         <from>
             <simple-table name="t_order" start-index="38" stop-index="44" />
         </from>
+    </select>
+    
+    <select sql-case-id="select_literal_type_cast_money" >
+        <projections start-index="7" stop-index="18">
+            <expression-projection text="'$99'::money" start-index="7" stop-index="18">
+                <binary-operation-expression start-index="7" stop-index="18">
+                    <left>
+                        <literal-expression value="$99" start-index="7" stop-index="11" />
+                    </left>
+                    <operator>::</operator>
+                    <right>
+                        <common-expression text="money" start-index="14" stop-index="18" />
+                    </right>
+                </binary-operation-expression>
+            </expression-projection>
+        </projections>
     </select>
 </sql-parser-test-cases>

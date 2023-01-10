@@ -58,9 +58,9 @@ import org.junit.runner.RunWith;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.internal.configuration.plugins.Plugins;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ParameterMetaData;
 import java.sql.ResultSetMetaData;
@@ -255,7 +255,7 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
         final String statementId = "S_2";
         when(packet.getName()).thenReturn(statementId);
         String sql = "insert into t_order (k, c, pad) values (?, ?, ?) "
-                + "returning id, id alias_id, 'anonymous', 'OK' literal_string, 1 literal_int, 4294967296 literal_bigint, 1.1 literal_numeric, t_order.*";
+                + "returning id, id alias_id, 'anonymous', 'OK' literal_string, 1 literal_int, 4294967296 literal_bigint, 1.1 literal_numeric, t_order.*, t_order, t_order alias_t_order";
         SQLStatement sqlStatement = SQL_PARSER_ENGINE.parse(sql, false);
         List<PostgreSQLColumnType> parameterTypes = new ArrayList<>(sqlStatement.getParameterCount());
         for (int i = 0; i < sqlStatement.getParameterCount(); i++) {
@@ -275,8 +275,12 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
         verify(mockPayload, times(2)).writeInt4(18);
         DatabasePacket<?> actualRowDescriptionPacket = actualPacketsIterator.next();
         assertThat(actualRowDescriptionPacket, is(instanceOf(PostgreSQLRowDescriptionPacket.class)));
-        List<PostgreSQLColumnDescription> actualColumnDescriptions = new ArrayList<>(getColumnDescriptionsFromPacket((PostgreSQLRowDescriptionPacket) actualRowDescriptionPacket));
-        assertThat(actualColumnDescriptions.size(), is(11));
+        assertRowDescriptions((PostgreSQLRowDescriptionPacket) actualRowDescriptionPacket);
+    }
+    
+    private void assertRowDescriptions(final PostgreSQLRowDescriptionPacket actualRowDescriptionPacket) {
+        List<PostgreSQLColumnDescription> actualColumnDescriptions = new ArrayList<>(getColumnDescriptionsFromPacket(actualRowDescriptionPacket));
+        assertThat(actualColumnDescriptions.size(), is(13));
         assertThat(actualColumnDescriptions.get(0).getColumnName(), is("id"));
         assertThat(actualColumnDescriptions.get(0).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_INT4.getValue()));
         assertThat(actualColumnDescriptions.get(0).getColumnLength(), is(4));
@@ -310,14 +314,18 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
         assertThat(actualColumnDescriptions.get(10).getColumnName(), is("pad"));
         assertThat(actualColumnDescriptions.get(10).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_CHAR.getValue()));
         assertThat(actualColumnDescriptions.get(10).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(11).getColumnName(), is("t_order"));
+        assertThat(actualColumnDescriptions.get(11).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_VARCHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(11).getColumnLength(), is(-1));
+        assertThat(actualColumnDescriptions.get(12).getColumnName(), is("alias_t_order"));
+        assertThat(actualColumnDescriptions.get(12).getTypeOID(), is(PostgreSQLColumnType.POSTGRESQL_TYPE_VARCHAR.getValue()));
+        assertThat(actualColumnDescriptions.get(12).getColumnLength(), is(-1));
     }
     
     @SuppressWarnings("unchecked")
-    @SneakyThrows({NoSuchFieldException.class, IllegalAccessException.class})
+    @SneakyThrows(ReflectiveOperationException.class)
     private Collection<PostgreSQLColumnDescription> getColumnDescriptionsFromPacket(final PostgreSQLRowDescriptionPacket packet) {
-        Field field = PostgreSQLRowDescriptionPacket.class.getDeclaredField("columnDescriptions");
-        field.setAccessible(true);
-        return (Collection<PostgreSQLColumnDescription>) field.get(packet);
+        return (Collection<PostgreSQLColumnDescription>) Plugins.getMemberAccessor().get(PostgreSQLRowDescriptionPacket.class.getDeclaredField("columnDescriptions"), packet);
     }
     
     @SuppressWarnings("rawtypes")
@@ -384,9 +392,7 @@ public final class PostgreSQLComDescribeExecutorTest extends ProxyContextRestore
     @SuppressWarnings("unchecked")
     @SneakyThrows(ReflectiveOperationException.class)
     private List<PostgreSQLColumnDescription> getColumnDescriptions(final PostgreSQLRowDescriptionPacket packet) {
-        Field columnDescriptionsField = PostgreSQLRowDescriptionPacket.class.getDeclaredField("columnDescriptions");
-        columnDescriptionsField.setAccessible(true);
-        return (List<PostgreSQLColumnDescription>) columnDescriptionsField.get(packet);
+        return (List<PostgreSQLColumnDescription>) Plugins.getMemberAccessor().get(PostgreSQLRowDescriptionPacket.class.getDeclaredField("columnDescriptions"), packet);
     }
     
     @Test(expected = UnsupportedSQLOperationException.class)

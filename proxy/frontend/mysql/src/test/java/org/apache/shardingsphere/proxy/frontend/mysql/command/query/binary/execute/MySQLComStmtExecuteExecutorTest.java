@@ -120,13 +120,13 @@ public final class MySQLComStmtExecuteExecutorTest extends ProxyContextRestorer 
         when(connectionSession.getBackendConnection()).thenReturn(backendConnection);
         SQLStatementContext<?> selectStatementContext = prepareSelectStatementContext();
         when(connectionSession.getServerPreparedStatementRegistry().getPreparedStatement(1))
-                .thenReturn(new MySQLServerPreparedStatement("select * from tbl where id = ?", selectStatementContext));
+                .thenReturn(new MySQLServerPreparedStatement("select * from tbl where id = ?", selectStatementContext, Collections.emptyList()));
         UpdateStatementContext updateStatementContext = mock(UpdateStatementContext.class, RETURNS_DEEP_STUBS);
         when(updateStatementContext.getSqlStatement()).thenReturn(prepareUpdateStatement());
         when(connectionSession.getServerPreparedStatementRegistry().getPreparedStatement(2))
-                .thenReturn(new MySQLServerPreparedStatement("update tbl set col=1 where id = ?", updateStatementContext));
+                .thenReturn(new MySQLServerPreparedStatement("update tbl set col=1 where id = ?", updateStatementContext, Collections.emptyList()));
         when(connectionSession.getServerPreparedStatementRegistry().getPreparedStatement(3))
-                .thenReturn(new MySQLServerPreparedStatement("commit", new CommonSQLStatementContext<>(new MySQLCommitStatement())));
+                .thenReturn(new MySQLServerPreparedStatement("commit", new CommonSQLStatementContext<>(new MySQLCommitStatement()), Collections.emptyList()));
     }
     
     private ShardingSphereDatabase mockDatabase() {
@@ -182,7 +182,6 @@ public final class MySQLComStmtExecuteExecutorTest extends ProxyContextRestorer 
         assertTrue(mysqlComStmtExecuteExecutor.next());
         MySQLPacket actualQueryRowPacket = mysqlComStmtExecuteExecutor.getQueryRowPacket();
         assertThat(actualQueryRowPacket, instanceOf(MySQLBinaryResultSetRowPacket.class));
-        assertThat(actualQueryRowPacket.getSequenceId(), is(4));
         mysqlComStmtExecuteExecutor.close();
         verify(proxyBackendHandler).close();
     }

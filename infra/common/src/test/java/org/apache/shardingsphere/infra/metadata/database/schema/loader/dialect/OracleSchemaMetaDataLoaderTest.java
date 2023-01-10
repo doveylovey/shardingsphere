@@ -17,13 +17,13 @@
 
 package org.apache.shardingsphere.infra.metadata.database.schema.loader.dialect;
 
-import org.apache.shardingsphere.infra.database.type.DatabaseTypeFactory;
+import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.metadata.database.schema.loader.model.ColumnMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.loader.model.IndexMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.loader.model.SchemaMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.loader.model.TableMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.loader.spi.DialectSchemaMetaDataLoader;
-import org.apache.shardingsphere.infra.metadata.database.schema.loader.spi.DialectSchemaMetaDataLoaderFactory;
+import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPIRegistry;
 import org.junit.Test;
 
 import javax.sql.DataSource;
@@ -69,6 +69,9 @@ public final class OracleSchemaMetaDataLoaderTest {
     
     private static final String ALL_TAB_COLUMNS_SQL_CONDITION6 = "SELECT OWNER AS TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_ID, HIDDEN_COLUMN  FROM ALL_TAB_COLS"
             + " WHERE OWNER = ? AND TABLE_NAME IN ('tbl') ORDER BY COLUMN_ID";
+    
+    private static final String ALL_TAB_COLUMNS_SQL_CONDITION7 = "SELECT OWNER AS TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_ID, HIDDEN_COLUMN , IDENTITY_COLUMN, COLLATION"
+            + " FROM ALL_TAB_COLS WHERE OWNER = ? AND TABLE_NAME IN ('tbl') ORDER BY COLUMN_ID";
     
     @Test
     public void assertLoadCondition1() throws SQLException {
@@ -184,6 +187,26 @@ public final class OracleSchemaMetaDataLoaderTest {
         assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false)));
     }
     
+    @Test
+    public void assertLoadCondition7() throws SQLException {
+        DataSource dataSource = mockDataSource();
+        ResultSet resultSet = mockTableMetaDataResultSetWithNullValue();
+        when(dataSource.getConnection().prepareStatement(ALL_TAB_COLUMNS_SQL_CONDITION7).executeQuery()).thenReturn(resultSet);
+        ResultSet indexResultSet = mockIndexMetaDataResultSet();
+        when(dataSource.getConnection().prepareStatement(ALL_INDEXES_SQL).executeQuery()).thenReturn(indexResultSet);
+        ResultSet primaryKeys = mockPrimaryKeysMetaDataResultSet();
+        when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITH_TABLES).executeQuery()).thenReturn(primaryKeys);
+        when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
+        when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(dataSource, Collections.singleton("tbl"), "sharding_db");
+        assertTableMetaDataMap(actual);
+        TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
+        Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
+        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false)));
+        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false)));
+        assertThat(columnsIterator.next(), is(new ColumnMetaData("address", Types.VARCHAR, false, false, false, false, false)));
+    }
+    
     private DataSource mockDataSource() throws SQLException {
         DataSource result = mock(DataSource.class, RETURNS_DEEP_STUBS);
         ResultSet typeInfoResultSet = mockTypeInfoResultSet();
@@ -211,6 +234,18 @@ public final class OracleSchemaMetaDataLoaderTest {
         return result;
     }
     
+    private ResultSet mockTableMetaDataResultSetWithNullValue() throws SQLException {
+        ResultSet result = mock(ResultSet.class);
+        when(result.next()).thenReturn(true, true, true, false);
+        when(result.getString("TABLE_NAME")).thenReturn("tbl");
+        when(result.getString("COLUMN_NAME")).thenReturn("id", "name", "address");
+        when(result.getString("DATA_TYPE")).thenReturn("int", "varchar", "varchar");
+        when(result.getString("HIDDEN_COLUMN")).thenReturn("NO", "YES", "YES");
+        when(result.getString("IDENTITY_COLUMN")).thenReturn("YES", "NO", "NO");
+        when(result.getString("COLLATION")).thenReturn("BINARY_CS", "BINARY_CI", null);
+        return result;
+    }
+    
     private ResultSet mockIndexMetaDataResultSet() throws SQLException {
         ResultSet result = mock(ResultSet.class);
         when(result.next()).thenReturn(true, false);
@@ -228,7 +263,8 @@ public final class OracleSchemaMetaDataLoaderTest {
     }
     
     private DialectSchemaMetaDataLoader getDialectTableMetaDataLoader() {
-        Optional<DialectSchemaMetaDataLoader> result = DialectSchemaMetaDataLoaderFactory.findInstance(DatabaseTypeFactory.getInstance("Oracle"));
+        Optional<DialectSchemaMetaDataLoader> result = TypedSPIRegistry.findRegisteredService(
+                DialectSchemaMetaDataLoader.class, TypedSPIRegistry.getRegisteredService(DatabaseType.class, "Oracle").getType());
         assertTrue(result.isPresent());
         return result.get();
     }
