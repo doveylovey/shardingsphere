@@ -15,46 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.shardingsphere.agent.plugin.metrics.core.advice;
+package org.apache.shardingsphere.agent.plugin.metrics.core.advice.proxy;
 
 import org.apache.shardingsphere.agent.plugin.metrics.core.MetricsPool;
+import org.apache.shardingsphere.agent.plugin.metrics.core.advice.MetricsAdviceBaseTest;
+import org.apache.shardingsphere.agent.plugin.metrics.core.advice.MockTargetAdviceObject;
 import org.apache.shardingsphere.agent.plugin.metrics.core.constant.MetricIds;
 import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.FixtureWrapper;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.Method;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
-@RunWith(MockitoJUnitRunner.class)
-public final class TransactionAdviceTest extends MetricsAdviceBaseTest {
+public final class RequestsCountAdviceTest extends MetricsAdviceBaseTest {
     
-    private final TransactionAdvice transactionAdvice = new TransactionAdvice();
-    
-    @Mock
-    private Method commit;
-    
-    @Mock
-    private Method rollback;
+    private final RequestsCountAdvice advice = new RequestsCountAdvice();
     
     @Test
-    public void assertMethod() {
-        when(commit.getName()).thenReturn(TransactionAdvice.COMMIT);
-        when(rollback.getName()).thenReturn(TransactionAdvice.ROLLBACK);
+    public void assertCountRequests() {
         MockTargetAdviceObject targetObject = new MockTargetAdviceObject();
-        transactionAdvice.beforeMethod(targetObject, commit, new Object[]{});
-        transactionAdvice.beforeMethod(targetObject, rollback, new Object[]{});
-        FixtureWrapper commitWrapper = (FixtureWrapper) MetricsPool.get(MetricIds.TRANSACTION_COMMIT).get();
-        assertTrue(MetricsPool.get(MetricIds.TRANSACTION_COMMIT).isPresent());
-        assertThat(commitWrapper.getFixtureValue(), is(1.0));
-        FixtureWrapper rollbackWrapper = (FixtureWrapper) MetricsPool.get(MetricIds.TRANSACTION_ROLLBACK).get();
-        assertTrue(MetricsPool.get(MetricIds.TRANSACTION_ROLLBACK).isPresent());
-        assertThat(rollbackWrapper.getFixtureValue(), is(1.0));
+        advice.beforeMethod(targetObject, mock(Method.class), new Object[]{});
+        assertTrue(MetricsPool.get(MetricIds.PROXY_REQUESTS).isPresent());
+        assertThat(((FixtureWrapper) MetricsPool.get(MetricIds.PROXY_REQUESTS).get()).getFixtureValue(), is(1d));
     }
 }

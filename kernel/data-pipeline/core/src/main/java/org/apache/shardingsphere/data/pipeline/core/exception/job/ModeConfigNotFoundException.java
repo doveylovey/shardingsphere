@@ -15,12 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.shardingsphere.sql.parser.sql.common.segment.generic;
+package org.apache.shardingsphere.data.pipeline.core.exception.job;
+
+import org.apache.shardingsphere.data.pipeline.core.exception.PipelineSQLException;
+import org.apache.shardingsphere.infra.util.exception.external.sql.sqlstate.XOpenSQLState;
 
 /**
- * Grant level type enum.
+ * Mode config not found exception.
  */
-public enum GrantLevelTypeEnum {
+public final class ModeConfigNotFoundException extends PipelineSQLException {
     
-    GLOBAL, DB, TABLE
+    private static final long serialVersionUID = -903289953649758722L;
+    
+    public ModeConfigNotFoundException() {
+        super(XOpenSQLState.CHECK_OPTION_VIOLATION, 3, "Mode configuration does not exist.");
+    }
 }

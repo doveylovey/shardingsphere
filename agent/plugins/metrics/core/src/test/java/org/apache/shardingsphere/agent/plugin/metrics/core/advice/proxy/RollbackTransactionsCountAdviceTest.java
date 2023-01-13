@@ -31,15 +31,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public final class TotalRequestsCountAdviceTest extends MetricsAdviceBaseTest {
+public final class RollbackTransactionsCountAdviceTest extends MetricsAdviceBaseTest {
     
-    private final TotalRequestsCountAdvice advice = new TotalRequestsCountAdvice();
+    private final RollbackTransactionsCountAdvice advice = new RollbackTransactionsCountAdvice();
     
     @Test
-    public void assertBeforeMethod() {
-        MockTargetAdviceObject targetObject = new MockTargetAdviceObject();
-        advice.beforeMethod(targetObject, mock(Method.class), new Object[]{});
-        assertTrue(MetricsPool.get(MetricIds.PROXY_REQUESTS).isPresent());
-        assertThat(((FixtureWrapper) MetricsPool.get(MetricIds.PROXY_REQUESTS).get()).getFixtureValue(), is(1d));
+    public void assertMethod() {
+        advice.beforeMethod(new MockTargetAdviceObject(), mock(Method.class), new Object[]{});
+        assertTrue(MetricsPool.get(MetricIds.PROXY_ROLLBACK_TRANSACTIONS).isPresent());
+        assertThat(((FixtureWrapper) MetricsPool.get(MetricIds.PROXY_ROLLBACK_TRANSACTIONS).get()).getFixtureValue(), is(1D));
     }
 }
