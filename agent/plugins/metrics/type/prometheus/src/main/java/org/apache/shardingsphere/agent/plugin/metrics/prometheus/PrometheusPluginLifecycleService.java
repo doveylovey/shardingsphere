@@ -23,11 +23,11 @@ import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.agent.api.PluginConfiguration;
-import org.apache.shardingsphere.agent.plugin.metrics.core.MetricsPool;
-import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.BuildInfoCollector;
-import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.MetaDataInfoCollector;
-import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.ProxyInfoCollector;
-import org.apache.shardingsphere.agent.plugin.metrics.prometheus.wrapper.PrometheusWrapperFactory;
+import org.apache.shardingsphere.agent.plugin.metrics.core.collector.MetricsCollectorRegistry;
+import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.business.BuildInfoCollector;
+import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.business.proxy.ProxyMetaDataInfoCollector;
+import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.business.proxy.ProxyStateCollector;
+import org.apache.shardingsphere.agent.plugin.metrics.prometheus.collector.PrometheusCollectorFactory;
 import org.apache.shardingsphere.agent.plugin.core.config.validator.PluginConfigurationValidator;
 import org.apache.shardingsphere.agent.spi.PluginLifecycleService;
 
@@ -48,7 +48,7 @@ public final class PrometheusPluginLifecycleService implements PluginLifecycleSe
     public void start(final PluginConfiguration pluginConfig, final boolean isEnhancedForProxy) {
         PluginConfigurationValidator.validatePort(getType(), pluginConfig);
         startServer(pluginConfig, isEnhancedForProxy);
-        MetricsPool.setMetricsFactory(new PrometheusWrapperFactory());
+        MetricsCollectorRegistry.setMetricsFactory(new PrometheusCollectorFactory());
     }
     
     private void startServer(final PluginConfiguration pluginConfig, final boolean isEnhancedForProxy) {
@@ -65,8 +65,8 @@ public final class PrometheusPluginLifecycleService implements PluginLifecycleSe
     private void registerCollector(final boolean isCollectJVMInformation, final boolean isEnhancedForProxy) {
         new BuildInfoCollector(isEnhancedForProxy).register();
         if (isEnhancedForProxy) {
-            new ProxyInfoCollector().register();
-            new MetaDataInfoCollector().register();
+            new ProxyStateCollector().register();
+            new ProxyMetaDataInfoCollector().register();
         }
         if (isCollectJVMInformation) {
             DefaultExports.initialize();
