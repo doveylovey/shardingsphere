@@ -17,31 +17,35 @@
 
 package org.apache.shardingsphere.agent.plugin.metrics.core.advice.proxy;
 
+import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.TargetAdviceObjectFixture;
 import org.apache.shardingsphere.agent.plugin.metrics.core.collector.MetricsCollectorRegistry;
-import org.apache.shardingsphere.agent.plugin.metrics.core.advice.MetricsAdviceBaseTest;
-import org.apache.shardingsphere.agent.plugin.metrics.core.advice.MockTargetAdviceObject;
-import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.MetricsCollectorFixture;
+import org.apache.shardingsphere.agent.plugin.metrics.core.config.MetricCollectorType;
+import org.apache.shardingsphere.agent.plugin.metrics.core.config.MetricConfiguration;
+import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.collector.MetricsCollectorFixture;
 import org.junit.After;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 
-public final class RollbackTransactionsCountAdviceTest extends MetricsAdviceBaseTest {
+public final class RollbackTransactionsCountAdviceTest {
+    
+    private final MetricConfiguration config = new MetricConfiguration("proxy_rollback_transactions_total", MetricCollectorType.COUNTER, null, Collections.emptyList(), Collections.emptyMap());
     
     private final RollbackTransactionsCountAdvice advice = new RollbackTransactionsCountAdvice();
     
     @After
     public void reset() {
-        ((MetricsCollectorFixture) MetricsCollectorRegistry.get("proxy_rollback_transactions_total")).reset();
+        ((MetricsCollectorFixture) MetricsCollectorRegistry.get(config, "FIXTURE")).reset();
     }
     
     @Test
     public void assertMethod() {
-        advice.beforeMethod(new MockTargetAdviceObject(), mock(Method.class), new Object[]{}, "FIXTURE");
-        assertThat(((MetricsCollectorFixture) MetricsCollectorRegistry.get("proxy_rollback_transactions_total")).getValue(), is(1D));
+        advice.beforeMethod(new TargetAdviceObjectFixture(), mock(Method.class), new Object[]{}, "FIXTURE");
+        assertThat(MetricsCollectorRegistry.get(config, "FIXTURE").toString(), is("1"));
     }
 }

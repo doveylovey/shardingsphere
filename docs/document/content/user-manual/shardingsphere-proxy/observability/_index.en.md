@@ -13,7 +13,7 @@ cd shardingsphere
 mvn clean install -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Djacoco.skip=true -DskipITs -DskipTests -Prelease
 ```
 
-Artifact is agent/distribution/target/apache-shardingsphere-${latest.release.version}-shardingsphere-agent-bin.tar.gz
+Artifact is distribution/agent/target/apache-shardingsphere-${latest.release.version}-shardingsphere-agent-bin.tar.gz
 
 ## Agent configuration
 
@@ -158,13 +158,12 @@ services:
 ## Metrics
 
 | Name                              | Type                | Description                                                                                                                            |
-| :-------------------------------- |:--------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
-| build_info                        | GAUGE               | Build information                                                                                                                      |
-| parsed_sql_total                  | COUNTER             | Total count of parsed by type. (INSERT, UPDATE, DELETE, SELECT, DDL, DCL, DAL, TCL, RQL, RDL, RAL, RUL)                                |
-| routed_sql_total                  | COUNTER             | Total count of routed by type. (INSERT, UPDATE, DELETE, SELECT)                                                                        |
-| routed_data_sources_total         | COUNTER             | Total count of data source routed                                                                                                      |
-| routed_tables_total               | COUNTER             | Total count of table routed                                                                                                            |
-| proxy_state                       | GAUGE               | Status information of ShardingSphere-Proxy. 0 is OK; 1 is CIRCUIT BREAK; 2 is LOCK                                                     |
+| :-------------------------------- | :------------------ | :------------------------------------------------------------------------------------------------------------------------------------- |
+| build_info                        | GAUGE_METRIC_FAMILY | Build information                                                                                                                      |
+| parsed_sql_total                  | COUNTER             | Total count of parsed by type (INSERT, UPDATE, DELETE, SELECT, DDL, DCL, DAL, TCL, RQL, RDL, RAL, RUL)                                 |
+| routed_sql_total                  | COUNTER             | Total count of routed by type (INSERT, UPDATE, DELETE, SELECT)                                                                         |
+| routed_result_total               | COUNTER             | Total count of routed result (data source routed, table routed)                                                                        |
+| proxy_state                       | GAUGE_METRIC_FAMILY | Status information of ShardingSphere-Proxy. 0 is OK; 1 is CIRCUIT BREAK; 2 is LOCK                                                     |
 | proxy_meta_data_info              | GAUGE_METRIC_FAMILY | Meta data information of ShardingSphere-Proxy. schema_count is logic number of databases; database_count is actual number of databases |
 | proxy_current_connections         | GAUGE               | Current connections of ShardingSphere-Proxy                                                                                            |
 | proxy_requests_total              | COUNTER             | Total requests of ShardingSphere-Proxy                                                                                                 |

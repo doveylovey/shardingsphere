@@ -17,8 +17,11 @@
 
 package org.apache.shardingsphere.agent.plugin.metrics.core.advice;
 
+import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.TargetAdviceObjectFixture;
 import org.apache.shardingsphere.agent.plugin.metrics.core.collector.MetricsCollectorRegistry;
-import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.MetricsCollectorFixture;
+import org.apache.shardingsphere.agent.plugin.metrics.core.config.MetricCollectorType;
+import org.apache.shardingsphere.agent.plugin.metrics.core.config.MetricConfiguration;
+import org.apache.shardingsphere.agent.plugin.metrics.core.fixture.collector.MetricsCollectorFixture;
 import org.apache.shardingsphere.distsql.parser.statement.rdl.create.RegisterStorageUnitStatement;
 import org.apache.shardingsphere.distsql.parser.statement.rql.show.ShowStorageUnitsStatement;
 import org.apache.shardingsphere.distsql.parser.statement.rul.sql.FormatStatement;
@@ -43,77 +46,77 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 
-public final class SQLParseCountAdviceTest extends MetricsAdviceBaseTest {
+public final class SQLParseCountAdviceTest {
     
-    private static final String PARSED_SQL_METRIC_KEY = "parsed_sql_total";
+    private final MetricConfiguration config = new MetricConfiguration("parsed_sql_total", MetricCollectorType.COUNTER, null, Collections.singletonList("type"), Collections.emptyMap());
     
     @After
     public void reset() {
-        ((MetricsCollectorFixture) MetricsCollectorRegistry.get(PARSED_SQL_METRIC_KEY)).reset();
+        ((MetricsCollectorFixture) MetricsCollectorRegistry.get(config, "FIXTURE")).reset();
     }
     
     @Test
     public void assertParseInsertSQL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLInsertStatement());
-    }
-    
-    @Test
-    public void assertParseDeleteSQL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLDeleteStatement());
+        assertParse(new MySQLInsertStatement(), "INSERT=1");
     }
     
     @Test
     public void assertParseUpdateSQL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLUpdateStatement());
+        assertParse(new MySQLUpdateStatement(), "UPDATE=1");
+    }
+    
+    @Test
+    public void assertParseDeleteSQL() {
+        assertParse(new MySQLDeleteStatement(), "DELETE=1");
     }
     
     @Test
     public void assertParseSelectSQL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLSelectStatement());
+        assertParse(new MySQLSelectStatement(), "SELECT=1");
     }
     
     @Test
     public void assertParseDDL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLCreateDatabaseStatement());
+        assertParse(new MySQLCreateDatabaseStatement(), "DDL=1");
     }
     
     @Test
     public void assertParseDCL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLCreateUserStatement());
+        assertParse(new MySQLCreateUserStatement(), "DCL=1");
     }
     
     @Test
     public void assertParseDAL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLShowDatabasesStatement());
+        assertParse(new MySQLShowDatabasesStatement(), "DAL=1");
     }
     
     @Test
     public void assertParseTCL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new MySQLCommitStatement());
+        assertParse(new MySQLCommitStatement(), "TCL=1");
     }
     
     @Test
     public void assertParseRQL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new ShowStorageUnitsStatement(new DatabaseSegment(0, 0, null), null));
+        assertParse(new ShowStorageUnitsStatement(new DatabaseSegment(0, 0, null), null), "RQL=1");
     }
     
     @Test
     public void assertParseRDL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new RegisterStorageUnitStatement(false, Collections.emptyList()));
+        assertParse(new RegisterStorageUnitStatement(false, Collections.emptyList()), "RDL=1");
     }
     
     @Test
     public void assertParseRAL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new ShowMigrationListStatement());
+        assertParse(new ShowMigrationListStatement(), "RAL=1");
     }
     
     @Test
     public void assertParseRUL() {
-        assertParse(PARSED_SQL_METRIC_KEY, new FormatStatement("SELECT * FROM t_order"));
+        assertParse(new FormatStatement("SELECT * FROM tbl"), "RUL=1");
     }
     
-    private void assertParse(final String metricIds, final SQLStatement sqlStatement) {
-        new SQLParseCountAdvice().afterMethod(new MockTargetAdviceObject(), mock(Method.class), new Object[]{}, sqlStatement, "FIXTURE");
-        assertThat(((MetricsCollectorFixture) MetricsCollectorRegistry.get(metricIds)).getValue(), is(1d));
+    private void assertParse(final SQLStatement sqlStatement, final String expected) {
+        new SQLParseCountAdvice().afterMethod(new TargetAdviceObjectFixture(), mock(Method.class), new Object[]{}, sqlStatement, "FIXTURE");
+        assertThat(MetricsCollectorRegistry.get(config, "FIXTURE").toString(), is(expected));
     }
 }
