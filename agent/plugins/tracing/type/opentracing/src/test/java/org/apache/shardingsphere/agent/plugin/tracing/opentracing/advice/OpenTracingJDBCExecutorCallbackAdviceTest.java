@@ -21,12 +21,13 @@ import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 import io.opentracing.util.GlobalTracer;
 import org.apache.shardingsphere.agent.plugin.tracing.advice.AbstractJDBCExecutorCallbackAdviceTest;
+import org.apache.shardingsphere.agent.plugin.tracing.core.constant.AttributeConstants;
 import org.apache.shardingsphere.agent.plugin.tracing.opentracing.constant.ErrorLogTagKeys;
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.driver.jdbc.JDBCExecutionUnit;
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.driver.jdbc.JDBCExecutorCallback;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.internal.configuration.plugins.Plugins;
 
 import java.io.IOException;
@@ -37,7 +38,7 @@ import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class OpenTracingJDBCExecutorCallbackAdviceTest extends AbstractJDBCExecutorCallbackAdviceTest {
     
@@ -45,16 +46,16 @@ public final class OpenTracingJDBCExecutorCallbackAdviceTest extends AbstractJDB
     
     private static Method executeMethod;
     
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws ReflectiveOperationException {
         if (!GlobalTracer.isRegistered()) {
             GlobalTracer.register(new MockTracer());
         }
         tracer = (MockTracer) Plugins.getMemberAccessor().get(GlobalTracer.class.getDeclaredField("tracer"), GlobalTracer.get());
-        executeMethod = JDBCExecutorCallback.class.getDeclaredMethod("execute", JDBCExecutionUnit.class, boolean.class, Map.class);
+        executeMethod = JDBCExecutorCallback.class.getDeclaredMethod("execute", JDBCExecutionUnit.class, boolean.class);
     }
     
-    @Before
+    @BeforeEach
     public void reset() {
         tracer.reset();
     }
@@ -70,10 +71,11 @@ public final class OpenTracingJDBCExecutorCallbackAdviceTest extends AbstractJDB
         Map<String, Object> tags = span.tags();
         assertTrue(spans.get(0).logEntries().isEmpty());
         assertThat(span.operationName(), is("/ShardingSphere/executeSQL/"));
-        assertThat(tags.get("db.instance"), is("mock.db"));
-        assertThat(tags.get("db.type"), is("sql"));
-        assertThat(tags.get("span.kind"), is("client"));
-        assertThat(tags.get("db.statement"), is("select 1"));
+        assertThat(tags.get(AttributeConstants.COMPONENT), is(AttributeConstants.COMPONENT_NAME));
+        assertThat(tags.get(AttributeConstants.DB_INSTANCE), is(getDataSourceName()));
+        assertThat(tags.get(AttributeConstants.DB_TYPE), is(getDatabaseType(getDataSourceName())));
+        assertThat(tags.get(AttributeConstants.DB_STATEMENT), is(getSql()));
+        assertThat(tags.get(AttributeConstants.SPAN_KIND), is(AttributeConstants.SPAN_KIND_CLIENT));
     }
     
     @Test
@@ -82,7 +84,6 @@ public final class OpenTracingJDBCExecutorCallbackAdviceTest extends AbstractJDB
         OpenTracingJDBCExecutorCallbackAdvice advice = new OpenTracingJDBCExecutorCallbackAdvice();
         advice.beforeMethod(getTargetObject(), executeMethod, new Object[]{getExecutionUnit(), false, extraMap}, "OpenTracing");
         advice.onThrowing(getTargetObject(), executeMethod, new Object[]{getExecutionUnit(), false, extraMap}, new IOException(), "OpenTracing");
-        advice.afterMethod(getTargetObject(), executeMethod, new Object[]{getExecutionUnit(), false, extraMap}, null, "OpenTracing");
         List<MockSpan> spans = tracer.finishedSpans();
         assertThat(spans.size(), is(1));
         MockSpan span = spans.get(0);
@@ -92,9 +93,10 @@ public final class OpenTracingJDBCExecutorCallbackAdviceTest extends AbstractJDB
         assertThat(fields.get(ErrorLogTagKeys.ERROR_KIND), is("java.io.IOException"));
         Map<String, Object> tags = span.tags();
         assertThat(span.operationName(), is("/ShardingSphere/executeSQL/"));
-        assertThat(tags.get("db.instance"), is("mock.db"));
-        assertThat(tags.get("db.type"), is("sql"));
-        assertThat(tags.get("span.kind"), is("client"));
-        assertThat(tags.get("db.statement"), is("select 1"));
+        assertThat(tags.get(AttributeConstants.COMPONENT), is(AttributeConstants.COMPONENT_NAME));
+        assertThat(tags.get(AttributeConstants.DB_INSTANCE), is(getDataSourceName()));
+        assertThat(tags.get(AttributeConstants.DB_TYPE), is(getDatabaseType(getDataSourceName())));
+        assertThat(tags.get(AttributeConstants.DB_STATEMENT), is(getSql()));
+        assertThat(tags.get(AttributeConstants.SPAN_KIND), is(AttributeConstants.SPAN_KIND_CLIENT));
     }
 }

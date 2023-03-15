@@ -47,11 +47,6 @@ public final class NativeContainerComposer extends BaseContainerComposer {
         this.databaseType = databaseType;
     }
     
-    @Override
-    public void start() {
-        // do nothing
-    }
-    
     @SneakyThrows(SQLException.class)
     @Override
     public void cleanUpDatabase(final String databaseName) {
@@ -108,5 +103,10 @@ public final class NativeContainerComposer extends BaseContainerComposer {
     @Override
     public String getProxyJdbcUrl(final String databaseName) {
         return DataSourceEnvironment.getURL(databaseType, "localhost", 3307, databaseName);
+    }
+    
+    @Override
+    public int getProxyCDCPort() {
+        return 33071;
     }
 }

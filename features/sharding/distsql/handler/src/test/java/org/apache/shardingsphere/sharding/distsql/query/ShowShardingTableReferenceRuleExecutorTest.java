@@ -28,7 +28,7 @@ import org.apache.shardingsphere.sharding.api.config.rule.ShardingTableRuleConfi
 import org.apache.shardingsphere.sharding.distsql.handler.query.ShowShardingTableReferenceRuleExecutor;
 import org.apache.shardingsphere.sharding.distsql.parser.statement.ShowShardingTableReferenceRulesStatement;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -46,6 +46,17 @@ public final class ShowShardingTableReferenceRuleExecutorTest {
     public void assertGetRowData() {
         RQLExecutor<ShowShardingTableReferenceRulesStatement> executor = new ShowShardingTableReferenceRuleExecutor();
         Collection<LocalDataQueryResultRow> actual = executor.getRows(mockDatabase(), mock(ShowShardingTableReferenceRulesStatement.class));
+        assertThat(actual.size(), is(1));
+        Iterator<LocalDataQueryResultRow> iterator = actual.iterator();
+        LocalDataQueryResultRow row = iterator.next();
+        assertThat(row.getCell(1), is("foo"));
+        assertThat(row.getCell(2), is("t_order,t_order_item"));
+    }
+    
+    @Test
+    public void assertGetRowDataWithSpecifiedRuleName() {
+        RQLExecutor<ShowShardingTableReferenceRulesStatement> executor = new ShowShardingTableReferenceRuleExecutor();
+        Collection<LocalDataQueryResultRow> actual = executor.getRows(mockDatabase(), new ShowShardingTableReferenceRulesStatement("foo", null));
         assertThat(actual.size(), is(1));
         Iterator<LocalDataQueryResultRow> iterator = actual.iterator();
         LocalDataQueryResultRow row = iterator.next();

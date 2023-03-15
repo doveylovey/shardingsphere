@@ -19,8 +19,8 @@ package org.apache.shardingsphere.dbdiscovery.rule;
 
 import org.apache.shardingsphere.dbdiscovery.api.config.rule.DatabaseDiscoveryDataSourceRuleConfiguration;
 import org.apache.shardingsphere.dbdiscovery.exception.MissingRequiredDataSourceNamesConfigurationException;
-import org.apache.shardingsphere.dbdiscovery.mysql.type.MGRMySQLDatabaseDiscoveryProviderAlgorithm;
-import org.junit.Test;
+import org.apache.shardingsphere.dbdiscovery.mysql.type.MGRMySQLDatabaseDiscoveryProvider;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,29 +29,33 @@ import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class DatabaseDiscoveryDataSourceRuleTest {
     
     private final DatabaseDiscoveryDataSourceRule databaseDiscoveryDataSourceRule = new DatabaseDiscoveryDataSourceRule(
             new DatabaseDiscoveryDataSourceRuleConfiguration("test_pr", Arrays.asList("ds_0", "ds_1"), "ha_heartbeat", "discoveryTypeName"), new Properties(),
-            new MGRMySQLDatabaseDiscoveryProviderAlgorithm());
+            new MGRMySQLDatabaseDiscoveryProvider());
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void assertNewHADataSourceRuleWithoutName() {
-        new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration("", Arrays.asList("ds_0", "ds_1"), "ha_heartbeat", "discoveryTypeName"),
-                new Properties(), new MGRMySQLDatabaseDiscoveryProviderAlgorithm());
+        assertThrows(IllegalArgumentException.class,
+                () -> new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration("", Arrays.asList("ds_0", "ds_1"), "ha_heartbeat", "discoveryTypeName"),
+                        new Properties(), new MGRMySQLDatabaseDiscoveryProvider()));
     }
     
-    @Test(expected = MissingRequiredDataSourceNamesConfigurationException.class)
+    @Test
     public void assertNewHADataSourceRuleWithNullDataSourceName() {
-        new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration("ds", null, "ha_heartbeat", "discoveryTypeName"),
-                new Properties(), new MGRMySQLDatabaseDiscoveryProviderAlgorithm());
+        assertThrows(MissingRequiredDataSourceNamesConfigurationException.class,
+                () -> new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration(
+                        "ds", null, "ha_heartbeat", "discoveryTypeName"), new Properties(), new MGRMySQLDatabaseDiscoveryProvider()));
     }
     
-    @Test(expected = MissingRequiredDataSourceNamesConfigurationException.class)
+    @Test
     public void assertNewHADataSourceRuleWithEmptyDataSourceName() {
-        new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration("ds", Collections.emptyList(), "ha_heartbeat", "discoveryTypeName"),
-                new Properties(), new MGRMySQLDatabaseDiscoveryProviderAlgorithm());
+        assertThrows(MissingRequiredDataSourceNamesConfigurationException.class,
+                () -> new DatabaseDiscoveryDataSourceRule(new DatabaseDiscoveryDataSourceRuleConfiguration("ds", Collections.emptyList(), "ha_heartbeat", "discoveryTypeName"),
+                        new Properties(), new MGRMySQLDatabaseDiscoveryProvider()));
     }
     
     @Test

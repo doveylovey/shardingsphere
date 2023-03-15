@@ -76,7 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-proxy-backend</artifactId>
+            <artifactId>shardingsphere-proxy-backend-core</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
             <exclusions>
@@ -87,6 +87,12 @@
             </exclusions>
         </dependency>
         
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-test-util</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-data-pipeline-distsql-statement</artifactId>

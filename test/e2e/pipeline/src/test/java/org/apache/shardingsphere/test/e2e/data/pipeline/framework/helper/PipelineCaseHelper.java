@@ -17,23 +17,25 @@
 
 package org.apache.shardingsphere.test.e2e.data.pipeline.framework.helper;
 
+import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.type.dialect.MySQLDatabaseType;
-import org.apache.shardingsphere.sharding.algorithm.keygen.SnowflakeKeyGenerateAlgorithm;
+import org.apache.shardingsphere.infra.database.type.dialect.OpenGaussDatabaseType;
+import org.apache.shardingsphere.infra.database.type.dialect.PostgreSQLDatabaseType;
 import org.apache.shardingsphere.sharding.spi.KeyGenerateAlgorithm;
 import org.apache.shardingsphere.test.e2e.data.pipeline.util.AutoIncrementKeyGenerateAlgorithm;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.Year;
 import java.util.ArrayList;
@@ -42,17 +44,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 public final class PipelineCaseHelper {
-    
-    private static final SnowflakeKeyGenerateAlgorithm SNOWFLAKE_KEY_GENERATE_ALGORITHM = new SnowflakeKeyGenerateAlgorithm();
-    
-    /**
-     * Generate snowflake key.
-     *
-     * @return snowflake key
-     */
-    public static long generateSnowflakeKey() {
-        return SNOWFLAKE_KEY_GENERATE_ALGORITHM.generateKey();
-    }
     
     /**
      * Generate insert data, contains full fields.
@@ -67,31 +58,47 @@ public final class PipelineCaseHelper {
         }
         AutoIncrementKeyGenerateAlgorithm orderKeyGenerate = new AutoIncrementKeyGenerateAlgorithm();
         AutoIncrementKeyGenerateAlgorithm orderItemKeyGenerate = new AutoIncrementKeyGenerateAlgorithm();
-        List<Object[]> orderData = new ArrayList<>(insertRows);
-        List<Object[]> orderItemData = new ArrayList<>(insertRows);
-        for (int i = 0; i < insertRows; i++) {
-            int orderId = orderKeyGenerate.generateKey();
-            int userId = generateInt(0, 6);
-            LocalDateTime now = LocalDateTime.now();
-            int randomInt = generateInt(-100, 100);
-            int randomUnsignedInt = generateInt(0, 100);
-            String emojiText = "☠️x☺️x✋x☹️";
-            if (databaseType instanceof MySQLDatabaseType) {
-                Object[] addObjs = {orderId, userId, generateString(6) + "", randomInt, randomInt, randomInt,
-                        randomUnsignedInt, randomUnsignedInt, randomUnsignedInt, randomUnsignedInt, generateFloat(), generateDouble(-100000000, 100000000),
-                        BigDecimal.valueOf(generateDouble(1, 100)), now, now, now.toLocalDate(), now.toLocalTime(), Year.now().getValue(), "1", "t", "e", "s", "t", generateString(2),
-                        emojiText, generateString(1), "1", "2", generateJsonString(32)};
-                orderData.add(addObjs);
-            } else {
-                long currentTimeMillis = System.currentTimeMillis();
-                orderData.add(new Object[]{orderId, userId, generateString(6), randomInt,
-                        BigDecimal.valueOf(generateDouble(1, 100)), true, "bytea".getBytes(), generateString(2), generateString(2), generateFloat(), generateDouble(0, 1000),
-                        generateJsonString(8), generateJsonString(12), emojiText, new Date(currentTimeMillis), new Time(currentTimeMillis), Timestamp.valueOf(LocalDateTime.now()),
-                        OffsetDateTime.now()});
-            }
-            orderItemData.add(new Object[]{orderItemKeyGenerate.generateKey(), orderId, userId, "SUCCESS"});
-        }
+        List<Object[]> orderData = generateOrderInsertData(databaseType, orderKeyGenerate, insertRows);
+        List<Object[]> orderItemData = generateOrderItemInsertData(orderItemKeyGenerate, insertRows);
         return Pair.of(orderData, orderItemData);
+    }
+    
+    /**
+     * Generate order insert data.
+     *
+     * @param databaseType database type
+     * @param keyGenerateAlgorithm key generate algorithm
+     * @param insertRows insert rows
+     * @return order insert data.
+     */
+    public static List<Object[]> generateOrderInsertData(final DatabaseType databaseType, final KeyGenerateAlgorithm keyGenerateAlgorithm, final int insertRows) {
+        List<Object[]> result = new ArrayList<>(insertRows);
+        String emojiText = "☠️x☺️x✋x☹️";
+        if (databaseType instanceof MySQLDatabaseType) {
+            for (int i = 0; i < insertRows; i++) {
+                int randomInt = generateInt(-100, 100);
+                Object orderId = keyGenerateAlgorithm.generateKey();
+                int randomUnsignedInt = generateInt(0, 100);
+                LocalDateTime now = LocalDateTime.now();
+                Object[] addObjs = {orderId, generateInt(0, 100), generateString(6) + "", randomInt, randomInt, randomInt,
+                        randomUnsignedInt, randomUnsignedInt, randomUnsignedInt, randomUnsignedInt, generateFloat(), generateDouble(),
+                        BigDecimal.valueOf(generateDouble()), now, now, now.toLocalDate(), now.toLocalTime(), Year.now().getValue(), "1", "t", "e", "s", "t", generateString(2),
+                        emojiText, generateString(1), "1", "2", generateJsonString(32, false)};
+                result.add(addObjs);
+            }
+            return result;
+        }
+        if (databaseType instanceof PostgreSQLDatabaseType || databaseType instanceof OpenGaussDatabaseType) {
+            for (int i = 0; i < insertRows; i++) {
+                Object orderId = keyGenerateAlgorithm.generateKey();
+                result.add(new Object[]{orderId, generateInt(0, 100), generateString(6), generateInt(-128, 127),
+                        BigDecimal.valueOf(generateDouble()), true, "bytea".getBytes(), generateString(2), generateString(2), generateFloat(), generateDouble(),
+                        generateJsonString(8, false), generateJsonString(12, true), emojiText, LocalDate.now(),
+                        LocalTime.now(), Timestamp.valueOf(LocalDateTime.now()), OffsetDateTime.now()});
+            }
+            return result;
+        }
+        throw new UnsupportedOperationException("now support generate %s insert data");
     }
     
     private static int generateInt(final int min, final int max) {
@@ -102,16 +109,50 @@ public final class PipelineCaseHelper {
         return RandomStringUtils.randomAlphabetic(strLength);
     }
     
-    private static String generateJsonString(final int strLength) {
-        return String.format("{\"test\":\"%s\"}", generateString(strLength));
+    /**
+     * Generate json string.
+     *
+     * @param useUnicodeCharacter use unicode character
+     * @param length length
+     * @return json string
+     */
+    public static String generateJsonString(final int length, final boolean useUnicodeCharacter) {
+        String value;
+        if (useUnicodeCharacter) {
+            // TODO openGauss incremental task parse single quote not correctly now
+            value = Strings.repeat("{中 } ABC", length);
+        } else {
+            value = generateString(length);
+        }
+        return String.format("{\"test\":\"%s\"}", value);
     }
     
-    private static float generateFloat() {
-        return ThreadLocalRandom.current().nextFloat();
+    /**
+     * Generate float value.
+     *
+     * @return float.
+     */
+    public static float generateFloat() {
+        return ThreadLocalRandom.current().nextInt(-1000, 1000) / 100.0F;
     }
     
-    private static double generateDouble(final double min, final double max) {
-        return ThreadLocalRandom.current().nextDouble(min, max);
+    /**
+     * Generate double value.
+     *
+     * @return double
+     */
+    public static double generateDouble() {
+        return ThreadLocalRandom.current().nextInt(-1000000000, 1000000000) / 1000000.0D;
+    }
+    
+    private static List<Object[]> generateOrderItemInsertData(final KeyGenerateAlgorithm keyGenerateAlgorithm, final int insertRows) {
+        List<Object[]> result = new ArrayList<>(insertRows);
+        for (int i = 0; i < insertRows; i++) {
+            Object orderId = keyGenerateAlgorithm.generateKey();
+            int userId = generateInt(0, 100);
+            result.add(new Object[]{keyGenerateAlgorithm.generateKey(), orderId, userId, "SUCCESS"});
+        }
+        return result;
     }
     
     /**

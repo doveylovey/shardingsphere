@@ -83,3 +83,33 @@ Data source connection pool active detector
 | ---------------------------------- | ---------------------------------------- | ---------------------------- |
 | Default                            | Default data source pool active detector | [`org.apache.shardingsphere.infra.datasource.pool.destroyer.detector.type.DefaultDataSourcePoolActiveDetector`](https://github.com/apache/shardingsphere/blob/master/infra/common/src/main/java/org/apache/shardingsphere/infra/datasource/pool/destroyer/detector/type/DefaultDataSourcePoolActiveDetector.java) |
 | com.zaxxer.hikari.HikariDataSource | Hikari data source pool active detector  | [`org.apache.shardingsphere.infra.datasource.pool.destroyer.detector.type.HikariDataSourcePoolActiveDetector`](https://github.com/apache/shardingsphere/blob/master/infra/common/src/main/java/org/apache/shardingsphere/infra/datasource/pool/destroyer/detector/type/HikariDataSourcePoolActiveDetector.java) |
+
+## ShardingSphereDriverURLProvider
+
+### Fully-qualified class name
+
+[`org.apache.shardingsphere.driver.jdbc.core.driver.ShardingSphereDriverURLProvider`](https://github.com/apache/shardingsphere/blob/master/jdbc/core/src/main/java/org/apache/shardingsphere/driver/jdbc/core/driver/ShardingSphereDriverURLProvider.java)
+
+### Definition
+
+ShardingSphere driver URL provider
+
+### Implementation classes
+
+| *Configuration Type*                    | *Description*                         | *Fully-qualified class name*                                                                                                                                                                                                                                   |
+|-----------------------------------------|---------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| jdbc:shardingsphere:classpath:<path>    | The classpath driver URL provider     | [`org.apache.shardingsphere.driver.jdbc.core.driver.spi.ClasspathDriverURLProvider`](https://github.com/apache/shardingsphere/blob/master/jdbc/core/src/main/java/org/apache/shardingsphere/driver/jdbc/core/driver/spi/ClasspathDriverURLProvider.java)       |
+| jdbc:shardingsphere:absolutepath:<path> | The absolute path driver URL provider | [`org.apache.shardingsphere.driver.jdbc.core.driver.spi.AbsolutePathDriverURLProvider`](https://github.com/apache/shardingsphere/blob/master/jdbc/core/src/main/java/org/apache/shardingsphere/driver/jdbc/core/driver/spi/AbsolutePathDriverURLProvider.java) |
+| jdbc:shardingsphere:apollo:<namespace>  | The apollo driver URL provider        | [`org.apache.shardingsphere.driver.jdbc.core.driver.spi.ApolloDriverURLProvider`](https://github.com/apache/shardingsphere/blob/master/jdbc/core/src/main/java/org/apache/shardingsphere/driver/jdbc/core/driver/spi/ApolloDriverURLProvider.java)             |
+
+### Notice
+
+When you use the Apollo driver url provider, you need to add the corresponding apollo pom dependency, currently available at version `1.9.0`, as follows:
+
+```xml
+<dependency>
+    <groupId>com.ctrip.framework.apollo</groupId>
+    <artifactId>apollo-client</artifactId>
+    <version>${apollo.version}</version>
+</dependency>
+```

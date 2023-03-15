@@ -25,6 +25,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import org.apache.shardingsphere.agent.api.advice.TargetAdviceObject;
 import org.apache.shardingsphere.agent.plugin.tracing.core.advice.TracingSQLParserEngineAdvice;
+import org.apache.shardingsphere.agent.plugin.tracing.core.constant.AttributeConstants;
 import org.apache.shardingsphere.agent.plugin.tracing.opentelemetry.constant.OpenTelemetryConstants;
 
 import java.lang.reflect.Method;
@@ -35,16 +36,16 @@ import java.lang.reflect.Method;
 public final class OpenTelemetrySQLParserEngineAdvice extends TracingSQLParserEngineAdvice<Span> {
     
     @Override
-    protected Object recordSQLParseInfo(final Span rootSpan, final TargetAdviceObject target, final String sql) {
-        Tracer tracer = GlobalOpenTelemetry.getTracer("shardingsphere-agent");
+    protected Object recordSQLParseInfo(final Span parentSpan, final TargetAdviceObject target, final String sql) {
+        Tracer tracer = GlobalOpenTelemetry.getTracer(OpenTelemetryConstants.TRACER_NAME);
         SpanBuilder spanBuilder = tracer.spanBuilder(OPERATION_NAME)
-                .setAttribute(OpenTelemetryConstants.COMPONENT, OpenTelemetryConstants.COMPONENT_NAME)
-                .setAttribute(OpenTelemetryConstants.DB_TYPE, OpenTelemetryConstants.DB_TYPE_VALUE)
-                .setAttribute(OpenTelemetryConstants.DB_STATEMENT, sql);
-        if (null != rootSpan) {
-            spanBuilder.setParent(Context.current().with(rootSpan));
-        }
-        return spanBuilder.startSpan();
+                .setAttribute(AttributeConstants.COMPONENT, AttributeConstants.COMPONENT_NAME)
+                .setAttribute(AttributeConstants.DB_STATEMENT, sql)
+                .setAttribute(AttributeConstants.SPAN_KIND, AttributeConstants.SPAN_KIND_INTERNAL);
+        spanBuilder.setParent(Context.current().with(parentSpan));
+        Span result = spanBuilder.startSpan();
+        target.setAttachment(result);
+        return result;
     }
     
     @Override
@@ -54,6 +55,8 @@ public final class OpenTelemetrySQLParserEngineAdvice extends TracingSQLParserEn
     
     @Override
     public void onThrowing(final TargetAdviceObject target, final Method method, final Object[] args, final Throwable throwable, final String pluginType) {
-        ((Span) target.getAttachment()).setStatus(StatusCode.ERROR).recordException(throwable);
+        Span span = (Span) target.getAttachment();
+        span.setStatus(StatusCode.ERROR).recordException(throwable);
+        span.end();
     }
 }

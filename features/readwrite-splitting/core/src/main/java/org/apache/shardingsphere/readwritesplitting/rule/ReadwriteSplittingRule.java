@@ -19,9 +19,10 @@ package org.apache.shardingsphere.readwritesplitting.rule;
 
 import com.google.common.base.Preconditions;
 import lombok.Getter;
-import org.apache.shardingsphere.infra.algorithm.ShardingSphereAlgorithmFactory;
+import org.apache.shardingsphere.infra.config.algorithm.AlgorithmConfiguration;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.datasource.state.DataSourceState;
+import org.apache.shardingsphere.infra.instance.InstanceContext;
 import org.apache.shardingsphere.infra.metadata.database.schema.QualifiedDatabase;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.event.DataSourceStatusChangedEvent;
@@ -36,6 +37,7 @@ import org.apache.shardingsphere.infra.util.exception.ShardingSpherePrecondition
 import org.apache.shardingsphere.infra.util.expr.InlineExpressionParser;
 import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.mode.metadata.storage.event.StorageNodeDataSourceChangedEvent;
+import org.apache.shardingsphere.mode.metadata.storage.event.StorageNodeDataSourceDeletedEvent;
 import org.apache.shardingsphere.readwritesplitting.api.ReadwriteSplittingRuleConfiguration;
 import org.apache.shardingsphere.readwritesplitting.api.rule.ReadwriteSplittingDataSourceRuleConfiguration;
 import org.apache.shardingsphere.readwritesplitting.api.strategy.DynamicReadwriteSplittingStrategyConfiguration;
@@ -59,6 +61,8 @@ import java.util.stream.Collectors;
  */
 public final class ReadwriteSplittingRule implements DatabaseRule, DataSourceContainedRule, StaticDataSourceContainedRule, ExportableRule, StorageConnectorReusableRule {
     
+    private final String databaseName;
+    
     @Getter
     private final RuleConfiguration configuration;
     
@@ -66,11 +70,20 @@ public final class ReadwriteSplittingRule implements DatabaseRule, DataSourceCon
     
     private final Map<String, ReadwriteSplittingDataSourceRule> dataSourceRules;
     
-    public ReadwriteSplittingRule(final ReadwriteSplittingRuleConfiguration ruleConfig, final Collection<ShardingSphereRule> builtRules) {
+    private final InstanceContext instanceContext;
+    
+    public ReadwriteSplittingRule(final String databaseName, final ReadwriteSplittingRuleConfiguration ruleConfig,
+                                  final Collection<ShardingSphereRule> builtRules, final InstanceContext instanceContext) {
+        this.databaseName = databaseName;
+        this.instanceContext = instanceContext;
         configuration = ruleConfig;
-        ruleConfig.getDataSources().stream().filter(each -> null != ruleConfig.getLoadBalancers().get(each.getLoadBalancerName()))
-                .forEach(each -> loadBalancers.put(each.getName() + "." + each.getLoadBalancerName(),
-                        ShardingSphereAlgorithmFactory.createAlgorithm(ruleConfig.getLoadBalancers().get(each.getLoadBalancerName()), ReadQueryLoadBalanceAlgorithm.class)));
+        for (ReadwriteSplittingDataSourceRuleConfiguration dataSourceRuleConfiguration : ruleConfig.getDataSources()) {
+            if (ruleConfig.getLoadBalancers().containsKey(dataSourceRuleConfiguration.getLoadBalancerName())) {
+                AlgorithmConfiguration algorithmConfig = ruleConfig.getLoadBalancers().get(dataSourceRuleConfiguration.getLoadBalancerName());
+                loadBalancers.put(dataSourceRuleConfiguration.getName() + "." + dataSourceRuleConfiguration.getLoadBalancerName(),
+                        TypedSPILoader.getService(ReadQueryLoadBalanceAlgorithm.class, algorithmConfig.getType(), algorithmConfig.getProps()));
+            }
+        }
         dataSourceRules = new HashMap<>(ruleConfig.getDataSources().size(), 1);
         for (ReadwriteSplittingDataSourceRuleConfiguration each : ruleConfig.getDataSources()) {
             dataSourceRules.putAll(createReadwriteSplittingDataSourceRules(each, builtRules));
@@ -132,7 +145,7 @@ public final class ReadwriteSplittingRule implements DatabaseRule, DataSourceCon
     private ReadwriteSplittingDataSourceRuleConfiguration createDynamicDataSourceRuleConfiguration(final ReadwriteSplittingDataSourceRuleConfiguration config, final int index,
                                                                                                    final List<String> readwriteDataSourceNames, final List<String> autoAwareDataSourceNames) {
         return new ReadwriteSplittingDataSourceRuleConfiguration(readwriteDataSourceNames.get(index), null,
-                new DynamicReadwriteSplittingStrategyConfiguration(autoAwareDataSourceNames.get(index), config.getDynamicStrategy().getWriteDataSourceQueryEnabled()), config.getLoadBalancerName());
+                new DynamicReadwriteSplittingStrategyConfiguration(autoAwareDataSourceNames.get(index)), config.getLoadBalancerName());
     }
     
     /**
@@ -170,6 +183,27 @@ public final class ReadwriteSplittingRule implements DatabaseRule, DataSourceCon
         ReadwriteSplittingDataSourceRule dataSourceRule = dataSourceRules.get(qualifiedDatabase.getGroupName());
         Preconditions.checkNotNull(dataSourceRule, "Can not find readwrite-splitting data source rule in database `%s`", qualifiedDatabase.getDatabaseName());
         dataSourceRule.updateDisabledDataSourceNames(dataSourceEvent.getQualifiedDatabase().getDataSourceName(), DataSourceState.DISABLED == dataSourceEvent.getDataSource().getStatus());
+    }
+    
+    @Override
+    public void cleanStorageNodeDataSource(final String groupName) {
+        Preconditions.checkNotNull(dataSourceRules.get(groupName), String.format("`%s` group name not exist in database `%s`", groupName, databaseName));
+        deleteStorageNodeDataSources(dataSourceRules.get(groupName));
+    }
+    
+    private void deleteStorageNodeDataSources(final ReadwriteSplittingDataSourceRule rule) {
+        if (rule.getReadwriteSplittingStrategy() instanceof DynamicReadwriteSplittingStrategy) {
+            return;
+        }
+        rule.getReadwriteSplittingStrategy().getReadDataSources()
+                .forEach(each -> instanceContext.getEventBusContext().post(new StorageNodeDataSourceDeletedEvent(new QualifiedDatabase(databaseName, rule.getName(), each))));
+    }
+    
+    @Override
+    public void cleanStorageNodeDataSources() {
+        for (Entry<String, ReadwriteSplittingDataSourceRule> entry : dataSourceRules.entrySet()) {
+            deleteStorageNodeDataSources(entry.getValue());
+        }
     }
     
     @Override

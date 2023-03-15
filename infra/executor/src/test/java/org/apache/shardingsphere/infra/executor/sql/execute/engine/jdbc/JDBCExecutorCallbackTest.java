@@ -25,16 +25,15 @@ import org.apache.shardingsphere.infra.executor.sql.execute.engine.ConnectionMod
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.SQLExecutorExceptionHandler;
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.driver.jdbc.JDBCExecutionUnit;
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.driver.jdbc.JDBCExecutorCallback;
-import org.apache.shardingsphere.infra.util.eventbus.EventBusContext;
 import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.internal.configuration.plugins.Plugins;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -48,10 +47,11 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public final class JDBCExecutorCallbackTest {
     
     @Mock
@@ -65,7 +65,7 @@ public final class JDBCExecutorCallbackTest {
     
     private Collection<JDBCExecutionUnit> units;
     
-    @Before
+    @BeforeEach
     public void setUp() throws SQLException {
         when(preparedStatement.getConnection()).thenReturn(connection);
         when(connection.getMetaData()).thenReturn(databaseMetaData);
@@ -79,8 +79,7 @@ public final class JDBCExecutorCallbackTest {
     @Test
     public void assertExecute() throws SQLException, NoSuchFieldException, IllegalAccessException {
         DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "MySQL");
-        JDBCExecutorCallback<?> jdbcExecutorCallback = new JDBCExecutorCallback<Integer>(databaseType, Collections.singletonMap("ds", databaseType), mock(SelectStatement.class), true,
-                new EventBusContext()) {
+        JDBCExecutorCallback<?> jdbcExecutorCallback = new JDBCExecutorCallback<Integer>(databaseType, Collections.singletonMap("ds", databaseType), mock(SelectStatement.class), true) {
             
             @Override
             protected Integer executeSQL(final String sql, final Statement statement, final ConnectionMode connectionMode, final DatabaseType storageType) throws SQLException {
@@ -94,9 +93,9 @@ public final class JDBCExecutorCallbackTest {
         };
         Map<String, DataSourceMetaData> cachedDataSourceMetaData = (Map<String, DataSourceMetaData>) Plugins.getMemberAccessor()
                 .get(JDBCExecutorCallback.class.getDeclaredField("CACHED_DATASOURCE_METADATA"), jdbcExecutorCallback);
-        jdbcExecutorCallback.execute(units, true, Collections.emptyMap());
+        jdbcExecutorCallback.execute(units, true);
         assertThat(cachedDataSourceMetaData.size(), is(1));
-        jdbcExecutorCallback.execute(units, true, Collections.emptyMap());
+        jdbcExecutorCallback.execute(units, true);
         assertThat(cachedDataSourceMetaData.size(), is(1));
     }
     
@@ -105,7 +104,7 @@ public final class JDBCExecutorCallbackTest {
         Object saneResult = new Object();
         JDBCExecutorCallback<Object> callback =
                 new JDBCExecutorCallback<Object>(TypedSPILoader.getService(DatabaseType.class, "MySQL"),
-                        Collections.singletonMap("ds", TypedSPILoader.getService(DatabaseType.class, "PostgreSQL")), mock(SelectStatement.class), true, new EventBusContext()) {
+                        Collections.singletonMap("ds", TypedSPILoader.getService(DatabaseType.class, "PostgreSQL")), mock(SelectStatement.class), true) {
                     
                     @Override
                     protected Object executeSQL(final String sql, final Statement statement, final ConnectionMode connectionMode, final DatabaseType storageType) throws SQLException {
@@ -117,15 +116,15 @@ public final class JDBCExecutorCallbackTest {
                         return Optional.of(saneResult);
                     }
                 };
-        assertThat(callback.execute(units, true, Collections.emptyMap()), is(Collections.singletonList(saneResult)));
-        assertThat(callback.execute(units, false, Collections.emptyMap()), is(Collections.emptyList()));
+        assertThat(callback.execute(units, true), is(Collections.singletonList(saneResult)));
+        assertThat(callback.execute(units, false), is(Collections.emptyList()));
     }
     
-    @Test(expected = SQLException.class)
-    public void assertExecuteSQLExceptionOccurredAndProtocolTypeSameAsDatabaseType() throws SQLException {
+    @Test
+    public void assertExecuteSQLExceptionOccurredAndProtocolTypeSameAsDatabaseType() {
         JDBCExecutorCallback<Object> callback =
                 new JDBCExecutorCallback<Object>(TypedSPILoader.getService(DatabaseType.class, "MySQL"),
-                        Collections.singletonMap("ds", TypedSPILoader.getService(DatabaseType.class, "PostgreSQL")), mock(SelectStatement.class), true, new EventBusContext()) {
+                        Collections.singletonMap("ds", TypedSPILoader.getService(DatabaseType.class, "PostgreSQL")), mock(SelectStatement.class), true) {
                     
                     @Override
                     protected Object executeSQL(final String sql, final Statement statement, final ConnectionMode connectionMode, final DatabaseType storageType) throws SQLException {
@@ -137,6 +136,6 @@ public final class JDBCExecutorCallbackTest {
                         return Optional.empty();
                     }
                 };
-        callback.execute(units, true, Collections.emptyMap());
+        assertThrows(SQLException.class, () -> callback.execute(units, true));
     }
 }

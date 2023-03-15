@@ -28,9 +28,11 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.OnDupl
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.combine.CombineSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.simple.LiteralExpressionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.AggregationProjectionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.ColumnProjectionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.ProjectionsSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.ShorthandProjectionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.predicate.LockSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.AliasSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.OwnerSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
@@ -38,7 +40,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateTable
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLInsertStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLSelectStatement;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -49,7 +51,7 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public final class TableExtractorTest {
@@ -141,6 +143,31 @@ public final class TableExtractorTest {
         projections.getProjections().add(new ShorthandProjectionSegment(0, 0));
         result.setProjections(projections);
         result.setFrom(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue(tableName))));
+        return result;
+    }
+    
+    @Test
+    public void assertExtractTablesFromCombineSegmentWithColumnProjection() {
+        MySQLSelectStatement selectStatement = createSelectStatementWithColumnProjection("t_order");
+        selectStatement.setCombine(new CombineSegment(0, 0, createSelectStatementWithColumnProjection("t_order"), CombineType.UNION, createSelectStatementWithColumnProjection("t_order_item")));
+        tableExtractor.extractTablesFromSelect(selectStatement);
+        Collection<SimpleTableSegment> actual = tableExtractor.getRewriteTables();
+        assertThat(actual.size(), is(2));
+        Iterator<SimpleTableSegment> iterator = actual.iterator();
+        assertTableSegment(iterator.next(), 0, 0, "t_order");
+        assertTableSegment(iterator.next(), 0, 0, "t_order_item");
+    }
+    
+    private MySQLSelectStatement createSelectStatementWithColumnProjection(final String tableName) {
+        MySQLSelectStatement result = new MySQLSelectStatement();
+        ProjectionsSegment projections = new ProjectionsSegment(0, 0);
+        ColumnSegment columnSegment = new ColumnSegment(0, 0, new IdentifierValue("id"));
+        columnSegment.setOwner(new OwnerSegment(0, 0, new IdentifierValue("a")));
+        projections.getProjections().add(new ColumnProjectionSegment(columnSegment));
+        result.setProjections(projections);
+        SimpleTableSegment tableSegment = new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue(tableName)));
+        tableSegment.setAlias(new AliasSegment(0, 0, new IdentifierValue("a")));
+        result.setFrom(tableSegment);
         return result;
     }
 }

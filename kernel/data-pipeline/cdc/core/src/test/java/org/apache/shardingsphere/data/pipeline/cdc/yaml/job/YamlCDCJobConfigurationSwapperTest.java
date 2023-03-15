@@ -18,12 +18,15 @@
 package org.apache.shardingsphere.data.pipeline.cdc.yaml.job;
 
 import org.apache.shardingsphere.data.pipeline.cdc.config.job.CDCJobConfiguration;
-import org.junit.Test;
+import org.apache.shardingsphere.data.pipeline.cdc.constant.CDCSinkType;
+import org.apache.shardingsphere.data.pipeline.cdc.yaml.job.YamlCDCJobConfiguration.YamlSinkConfiguration;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class YamlCDCJobConfigurationSwapperTest {
     
@@ -31,15 +34,16 @@ public final class YamlCDCJobConfigurationSwapperTest {
     public void assertSwapToObject() {
         YamlCDCJobConfiguration yamlJobConfig = new YamlCDCJobConfiguration();
         yamlJobConfig.setJobId("j51017f973ac82cb1edea4f5238a258c25e89");
-        yamlJobConfig.setDatabase("test_db");
-        yamlJobConfig.setTableNames(Arrays.asList("t_order", "t_order_item"));
-        yamlJobConfig.setSubscriptionName("test_name");
-        yamlJobConfig.setSubscriptionMode("FULL");
+        yamlJobConfig.setDatabaseName("test_db");
+        yamlJobConfig.setSchemaTableNames(Arrays.asList("test.t_order", "t_order_item"));
+        yamlJobConfig.setFull(true);
+        YamlSinkConfiguration sinkConfig = new YamlSinkConfiguration();
+        sinkConfig.setSinkType(CDCSinkType.SOCKET.name());
+        yamlJobConfig.setSinkConfig(sinkConfig);
         CDCJobConfiguration actual = new YamlCDCJobConfigurationSwapper().swapToObject(yamlJobConfig);
         assertThat(actual.getJobId(), is("j51017f973ac82cb1edea4f5238a258c25e89"));
-        assertThat(actual.getDatabase(), is("test_db"));
-        assertThat(actual.getTableNames(), is(Arrays.asList("t_order", "t_order_item")));
-        assertThat(actual.getSubscriptionName(), is("test_name"));
-        assertThat(actual.getSubscriptionMode(), is("FULL"));
+        assertThat(actual.getDatabaseName(), is("test_db"));
+        assertThat(actual.getSchemaTableNames(), is(Arrays.asList("test.t_order", "t_order_item")));
+        assertTrue(actual.isFull());
     }
 }

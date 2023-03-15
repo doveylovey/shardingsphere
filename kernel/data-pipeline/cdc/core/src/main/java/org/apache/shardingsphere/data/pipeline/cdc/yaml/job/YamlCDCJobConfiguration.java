@@ -23,6 +23,7 @@ import org.apache.shardingsphere.data.pipeline.api.config.job.yaml.YamlPipelineJ
 import org.apache.shardingsphere.data.pipeline.api.datasource.config.yaml.YamlPipelineDataSourceConfiguration;
 
 import java.util.List;
+import java.util.Properties;
 
 /**
  * CDC job configuration for YAML.
@@ -33,13 +34,11 @@ public final class YamlCDCJobConfiguration implements YamlPipelineJobConfigurati
     
     private String jobId;
     
-    private String database;
+    private String databaseName;
     
-    private List<String> tableNames;
+    private List<String> schemaTableNames;
     
-    private String subscriptionName;
-    
-    private String subscriptionMode;
+    private boolean full;
     
     private String sourceDatabaseType;
     
@@ -51,6 +50,8 @@ public final class YamlCDCJobConfiguration implements YamlPipelineJobConfigurati
     
     private boolean decodeWithTX;
     
+    private YamlSinkConfiguration sinkConfig;
+    
     private int concurrency = 1;
     
     private int retryTimes;
@@ -58,5 +59,17 @@ public final class YamlCDCJobConfiguration implements YamlPipelineJobConfigurati
     @Override
     public String getTargetDatabaseName() {
         throw new UnsupportedOperationException();
+    }
+    
+    /**
+     * Sink configuration for YAML.
+     */
+    @Getter
+    @Setter
+    public static class YamlSinkConfiguration {
+        
+        private String sinkType;
+        
+        private Properties props;
     }
 }

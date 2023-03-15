@@ -21,11 +21,11 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.agent.core.advisor.config.yaml.loader.YamlAdvisorsConfigurationLoader;
 import org.apache.shardingsphere.agent.core.advisor.config.yaml.swapper.YamlAdvisorsConfigurationSwapper;
+import org.apache.shardingsphere.agent.core.log.AgentLogger;
 import org.apache.shardingsphere.agent.core.log.AgentLoggerFactory;
 import org.apache.shardingsphere.agent.core.plugin.classloader.AgentPluginClassLoader;
-import org.apache.shardingsphere.agent.core.plugin.jar.PluginJarLoader;
-import org.apache.shardingsphere.agent.log.api.AgentLogger;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ import java.util.jar.JarFile;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AdvisorConfigurationLoader {
     
-    private static final AgentLogger LOGGER = AgentLoggerFactory.getAgentLogger(PluginJarLoader.class);
+    private static final AgentLogger LOGGER = AgentLoggerFactory.getAgentLogger(AdvisorConfigurationLoader.class);
     
     /**
      * Load advisor configurations.
@@ -68,7 +68,7 @@ public final class AdvisorConfigurationLoader {
     }
     
     private static InputStream getResourceStream(final ClassLoader pluginClassLoader, final String fileName) {
-        return pluginClassLoader.getResourceAsStream(String.join("/", "META-INF", "conf", fileName));
+        return pluginClassLoader.getResourceAsStream(String.join(File.separator, "META-INF", "conf", fileName));
     }
     
     private static String getFileName(final String pluginType, final boolean isEnhancedForProxy) {

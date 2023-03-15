@@ -24,65 +24,65 @@ import org.apache.shardingsphere.authority.rule.AuthorityRule;
 import org.apache.shardingsphere.data.pipeline.cdc.common.CDCResponseErrorCode;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.CDCRequest;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.CDCRequest.Builder;
-import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequest;
-import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequest.BasicBody;
+import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.CDCRequest.Type;
+import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequestBody;
+import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequestBody.BasicBody;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.response.CDCResponse;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.response.CDCResponse.Status;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
 import org.apache.shardingsphere.infra.metadata.user.ShardingSphereUser;
+import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.MockedStatic;
+import org.apache.shardingsphere.test.mock.AutoMockExtension;
+import org.apache.shardingsphere.test.mock.StaticMockSettings;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(AutoMockExtension.class)
+@StaticMockSettings(ProxyContext.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public final class CDCChannelInboundHandlerTest {
     
-    private static MockedStatic<ProxyContext> proxyContext;
+    private final EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(), new CDCChannelInboundHandler());
     
-    private final CDCChannelInboundHandler cdcChannelInboundHandler = new CDCChannelInboundHandler();
-    
-    private EmbeddedChannel channel;
-    
-    @BeforeClass
-    public static void beforeClass() {
-        proxyContext = mockStatic(ProxyContext.class);
-        ProxyContext mockedProxyContext = mock(ProxyContext.class, RETURNS_DEEP_STUBS);
-        proxyContext.when(ProxyContext::getInstance).thenReturn(mockedProxyContext);
-        AuthorityRule authorityRule = mock(AuthorityRule.class);
-        ShardingSphereUser rootUser = new ShardingSphereUser("root", "root", "%");
-        when(authorityRule.findUser(any())).thenReturn(Optional.of(rootUser));
-        ShardingSphereRuleMetaData shardingSphereRuleMetaData = new ShardingSphereRuleMetaData(Collections.singletonList(authorityRule));
-        when(mockedProxyContext.getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData()).thenReturn(shardingSphereRuleMetaData);
-    }
-    
-    @AfterClass
-    public static void afterClass() {
-        proxyContext.close();
-    }
-    
-    @Before
+    @BeforeEach
     public void setup() {
-        channel = new EmbeddedChannel(new LoggingHandler(), cdcChannelInboundHandler);
+        ContextManager contextManager = mockContextManager();
+        when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
+    }
+    
+    private ContextManager mockContextManager() {
+        ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
+        ShardingSphereRuleMetaData globalRuleMetaData = new ShardingSphereRuleMetaData(Collections.singleton(mockAuthorityRule()));
+        when(result.getMetaDataContexts().getMetaData().getGlobalRuleMetaData()).thenReturn(globalRuleMetaData);
+        return result;
+    }
+    
+    private AuthorityRule mockAuthorityRule() {
+        AuthorityRule result = mock(AuthorityRule.class);
+        when(result.findUser(any())).thenReturn(Optional.of(new ShardingSphereUser("root", "root", "%")));
+        return result;
     }
     
     @Test
     public void assertLoginRequestFailed() {
-        CDCRequest actualRequest = CDCRequest.newBuilder().setLogin(LoginRequest.newBuilder().setBasicBody(BasicBody.newBuilder().setUsername("root2").build()).build()).build();
+        CDCRequest actualRequest = CDCRequest.newBuilder().setType(Type.LOGIN).setLoginRequestBody(LoginRequestBody.newBuilder().setBasicBody(BasicBody.newBuilder().setUsername("root2").build())
+                .build()).build();
         channel.writeInbound(actualRequest);
         CDCResponse expectedGreetingResult = channel.readOutbound();
         assertTrue(expectedGreetingResult.hasServerGreetingResult());
@@ -94,7 +94,7 @@ public final class CDCChannelInboundHandlerTest {
     
     @Test
     public void assertIllegalLoginRequest() {
-        CDCRequest actualRequest = CDCRequest.newBuilder().setVersion(1).setRequestId("test").build();
+        CDCRequest actualRequest = CDCRequest.newBuilder().setType(Type.LOGIN).setVersion(1).setRequestId("test").build();
         channel.writeInbound(actualRequest);
         CDCResponse expectedGreetingResult = channel.readOutbound();
         assertTrue(expectedGreetingResult.hasServerGreetingResult());
@@ -107,7 +107,8 @@ public final class CDCChannelInboundHandlerTest {
     @Test
     public void assertLoginRequestSucceed() {
         String encryptPassword = Hashing.sha256().hashBytes("root".getBytes()).toString().toUpperCase();
-        Builder builder = CDCRequest.newBuilder().setLogin(LoginRequest.newBuilder().setBasicBody(BasicBody.newBuilder().setUsername("root").setPassword(encryptPassword).build()).build());
+        Builder builder = CDCRequest.newBuilder().setType(Type.LOGIN).setLoginRequestBody(LoginRequestBody.newBuilder().setBasicBody(BasicBody.newBuilder().setUsername("root")
+                .setPassword(encryptPassword).build()).build());
         CDCRequest actualRequest = builder.build();
         channel.writeInbound(actualRequest);
         CDCResponse expectedGreetingResult = channel.readOutbound();

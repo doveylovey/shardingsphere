@@ -17,50 +17,34 @@
 
 package org.apache.shardingsphere.test.e2e.agent.jaeger;
 
-import lombok.SneakyThrows;
-import org.apache.shardingsphere.test.e2e.agent.common.BasePluginE2EIT;
+import org.apache.shardingsphere.test.e2e.agent.common.AgentTestActionExtension;
 import org.apache.shardingsphere.test.e2e.agent.common.env.E2ETestEnvironment;
-import org.apache.shardingsphere.test.e2e.agent.common.util.OkHttpUtils;
-import org.apache.shardingsphere.test.e2e.agent.jaeger.result.JaegerTraceResult;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.shardingsphere.test.e2e.agent.jaeger.asserts.SpanAssert;
+import org.apache.shardingsphere.test.e2e.agent.jaeger.cases.IntegrationTestCasesLoader;
+import org.apache.shardingsphere.test.e2e.agent.jaeger.cases.SpanTestCase;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import java.io.IOException;
-import java.util.Properties;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.assertFalse;
-
-public final class JaegerPluginE2EIT extends BasePluginE2EIT {
+@ExtendWith(AgentTestActionExtension.class)
+public final class JaegerPluginE2EIT {
     
-    private Properties props;
-    
-    private String url;
-    
-    private String serviceName;
-    
-    @Before
-    public void before() {
-        props = E2ETestEnvironment.getInstance().getProps();
-        url = props.getProperty("jaeger.url");
-        serviceName = props.getProperty("jaeger.servername");
+    @ParameterizedTest
+    @ArgumentsSource(TestCaseArgumentsProvider.class)
+    public void assertProxyWithAgent(final SpanTestCase spanTestCase) {
+        SpanAssert.assertIs(E2ETestEnvironment.getInstance().getProps().getProperty("jaeger.url"), spanTestCase);
     }
     
-    @SneakyThrows(IOException.class)
-    @Test
-    public void assertProxyWithAgent() {
-        super.assertProxyWithAgent();
-        try {
-            Thread.sleep(Long.parseLong(props.getProperty("jaeger.waitMs", "60000")));
-        } catch (final InterruptedException ignore) {
+    private static class TestCaseArgumentsProvider implements ArgumentsProvider {
+        
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext extensionContext) {
+            return IntegrationTestCasesLoader.getInstance().loadIntegrationTestCases().stream().map(Arguments::of);
         }
-        assertTraces();
-    }
-    
-    @SneakyThrows(IOException.class)
-    private void assertTraces() {
-        String traceURL = url + "traces?service=" + serviceName;
-        JaegerTraceResult jaegerTraceResult = OkHttpUtils.getInstance().get(traceURL, JaegerTraceResult.class);
-        assertFalse("Jaeger should have tracing data.", jaegerTraceResult.getData().isEmpty());
-        jaegerTraceResult.getData().forEach(each -> assertFalse("Jaeger should have span data.", each.getSpans().isEmpty()));
     }
 }

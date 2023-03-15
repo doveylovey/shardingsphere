@@ -18,9 +18,8 @@
 package org.apache.shardingsphere.sharding.algorithm.sharding.classbased;
 
 import com.google.common.collect.Range;
-import org.apache.shardingsphere.infra.algorithm.ShardingSphereAlgorithmFactory;
-import org.apache.shardingsphere.infra.config.algorithm.AlgorithmConfiguration;
 import org.apache.shardingsphere.infra.datanode.DataNodeInfo;
+import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sharding.api.sharding.complex.ComplexKeysShardingValue;
 import org.apache.shardingsphere.sharding.api.sharding.hint.HintShardingValue;
 import org.apache.shardingsphere.sharding.api.sharding.standard.PreciseShardingValue;
@@ -33,59 +32,59 @@ import org.apache.shardingsphere.sharding.fixture.ClassBasedStandardShardingAlgo
 import org.apache.shardingsphere.sharding.spi.ShardingAlgorithm;
 import org.apache.shardingsphere.test.util.PropertiesBuilder;
 import org.apache.shardingsphere.test.util.PropertiesBuilder.Property;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class ClassBasedShardingAlgorithmTest {
     
-    @Test(expected = ShardingAlgorithmInitializationException.class)
+    @Test
     public void assertInitWithNullStrategy() {
-        Properties props = PropertiesBuilder.build();
-        ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        assertThrows(ShardingAlgorithmInitializationException.class, () -> TypedSPILoader.getService(ShardingAlgorithm.class, "CLASS_BASED"));
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void assertInitWithWrongStrategy() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "wrong"));
-        ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        assertThrows(IllegalArgumentException.class, () -> TypedSPILoader.getService(ShardingAlgorithm.class, "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "wrong"))));
     }
     
-    @Test(expected = ShardingAlgorithmInitializationException.class)
+    @Test
     public void assertInitWithNullClass() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "standard"));
-        ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        assertThrows(ShardingAlgorithmInitializationException.class,
+                () -> TypedSPILoader.getService(ShardingAlgorithm.class, "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "standard"))));
     }
     
-    @Test(expected = ClassNotFoundException.class)
+    @Test
     public void assertInitWithUndefinedClass() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", "org.apache.shardingsphere.sharding.UndefinedClass"));
-        ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        assertThrows(ClassNotFoundException.class,
+                () -> TypedSPILoader.getService(ShardingAlgorithm.class,
+                        "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", "org.apache.shardingsphere.sharding.UndefinedClass"))));
     }
     
-    @Test(expected = ShardingAlgorithmClassImplementationException.class)
+    @Test
     public void assertInitWithMismatchStrategy() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedComplexKeysShardingAlgorithmFixture.class.getName()));
-        ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        assertThrows(ShardingAlgorithmClassImplementationException.class,
+                () -> TypedSPILoader.getService(ShardingAlgorithm.class, "CLASS_BASED",
+                        PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedComplexKeysShardingAlgorithmFixture.class.getName()))));
     }
     
     @Test
     public void assertPreciseDoSharding() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedStandardShardingAlgorithmFixture.class.getName()));
-        ClassBasedShardingAlgorithm algorithm = ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        ClassBasedShardingAlgorithm algorithm = (ClassBasedShardingAlgorithm) TypedSPILoader.getService(ShardingAlgorithm.class,
+                "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedStandardShardingAlgorithmFixture.class.getName())));
         Collection<String> availableTargetNames = Arrays.asList("t_order_0", "t_order_1", "t_order_2", "t_order_3");
         assertThat(algorithm.doSharding(availableTargetNames, new PreciseShardingValue<>("t_order", "order_id", new DataNodeInfo("t_order_", 1, '0'), 0)), is("t_order_0"));
     }
     
     @Test
     public void assertRangeDoSharding() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedStandardShardingAlgorithmFixture.class.getName()));
-        ClassBasedShardingAlgorithm algorithm = ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        ClassBasedShardingAlgorithm algorithm = (ClassBasedShardingAlgorithm) TypedSPILoader.getService(ShardingAlgorithm.class,
+                "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "standard"), new Property("algorithmClassName", ClassBasedStandardShardingAlgorithmFixture.class.getName())));
         Collection<String> availableTargetNames = Arrays.asList("t_order_0", "t_order_1", "t_order_2", "t_order_3");
         Collection<String> actual = algorithm.doSharding(availableTargetNames, new RangeShardingValue<>("t_order", "order_id", new DataNodeInfo("t_order_", 1, '0'), Range.closed(2, 15)));
         assertThat(actual.size(), is(4));
@@ -93,8 +92,8 @@ public final class ClassBasedShardingAlgorithmTest {
     
     @Test
     public void assertComplexKeysDoSharding() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "complex"), new Property("algorithmClassName", ClassBasedComplexKeysShardingAlgorithmFixture.class.getName()));
-        ClassBasedShardingAlgorithm algorithm = ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        ClassBasedShardingAlgorithm algorithm = (ClassBasedShardingAlgorithm) TypedSPILoader.getService(ShardingAlgorithm.class,
+                "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "complex"), new Property("algorithmClassName", ClassBasedComplexKeysShardingAlgorithmFixture.class.getName())));
         Collection<String> availableTargetNames = Arrays.asList("t_order_0", "t_order_1", "t_order_2", "t_order_3");
         Collection<String> actual = algorithm.doSharding(availableTargetNames, new ComplexKeysShardingValue<>("t_order", null, null));
         assertThat(actual.size(), is(4));
@@ -102,8 +101,8 @@ public final class ClassBasedShardingAlgorithmTest {
     
     @Test
     public void assertHintDoSharding() {
-        Properties props = PropertiesBuilder.build(new Property("strategy", "hint"), new Property("algorithmClassName", ClassBasedHintShardingAlgorithmFixture.class.getName()));
-        ClassBasedShardingAlgorithm algorithm = ShardingSphereAlgorithmFactory.createAlgorithm(new AlgorithmConfiguration("CLASS_BASED", props), ShardingAlgorithm.class);
+        ClassBasedShardingAlgorithm algorithm = (ClassBasedShardingAlgorithm) TypedSPILoader.getService(ShardingAlgorithm.class,
+                "CLASS_BASED", PropertiesBuilder.build(new Property("strategy", "hint"), new Property("algorithmClassName", ClassBasedHintShardingAlgorithmFixture.class.getName())));
         Collection<String> availableTargetNames = Arrays.asList("t_order_0", "t_order_1", "t_order_2", "t_order_3");
         Collection<String> actual = algorithm.doSharding(availableTargetNames, new HintShardingValue<>("t_order", "order_id", null));
         assertThat(actual.size(), is(4));

@@ -43,10 +43,6 @@ ALTER
     : A L T E R
     ;
 
-CLEAR
-    : C L E A R
-    ;
-
 DROP
     : D R O P
     ;
@@ -105,10 +101,6 @@ VARIABLE
 
 VARIABLES
     : V A R I A B L E S
-    ;
-
-HINT
-    : H I N T
     ;
 
 ENABLE
@@ -247,18 +239,6 @@ UNUSED
     : U N U S E D
     ;
 
-PREPARE
-    : P R E P A R E
-    ;
-
-DISTSQL
-    : D I S T S Q L
-    ;
-
-APPLY
-    : A P P L Y
-    ;
-
 DISCARD
     : D I S C A R D
     ;
@@ -361,4 +341,20 @@ LIKE
 
 NOT
     : N O T
+    ;
+
+LOCK
+    : L O C K
+    ;
+
+UNLOCK
+    : U N L O C K
+    ;
+
+CLUSTER
+    : C L U S T E R
+    ;
+
+LOCK_STRATEGY
+    : L O C K UL_ S T R A T E G Y
     ;

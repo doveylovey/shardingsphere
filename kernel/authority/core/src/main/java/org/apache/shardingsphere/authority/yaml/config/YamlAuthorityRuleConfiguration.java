@@ -20,12 +20,13 @@ package org.apache.shardingsphere.authority.yaml.config;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.shardingsphere.authority.config.AuthorityRuleConfiguration;
-import org.apache.shardingsphere.infra.metadata.user.yaml.config.YamlUserConfiguration;
 import org.apache.shardingsphere.infra.yaml.config.pojo.algorithm.YamlAlgorithmConfiguration;
 import org.apache.shardingsphere.infra.yaml.config.pojo.rule.YamlGlobalRuleConfiguration;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * Authority rule configuration for YAML.
@@ -37,6 +38,10 @@ public final class YamlAuthorityRuleConfiguration implements YamlGlobalRuleConfi
     private Collection<YamlUserConfiguration> users = new LinkedList<>();
     
     private YamlAlgorithmConfiguration privilege;
+    
+    private Map<String, YamlAlgorithmConfiguration> authenticators = new LinkedHashMap<>();
+    
+    private String defaultAuthenticator;
     
     @Override
     public Class<AuthorityRuleConfiguration> getRuleConfigurationType() {

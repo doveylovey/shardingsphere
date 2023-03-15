@@ -35,7 +35,7 @@ import java.sql.Statement;
 import java.text.ParseException;
 import java.util.Collection;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ParallelRunningStrategy(ParallelLevel.CASE)
 public final class GeneralDQLE2EIT extends BaseDQLE2EIT {
@@ -51,6 +51,27 @@ public final class GeneralDQLE2EIT extends BaseDQLE2EIT {
     
     @Test
     public void assertExecuteQuery() throws SQLException, ParseException {
+        if (isUseXMLAsExpectedDataset()) {
+            assertExecuteQueryWithXmlExpected();
+        } else {
+            assertExecuteQueryWithExpectedDataSource();
+        }
+    }
+    
+    private void assertExecuteQueryWithXmlExpected() throws SQLException, ParseException {
+        // TODO Fix jdbc adapter
+        if ("jdbc".equals(getAdapter())) {
+            return;
+        }
+        try (
+                Connection connection = getTargetDataSource().getConnection();
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(getSQL())) {
+            assertResultSet(resultSet);
+        }
+    }
+    
+    private void assertExecuteQueryWithExpectedDataSource() throws SQLException, ParseException {
         try (
                 Connection actualConnection = getTargetDataSource().getConnection();
                 Connection expectedConnection = getExpectedDataSource().getConnection()) {
@@ -90,6 +111,28 @@ public final class GeneralDQLE2EIT extends BaseDQLE2EIT {
     
     @Test
     public void assertExecute() throws SQLException, ParseException {
+        if (isUseXMLAsExpectedDataset()) {
+            assertExecuteWithXmlExpected();
+        } else {
+            assertExecuteWithExpectedDataSource();
+        }
+    }
+    
+    private void assertExecuteWithXmlExpected() throws SQLException, ParseException {
+        // TODO Fix jdbc adapter
+        if ("jdbc".equals(getAdapter())) {
+            return;
+        }
+        try (
+                Connection connection = getTargetDataSource().getConnection();
+                Statement statement = connection.createStatement()) {
+            assertTrue(statement.execute(getSQL()), "Not a query statement.");
+            ResultSet resultSet = statement.getResultSet();
+            assertResultSet(resultSet);
+        }
+    }
+    
+    private void assertExecuteWithExpectedDataSource() throws SQLException, ParseException {
         try (
                 Connection actualConnection = getTargetDataSource().getConnection();
                 Connection expectedConnection = getExpectedDataSource().getConnection()) {
@@ -105,7 +148,7 @@ public final class GeneralDQLE2EIT extends BaseDQLE2EIT {
         try (
                 Statement actualStatement = actualConnection.createStatement();
                 Statement expectedStatement = expectedConnection.createStatement()) {
-            assertTrue("Not a query statement.", actualStatement.execute(getSQL()) && expectedStatement.execute(getSQL()));
+            assertTrue(actualStatement.execute(getSQL()) && expectedStatement.execute(getSQL()), "Not a query statement.");
             try (
                     ResultSet actualResultSet = actualStatement.getResultSet();
                     ResultSet expectedResultSet = expectedStatement.getResultSet()) {
@@ -122,7 +165,7 @@ public final class GeneralDQLE2EIT extends BaseDQLE2EIT {
                 actualPreparedStatement.setObject(each.getIndex(), each.getValue());
                 expectedPreparedStatement.setObject(each.getIndex(), each.getValue());
             }
-            assertTrue("Not a query statement.", actualPreparedStatement.execute() && expectedPreparedStatement.execute());
+            assertTrue(actualPreparedStatement.execute() && expectedPreparedStatement.execute(), "Not a query statement.");
             try (
                     ResultSet actualResultSet = actualPreparedStatement.getResultSet();
                     ResultSet expectedResultSet = expectedPreparedStatement.getResultSet()) {

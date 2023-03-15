@@ -28,7 +28,7 @@ import org.apache.shardingsphere.infra.config.algorithm.AlgorithmConfiguration;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +39,7 @@ import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -58,6 +58,20 @@ public final class ShowDatabaseDiscoveryRuleExecutorTest {
         RQLExecutor<ShowDatabaseDiscoveryRulesStatement> executor = new ShowDatabaseDiscoveryRuleExecutor();
         assertColumns(executor.getColumnNames());
         assertRowData(new ArrayList<>(executor.getRows(database, mock(ShowDatabaseDiscoveryRulesStatement.class))));
+    }
+    
+    @Test
+    public void assertGetRowsWithSpecifiedRuleName() {
+        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
+        DatabaseDiscoveryRule rule = mock(DatabaseDiscoveryRule.class, RETURNS_DEEP_STUBS);
+        when(rule.getConfiguration()).thenReturn(createRuleConfiguration());
+        DatabaseDiscoveryDataSourceRule dataSourceRule = mock(DatabaseDiscoveryDataSourceRule.class);
+        when(dataSourceRule.getPrimaryDataSourceName()).thenReturn("ds_0");
+        when(rule.getDataSourceRules()).thenReturn(Collections.singletonMap("ms_group", dataSourceRule));
+        when(database.getRuleMetaData()).thenReturn(new ShardingSphereRuleMetaData(Collections.singleton(rule)));
+        RQLExecutor<ShowDatabaseDiscoveryRulesStatement> executor = new ShowDatabaseDiscoveryRuleExecutor();
+        assertColumns(executor.getColumnNames());
+        assertRowData(new ArrayList<>(executor.getRows(database, new ShowDatabaseDiscoveryRulesStatement("ms_group", null))));
     }
     
     @Test

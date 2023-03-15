@@ -52,7 +52,7 @@ public final class ShowReadwriteSplittingRuleExecutor implements RQLExecutor<Sho
         Collection<LocalDataQueryResultRow> result = new LinkedList<>();
         if (rule.isPresent()) {
             buildExportableMap(rule.get());
-            result = buildData(rule.get());
+            result = buildData(rule.get(), sqlStatement);
         }
         return result;
     }
@@ -64,11 +64,13 @@ public final class ShowReadwriteSplittingRuleExecutor implements RQLExecutor<Sho
         exportableDataSourceMap = (Map<String, Map<String, String>>) exportedData.get(ExportableConstants.EXPORT_STATIC_READWRITE_SPLITTING_RULE);
     }
     
-    private Collection<LocalDataQueryResultRow> buildData(final ReadwriteSplittingRule rule) {
+    private Collection<LocalDataQueryResultRow> buildData(final ReadwriteSplittingRule rule, final ShowReadwriteSplittingRulesStatement sqlStatement) {
         Collection<LocalDataQueryResultRow> result = new LinkedList<>();
         ((ReadwriteSplittingRuleConfiguration) rule.getConfiguration()).getDataSources().forEach(each -> {
             LocalDataQueryResultRow dataItem = buildDataItem(each, getLoadBalancers((ReadwriteSplittingRuleConfiguration) rule.getConfiguration()));
-            result.add(dataItem);
+            if (null == sqlStatement.getRuleName() || sqlStatement.getRuleName().equalsIgnoreCase(each.getName())) {
+                result.add(dataItem);
+            }
         });
         return result;
     }
@@ -79,7 +81,6 @@ public final class ShowReadwriteSplittingRuleExecutor implements RQLExecutor<Sho
         Optional<AlgorithmConfiguration> loadBalancer = Optional.ofNullable(loadBalancers.get(dataSourceRuleConfig.getLoadBalancerName()));
         return new LocalDataQueryResultRow(name,
                 getAutoAwareDataSourceName(dataSourceRuleConfig),
-                getWriteDataSourceQueryEnabled(dataSourceRuleConfig),
                 getWriteDataSourceName(dataSourceRuleConfig, exportDataSources),
                 getReadDataSourceNames(dataSourceRuleConfig, exportDataSources),
                 loadBalancer.map(AlgorithmConfiguration::getType).orElse(""),
@@ -95,10 +96,6 @@ public final class ShowReadwriteSplittingRuleExecutor implements RQLExecutor<Sho
         return null == dataSourceRuleConfig.getDynamicStrategy() ? "" : dataSourceRuleConfig.getDynamicStrategy().getAutoAwareDataSourceName();
     }
     
-    private String getWriteDataSourceQueryEnabled(final ReadwriteSplittingDataSourceRuleConfiguration dataSourceRuleConfig) {
-        return null == dataSourceRuleConfig.getDynamicStrategy() ? "" : dataSourceRuleConfig.getDynamicStrategy().getWriteDataSourceQueryEnabled();
-    }
-    
     private String getWriteDataSourceName(final ReadwriteSplittingDataSourceRuleConfiguration dataSourceRuleConfig, final Map<String, String> exportDataSources) {
         return null == exportDataSources ? dataSourceRuleConfig.getStaticStrategy().getWriteDataSourceName() : exportDataSources.get(ExportableItemConstants.PRIMARY_DATA_SOURCE_NAME);
     }
@@ -111,8 +108,7 @@ public final class ShowReadwriteSplittingRuleExecutor implements RQLExecutor<Sho
     
     @Override
     public Collection<String> getColumnNames() {
-        return Arrays.asList("name", "auto_aware_data_source_name", "write_data_source_query_enabled",
-                "write_storage_unit_name", "read_storage_unit_names", "load_balancer_type", "load_balancer_props");
+        return Arrays.asList("name", "auto_aware_data_source_name", "write_storage_unit_name", "read_storage_unit_names", "load_balancer_type", "load_balancer_props");
     }
     
     @Override

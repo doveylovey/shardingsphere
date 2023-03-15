@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.sharding.algorithm.sharding.mod;
 
-import lombok.Getter;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.sharding.algorithm.sharding.ShardingAutoTableAlgorithmUtil;
 import org.apache.shardingsphere.sharding.api.sharding.ShardingAutoTableAlgorithm;
@@ -36,14 +35,10 @@ public final class HashModShardingAlgorithm implements StandardShardingAlgorithm
     
     private static final String SHARDING_COUNT_KEY = "sharding-count";
     
-    @Getter
-    private Properties props;
-    
     private int shardingCount;
     
     @Override
     public void init(final Properties props) {
-        this.props = props;
         shardingCount = getShardingCount(props);
     }
     
@@ -63,7 +58,7 @@ public final class HashModShardingAlgorithm implements StandardShardingAlgorithm
         return availableTargetNames;
     }
     
-    private long hashShardingValue(final Comparable<?> shardingValue) {
+    private long hashShardingValue(final Object shardingValue) {
         return Math.abs((long) shardingValue.hashCode());
     }
     

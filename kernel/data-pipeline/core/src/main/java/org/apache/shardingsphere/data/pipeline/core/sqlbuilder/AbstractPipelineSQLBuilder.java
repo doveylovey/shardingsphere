@@ -18,7 +18,6 @@
 package org.apache.shardingsphere.data.pipeline.core.sqlbuilder;
 
 import com.google.common.base.Strings;
-import lombok.NonNull;
 import org.apache.shardingsphere.data.pipeline.api.ingest.record.Column;
 import org.apache.shardingsphere.data.pipeline.api.ingest.record.DataRecord;
 import org.apache.shardingsphere.data.pipeline.core.record.RecordUtil;
@@ -31,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * Abstract pipeline SQL builder.
@@ -72,17 +72,37 @@ public abstract class AbstractPipelineSQLBuilder implements PipelineSQLBuilder {
     protected abstract String getRightIdentifierQuoteString();
     
     @Override
-    public String buildDivisibleInventoryDumpSQL(final String schemaName, final String tableName, final String uniqueKey, final int uniqueKeyDataType, final boolean firstQuery) {
+    public String buildDivisibleInventoryDumpSQL(final String schemaName, final String tableName, final List<String> columnNames, final String uniqueKey) {
         String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
         String quotedUniqueKey = quote(uniqueKey);
-        return String.format("SELECT * FROM %s WHERE %s%s? AND %s<=? ORDER BY %s ASC LIMIT ?", qualifiedTableName, quotedUniqueKey, firstQuery ? ">=" : ">", quotedUniqueKey, quotedUniqueKey);
+        return String.format("SELECT %s FROM %s WHERE %s>=? AND %s<=? ORDER BY %s ASC", buildQueryColumns(columnNames), qualifiedTableName, quotedUniqueKey, quotedUniqueKey, quotedUniqueKey);
+    }
+    
+    private String buildQueryColumns(final List<String> columnNames) {
+        if (columnNames.isEmpty()) {
+            return "*";
+        }
+        return columnNames.stream().map(this::quote).collect(Collectors.joining(","));
     }
     
     @Override
-    public String buildIndivisibleInventoryDumpSQL(final String schemaName, final String tableName, final String uniqueKey, final int uniqueKeyDataType, final boolean firstQuery) {
+    public String buildDivisibleInventoryDumpSQLNoEnd(final String schemaName, final String tableName, final List<String> columnNames, final String uniqueKey) {
         String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
         String quotedUniqueKey = quote(uniqueKey);
-        return String.format("SELECT * FROM %s WHERE %s%s? ORDER BY %s ASC LIMIT ?", qualifiedTableName, quotedUniqueKey, firstQuery ? ">=" : ">", quotedUniqueKey);
+        return String.format("SELECT %s FROM %s WHERE %s>=? ORDER BY %s ASC", buildQueryColumns(columnNames), qualifiedTableName, quotedUniqueKey, quotedUniqueKey);
+    }
+    
+    @Override
+    public String buildIndivisibleInventoryDumpSQL(final String schemaName, final String tableName, final List<String> columnNames, final String uniqueKey) {
+        String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
+        String quotedUniqueKey = quote(uniqueKey);
+        return String.format("SELECT %s FROM %s ORDER BY %s ASC", buildQueryColumns(columnNames), qualifiedTableName, quotedUniqueKey);
+    }
+    
+    @Override
+    public String buildNoUniqueKeyInventoryDumpSQL(final String schemaName, final String tableName) {
+        String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
+        return String.format("SELECT * FROM %s", qualifiedTableName);
     }
     
     protected final String getQualifiedTableName(final String schemaName, final String tableName) {
@@ -171,12 +191,12 @@ public abstract class AbstractPipelineSQLBuilder implements PipelineSQLBuilder {
     }
     
     @Override
-    public String buildChunkedQuerySQL(final String schemaName, final @NonNull String tableName, final @NonNull String uniqueKey, final boolean firstQuery) {
+    public String buildQueryAllOrderingSQL(final String schemaName, final String tableName, final List<String> columnNames, final String uniqueKey, final boolean firstQuery) {
         String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
         String quotedUniqueKey = quote(uniqueKey);
         return firstQuery
-                ? String.format("SELECT * FROM %s ORDER BY %s ASC LIMIT ?", qualifiedTableName, quotedUniqueKey)
-                : String.format("SELECT * FROM %s WHERE %s>? ORDER BY %s ASC LIMIT ?", qualifiedTableName, quotedUniqueKey, quotedUniqueKey);
+                ? String.format("SELECT %s FROM %s ORDER BY %s ASC", buildQueryColumns(columnNames), qualifiedTableName, quotedUniqueKey)
+                : String.format("SELECT %s FROM %s WHERE %s>? ORDER BY %s ASC", buildQueryColumns(columnNames), qualifiedTableName, quotedUniqueKey, quotedUniqueKey);
     }
     
     @Override
@@ -185,15 +205,9 @@ public abstract class AbstractPipelineSQLBuilder implements PipelineSQLBuilder {
     }
     
     @Override
-    public String buildSplitByPrimaryKeyRangeSQL(final String schemaName, final String tableName, final String primaryKey) {
-        String quotedUniqueKey = quote(primaryKey);
-        return String.format("SELECT MAX(%s),COUNT(*) FROM (SELECT %s FROM %s WHERE %s>=? ORDER BY %s LIMIT ?) t",
+    public String buildSplitByPrimaryKeyRangeSQL(final String schemaName, final String tableName, final String uniqueKey) {
+        String quotedUniqueKey = quote(uniqueKey);
+        return String.format("SELECT MAX(%s),COUNT(1) FROM (SELECT %s FROM %s WHERE %s>=? ORDER BY %s LIMIT ?) t",
                 quotedUniqueKey, quotedUniqueKey, getQualifiedTableName(schemaName, tableName), quotedUniqueKey, quotedUniqueKey);
-    }
-    
-    @Override
-    public String buildInventoryDumpAllSQL(final String schemaName, final String tableName) {
-        String qualifiedTableName = getQualifiedTableName(schemaName, tableName);
-        return String.format("SELECT * FROM %s", qualifiedTableName);
     }
 }

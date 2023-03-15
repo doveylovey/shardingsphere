@@ -47,10 +47,6 @@ showComputeNodes
     : SHOW COMPUTE NODES
     ;
 
-clearHint
-    : CLEAR HINT
-    ;
-
 refreshDatabaseMetadata
     : REFRESH DATABASE METADATA databaseName? FROM GOVERNANCE CENTER
     ;
@@ -87,6 +83,18 @@ importDatabaseConfiguration
     : IMPORT DATABASE CONFIGURATION FROM FILE filePath
     ;
 
+exportMetaData
+    : EXPORT METADATA (TO FILE filePath)?
+    ;
+
+importMetaData
+    : IMPORT METADATA (metaDataValue | FROM FILE filePath)
+    ;
+
+exportStorageNodes
+    : EXPORT STORAGE NODES (FROM databaseName)? (TO FILE filePath)?
+    ;
+
 convertYamlConfiguration
     : CONVERT YAML CONFIGURATION FROM FILE filePath
     ;
@@ -97,6 +105,14 @@ showMigrationRule
 
 alterMigrationRule
     : ALTER MIGRATION RULE inventoryIncrementalRule?
+    ;
+
+lockCluster
+    : LOCK CLUSTER WITH lockStrategy
+    ;
+
+unlockCluster
+    : UNLOCK CLUSTER
     ;
 
 inventoryIncrementalRule
@@ -139,8 +155,12 @@ filePath
     : STRING_
     ;
 
+metaDataValue
+    : STRING_
+    ;
+
 variableName
-    : IDENTIFIER_
+    : IDENTIFIER_ | STRING_
     ;
 
 variableValues
@@ -163,22 +183,14 @@ fromSegment
     : FROM STORAGE UNIT storageUnitName (SCHEMA schemaName)?
     ;
 
+lockStrategy
+    : LOCK_STRATEGY LP_ algorithmDefinition RP_
+    ;
+
 label
     : IDENTIFIER_
     ;
 
 intValue
     : INT_
-    ;
-
-prepareDistSQL
-    : PREPARE DISTSQL
-    ;
-
-applyDistSQL
-    : APPLY DISTSQL
-    ;
-
-discardDistSQL
-    : DISCARD DISTSQL
     ;

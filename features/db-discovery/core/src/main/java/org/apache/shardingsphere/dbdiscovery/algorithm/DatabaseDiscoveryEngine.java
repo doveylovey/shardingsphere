@@ -19,11 +19,11 @@ package org.apache.shardingsphere.dbdiscovery.algorithm;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.dbdiscovery.spi.DatabaseDiscoveryProviderAlgorithm;
+import org.apache.shardingsphere.dbdiscovery.spi.DatabaseDiscoveryProvider;
 import org.apache.shardingsphere.dbdiscovery.spi.ReplicaDataSourceStatus;
 import org.apache.shardingsphere.infra.datasource.state.DataSourceState;
+import org.apache.shardingsphere.infra.instance.InstanceContext;
 import org.apache.shardingsphere.infra.metadata.database.schema.QualifiedDatabase;
-import org.apache.shardingsphere.infra.util.eventbus.EventBusContext;
 import org.apache.shardingsphere.mode.metadata.storage.StorageNodeDataSource;
 import org.apache.shardingsphere.mode.metadata.storage.StorageNodeRole;
 import org.apache.shardingsphere.mode.metadata.storage.event.DataSourceDisabledEvent;
@@ -44,9 +44,9 @@ import java.util.Optional;
 @Slf4j
 public final class DatabaseDiscoveryEngine {
     
-    private final DatabaseDiscoveryProviderAlgorithm databaseDiscoveryProviderAlgorithm;
+    private final DatabaseDiscoveryProvider provider;
     
-    private final EventBusContext eventBusContext;
+    private final InstanceContext instanceContext;
     
     /**
      * Check environment of database cluster.
@@ -55,7 +55,7 @@ public final class DatabaseDiscoveryEngine {
      * @param dataSourceMap data source map
      */
     public void checkEnvironment(final String databaseName, final Map<String, DataSource> dataSourceMap) {
-        databaseDiscoveryProviderAlgorithm.checkEnvironment(databaseName, dataSourceMap.values());
+        provider.checkEnvironment(databaseName, dataSourceMap.values());
     }
     
     /**
@@ -81,7 +81,7 @@ public final class DatabaseDiscoveryEngine {
     private Optional<String> findPrimaryDataSourceName(final Map<String, DataSource> dataSourceMap) {
         for (Entry<String, DataSource> entry : dataSourceMap.entrySet()) {
             try {
-                if (databaseDiscoveryProviderAlgorithm.isPrimaryInstance(entry.getValue())) {
+                if (provider.isPrimaryInstance(entry.getValue())) {
                     return Optional.of(entry.getKey());
                 }
             } catch (final SQLException ex) {
@@ -93,7 +93,7 @@ public final class DatabaseDiscoveryEngine {
     
     private void postPrimaryChangedEvent(final String databaseName, final String groupName, final String originalPrimaryDataSourceName, final String newPrimaryDataSourceName) {
         if (!newPrimaryDataSourceName.equals(originalPrimaryDataSourceName)) {
-            eventBusContext.post(new PrimaryDataSourceChangedEvent(new QualifiedDatabase(databaseName, groupName, newPrimaryDataSourceName)));
+            instanceContext.getEventBusContext().post(new PrimaryDataSourceChangedEvent(new QualifiedDatabase(databaseName, groupName, newPrimaryDataSourceName)));
         }
     }
     
@@ -104,16 +104,16 @@ public final class DatabaseDiscoveryEngine {
             StorageNodeDataSource replicaStorageNode = createReplicaStorageNode(loadReplicaStatus(entry.getValue()));
             if (DataSourceState.ENABLED == replicaStorageNode.getStatus()) {
                 enabledReplicasCount += disabledDataSourceNames.contains(entry.getKey()) ? 1 : 0;
-                eventBusContext.post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
+                instanceContext.getEventBusContext().post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
                 continue;
             }
-            if (!databaseDiscoveryProviderAlgorithm.getMinEnabledReplicas().isPresent()) {
-                eventBusContext.post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
+            if (provider.getMinEnabledReplicas().isPresent() && 0 == provider.getMinEnabledReplicas().get()) {
+                instanceContext.getEventBusContext().post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
                 continue;
             }
-            if (enabledReplicasCount > databaseDiscoveryProviderAlgorithm.getMinEnabledReplicas().get()) {
+            if (enabledReplicasCount > provider.getMinEnabledReplicas().get()) {
                 enabledReplicasCount -= disabledDataSourceNames.contains(entry.getKey()) ? 0 : 1;
-                eventBusContext.post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
+                instanceContext.getEventBusContext().post(new DataSourceDisabledEvent(databaseName, groupName, entry.getKey(), replicaStorageNode));
             }
         }
     }
@@ -124,7 +124,7 @@ public final class DatabaseDiscoveryEngine {
     
     private ReplicaDataSourceStatus loadReplicaStatus(final DataSource replicaDataSource) {
         try {
-            return databaseDiscoveryProviderAlgorithm.loadReplicaStatus(replicaDataSource);
+            return provider.loadReplicaStatus(replicaDataSource);
         } catch (final SQLException ex) {
             log.error("Load data source replica status error: ", ex);
             return new ReplicaDataSourceStatus(false, 0L);

@@ -1,11 +1,11 @@
 +++
-title = "SHOW READWRITE_SPLITTING RULES"
+title = "SHOW READWRITE_SPLITTING RULE"
 weight = 2
 +++
 
 ### Description
 
-The `SHOW READWRITE_SPLITTING RULES` syntax is used to query readwrite splitting rules for specified database.
+The `SHOW READWRITE_SPLITTING RULE` syntax is used to query specified readwrite splitting rules for specified database.
 
 ### Syntax
 
@@ -13,7 +13,10 @@ The `SHOW READWRITE_SPLITTING RULES` syntax is used to query readwrite splitting
 {{% tab name="Grammar" %}}
 ```sql
 ShowReadWriteSplittingRule::=
-  'SHOW' 'READWRITE_SPLITTING' 'RULES' ('FROM' databaseName)?
+  'SHOW' 'READWRITE_SPLITTING' ('RULE' ruleName | 'RULES') ('FROM' databaseName)?
+
+ruleName ::=
+  identifier  
 
 databaseName ::=
   identifier
@@ -34,7 +37,6 @@ databaseName ::=
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | name                            | Readwrite splitting rule name                                                                              |
 | auto_aware_data_source_name     | Auto-Aware discovery data source name (Display configuration dynamic readwrite splitting rules)            |
-| write_data_source_query_enabled | All read data source are offline, write data source whether the data source is responsible for read traffic|
 | write_data_source_name          | Write data source name                                                                                     |
 | read_data_source_names          | Read data source name list                                                                                 |
 | load_balancer_type              | Load balance algorithm type                                                                                |
@@ -51,11 +53,11 @@ SHOW READWRITE_SPLITTING RULES FROM readwrite_splitting_db;
 
 ```sql
 mysql> SHOW READWRITE_SPLITTING RULES FROM readwrite_splitting_db;
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
-| name       | auto_aware_data_source_name | write_data_source_query_enabled | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
-| ms_group_0 |                             |                                 | resource_1             | ds_0,ds_1              | random             |                     |
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| name       | auto_aware_data_source_name | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| ms_group_0 |                             | resource_1             | ds_0,ds_1              | random             |                     |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
 1 row in set (0.01 sec)
 ```
 
@@ -67,17 +69,49 @@ SHOW READWRITE_SPLITTING RULES;
 
 ```sql
 mysql> SHOW READWRITE_SPLITTING RULES;
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
-| name       | auto_aware_data_source_name | write_data_source_query_enabled | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
-| ms_group_0 |                             |                                 | resource_1             | ds_0,ds_1              | random             |                     |
-+------------+-----------------------------+---------------------------------+------------------------+------------------------+--------------------+---------------------+
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| name       | auto_aware_data_source_name | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| ms_group_0 |                             | resource_1             | ds_0,ds_1              | random             |                     |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+1 row in set (0.01 sec)
+```
+
+- Query specified readwrite splitting rule for specified database.
+
+```sql
+SHOW READWRITE_SPLITTING RULE ms_group_0 FROM readwrite_splitting_db;
+```
+
+```sql
+mysql> SHOW READWRITE_SPLITTING RULE ms_group_0 FROM readwrite_splitting_db;
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| name       | auto_aware_data_source_name | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| ms_group_0 |                             | resource_1             | ds_0,ds_1              | random             |                     |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+1 row in set (0.01 sec)
+```
+
+- Query specified readwrite splitting rule for current database.
+
+```sql
+SHOW READWRITE_SPLITTING RULE ms_group_0;
+```
+
+```sql
+mysql> SHOW READWRITE_SPLITTING RULE ms_group_0;
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| name       | auto_aware_data_source_name | write_data_source_name | read_data_source_names | load_balancer_type | load_balancer_props |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
+| ms_group_0 |                             | resource_1             | ds_0,ds_1              | random             |                     |
++------------+-----------------------------+------------------------+------------------------+--------------------+---------------------+
 1 row in set (0.01 sec)
 ```
 
 ### Reserved word
 
-`SHOW`, `READWRITE_SPLITTING`, `RULES`, `FROM`
+`SHOW`, `READWRITE_SPLITTING`, `RULE`, `RULES`, `FROM`
 
 ### Related links
 

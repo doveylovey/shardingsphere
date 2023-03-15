@@ -23,11 +23,12 @@ import lombok.Getter;
 import org.apache.shardingsphere.dbdiscovery.api.config.rule.DatabaseDiscoveryDataSourceRuleConfiguration;
 import org.apache.shardingsphere.dbdiscovery.exception.MissingRequiredDataSourceNamesConfigurationException;
 import org.apache.shardingsphere.dbdiscovery.exception.MissingRequiredGroupNameConfigurationException;
-import org.apache.shardingsphere.dbdiscovery.spi.DatabaseDiscoveryProviderAlgorithm;
+import org.apache.shardingsphere.dbdiscovery.spi.DatabaseDiscoveryProvider;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 
 import javax.sql.DataSource;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -49,19 +50,19 @@ public final class DatabaseDiscoveryDataSourceRule {
     
     private final Properties heartbeatProps;
     
-    private final DatabaseDiscoveryProviderAlgorithm databaseDiscoveryProviderAlgorithm;
+    private final DatabaseDiscoveryProvider provider;
     
     private final Collection<String> disabledDataSourceNames = new HashSet<>();
     
     private volatile String primaryDataSourceName;
     
     public DatabaseDiscoveryDataSourceRule(final DatabaseDiscoveryDataSourceRuleConfiguration config,
-                                           final Properties props, final DatabaseDiscoveryProviderAlgorithm databaseDiscoveryProviderAlgorithm) {
+                                           final Properties props, final DatabaseDiscoveryProvider provider) {
         checkConfiguration(config);
         groupName = config.getGroupName();
         dataSourceNames = config.getDataSourceNames();
         this.heartbeatProps = props;
-        this.databaseDiscoveryProviderAlgorithm = databaseDiscoveryProviderAlgorithm;
+        this.provider = provider;
     }
     
     private void checkConfiguration(final DatabaseDiscoveryDataSourceRuleConfiguration config) {
@@ -129,9 +130,7 @@ public final class DatabaseDiscoveryDataSourceRule {
      * @return data source mapper
      */
     public Map<String, Collection<String>> getDataSourceMapper() {
-        Map<String, Collection<String>> result = new HashMap<>(1, 1);
-        result.put(groupName, getActualDataSourceNames());
-        return result;
+        return Collections.singletonMap(groupName, getActualDataSourceNames());
     }
     
     private Collection<String> getActualDataSourceNames() {
