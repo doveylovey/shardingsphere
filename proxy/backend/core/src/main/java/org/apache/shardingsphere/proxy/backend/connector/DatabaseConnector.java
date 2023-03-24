@@ -49,7 +49,9 @@ import org.apache.shardingsphere.infra.merge.MergeEngine;
 import org.apache.shardingsphere.infra.merge.result.MergedResult;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.util.SystemSchemaUtil;
+import org.apache.shardingsphere.infra.rule.identifier.type.ColumnContainedRule;
 import org.apache.shardingsphere.infra.rule.identifier.type.DataNodeContainedRule;
+import org.apache.shardingsphere.infra.rule.identifier.type.MutableDataNodeRule;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
@@ -175,12 +177,13 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
             ResultSet resultSet = doExecuteFederation(queryContext, metaDataContexts);
             return processExecuteFederation(resultSet, metaDataContexts);
         }
-        Collection<ExecutionContext> executionContexts = generateExecutionContexts(metaDataContexts);
-        return isNeedImplicitCommitTransaction(executionContexts.iterator().next()) ? doExecuteWithImplicitCommitTransaction(executionContexts) : doExecute(executionContexts);
+        Collection<ExecutionContext> executionContexts = generateExecutionContexts();
+        return isNeedImplicitCommitTransaction(executionContexts) ? doExecuteWithImplicitCommitTransaction(executionContexts) : doExecute(executionContexts);
     }
     
-    private Collection<ExecutionContext> generateExecutionContexts(final MetaDataContexts metaDataContexts) {
+    private Collection<ExecutionContext> generateExecutionContexts() {
         Collection<ExecutionContext> result = new LinkedList<>();
+        MetaDataContexts metaDataContexts = ProxyContext.getInstance().getContextManager().getMetaDataContexts();
         ExecutionContext executionContext = new KernelProcessor().generateExecutionContext(queryContext, database, metaDataContexts.getMetaData().getGlobalRuleMetaData(),
                 metaDataContexts.getMetaData().getProps(), backendConnection.getConnectionSession().getConnectionContext());
         result.add(executionContext);
@@ -188,11 +191,20 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
         return result;
     }
     
-    private boolean isNeedImplicitCommitTransaction(final ExecutionContext executionContext) {
+    private boolean isNeedImplicitCommitTransaction(final Collection<ExecutionContext> executionContexts) {
         TransactionStatus transactionStatus = backendConnection.getConnectionSession().getTransactionStatus();
-        SQLStatement sqlStatement = executionContext.getSqlStatementContext().getSqlStatement();
-        return TransactionType.isDistributedTransaction(transactionStatus.getTransactionType()) && !transactionStatus.isInTransaction() && sqlStatement instanceof DMLStatement
-                && !(sqlStatement instanceof SelectStatement) && executionContext.getExecutionUnits().size() > 1;
+        if (!TransactionType.isDistributedTransaction(transactionStatus.getTransactionType()) || transactionStatus.isInTransaction()) {
+            return false;
+        }
+        if (1 == executionContexts.size()) {
+            SQLStatement sqlStatement = executionContexts.iterator().next().getSqlStatementContext().getSqlStatement();
+            return isWriteDMLStatement(sqlStatement) && executionContexts.iterator().next().getExecutionUnits().size() > 1;
+        }
+        return executionContexts.stream().anyMatch(each -> isWriteDMLStatement(each.getSqlStatementContext().getSqlStatement()));
+    }
+    
+    private static boolean isWriteDMLStatement(final SQLStatement sqlStatement) {
+        return sqlStatement instanceof DMLStatement && !(sqlStatement instanceof SelectStatement);
     }
     
     private ResponseHeader doExecuteWithImplicitCommitTransaction(final Collection<ExecutionContext> executionContexts) throws SQLException {
@@ -290,15 +302,15 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
     
     private void prepareCursorStatementContext(final CursorAvailable statementContext, final ConnectionSession connectionSession, final String cursorName) {
         if (statementContext instanceof CursorStatementContext) {
-            connectionSession.getConnectionContext().getCursorConnectionContext().getCursorDefinitions().put(cursorName, (CursorStatementContext) statementContext);
+            connectionSession.getConnectionContext().getCursorContext().getCursorDefinitions().put(cursorName, (CursorStatementContext) statementContext);
         }
         if (statementContext instanceof CursorDefinitionAware) {
-            CursorStatementContext cursorStatementContext = (CursorStatementContext) connectionSession.getConnectionContext().getCursorConnectionContext().getCursorDefinitions().get(cursorName);
+            CursorStatementContext cursorStatementContext = (CursorStatementContext) connectionSession.getConnectionContext().getCursorContext().getCursorDefinitions().get(cursorName);
             Preconditions.checkArgument(null != cursorStatementContext, "Cursor %s does not exist.", cursorName);
             ((CursorDefinitionAware) statementContext).setUpCursorDefinition(cursorStatementContext);
         }
         if (statementContext instanceof CloseStatementContext) {
-            connectionSession.getConnectionContext().getCursorConnectionContext().removeCursorName(cursorName);
+            connectionSession.getConnectionContext().getCursorContext().removeCursorName(cursorName);
         }
     }
     
@@ -324,21 +336,52 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
         return result;
     }
     
-    private QueryHeader createQueryHeader(final QueryHeaderBuilderEngine queryHeaderBuilderEngine, final ExecutionContext executionContext,
-                                          final QueryResult queryResultSample, final ShardingSphereDatabase database, final int columnIndex) throws SQLException {
-        return hasSelectExpandProjections(executionContext.getSqlStatementContext()) ? queryHeaderBuilderEngine.build(
-                ((SelectStatementContext) executionContext.getSqlStatementContext()).getProjectionsContext(), queryResultSample.getMetaData(), database, columnIndex)
-                : queryHeaderBuilderEngine.build(queryResultSample.getMetaData(), database, columnIndex);
-    }
-    
     private int getColumnCount(final ExecutionContext executionContext, final QueryResult queryResultSample) throws SQLException {
+        if (isTransparentStatement(executionContext.getSqlStatementContext())) {
+            return queryResultSample.getMetaData().getColumnCount();
+        }
         return hasSelectExpandProjections(executionContext.getSqlStatementContext())
                 ? ((SelectStatementContext) executionContext.getSqlStatementContext()).getProjectionsContext().getExpandProjections().size()
                 : queryResultSample.getMetaData().getColumnCount();
     }
     
+    private boolean isTransparentStatement(final SQLStatementContext<?> sqlStatementContext) {
+        Optional<DataNodeContainedRule> dataNodeContainedRule = getDataNodeContainedRuleForShardingRule(database.getRuleMetaData().findRules(DataNodeContainedRule.class));
+        Collection<ColumnContainedRule> columnContainedRules = database.getRuleMetaData().findRules(ColumnContainedRule.class);
+        for (String each : sqlStatementContext.getTablesContext().getTableNames()) {
+            return (!dataNodeContainedRule.isPresent() || !dataNodeContainedRule.get().getAllTables().contains(each)) && !containsInColumnContainedRule(each, columnContainedRules);
+        }
+        return true;
+    }
+    
+    private Optional<DataNodeContainedRule> getDataNodeContainedRuleForShardingRule(final Collection<DataNodeContainedRule> dataNodeContainedRules) {
+        for (DataNodeContainedRule each : dataNodeContainedRules) {
+            if (!(each instanceof MutableDataNodeRule)) {
+                return Optional.of(each);
+            }
+        }
+        return Optional.empty();
+    }
+    
+    private boolean containsInColumnContainedRule(final String tableName, final Collection<ColumnContainedRule> columnContainedRules) {
+        for (ColumnContainedRule each : columnContainedRules) {
+            return each.getTables().contains(tableName);
+        }
+        return false;
+    }
+    
     private boolean hasSelectExpandProjections(final SQLStatementContext<?> sqlStatementContext) {
         return sqlStatementContext instanceof SelectStatementContext && !((SelectStatementContext) sqlStatementContext).getProjectionsContext().getExpandProjections().isEmpty();
+    }
+    
+    private QueryHeader createQueryHeader(final QueryHeaderBuilderEngine queryHeaderBuilderEngine, final ExecutionContext executionContext,
+                                          final QueryResult queryResultSample, final ShardingSphereDatabase database, final int columnIndex) throws SQLException {
+        if (isTransparentStatement(executionContext.getSqlStatementContext())) {
+            return queryHeaderBuilderEngine.build(queryResultSample.getMetaData(), database, columnIndex);
+        }
+        return hasSelectExpandProjections(executionContext.getSqlStatementContext())
+                ? queryHeaderBuilderEngine.build(((SelectStatementContext) executionContext.getSqlStatementContext()).getProjectionsContext(), queryResultSample.getMetaData(), database, columnIndex)
+                : queryHeaderBuilderEngine.build(queryResultSample.getMetaData(), database, columnIndex);
     }
     
     private MergedResult mergeQuery(final SQLStatementContext<?> sqlStatementContext, final List<QueryResult> queryResults) throws SQLException {

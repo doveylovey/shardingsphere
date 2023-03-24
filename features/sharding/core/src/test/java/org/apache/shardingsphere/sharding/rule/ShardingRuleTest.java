@@ -667,21 +667,6 @@ public final class ShardingRuleTest {
     }
     
     @Test
-    public void assertGetLogicTablesByActualTable() {
-        assertThat(createShardingRuleWithSameActualTablesButDifferentLogicTables().getLogicTablesByActualTable("table_0"),
-                is(new LinkedHashSet<>(Arrays.asList("ID_STRATEGY_LOGIC_TABLE", "HINT_STRATEGY_LOGIC_TABLE"))));
-    }
-    
-    private ShardingRule createShardingRuleWithSameActualTablesButDifferentLogicTables() {
-        ShardingRuleConfiguration shardingRuleConfig = new ShardingRuleConfiguration();
-        ShardingTableRuleConfiguration idTableRuleConfig = createTableRuleConfiguration("ID_STRATEGY_LOGIC_TABLE", "ds_${0..1}.table_${0..2}");
-        ShardingTableRuleConfiguration hintTableRuleConfig = createTableRuleConfiguration("HINT_STRATEGY_LOGIC_TABLE", "ds_${0..1}.table_${0..2}");
-        shardingRuleConfig.getTables().add(idTableRuleConfig);
-        shardingRuleConfig.getTables().add(hintTableRuleConfig);
-        return new ShardingRule(shardingRuleConfig, createDataSourceNames(), mock(InstanceContext.class));
-    }
-    
-    @Test
     public void assertGetDataNodesByTableName() {
         ShardingRule shardingRule = createMinimumShardingRule();
         Collection<DataNode> actual = shardingRule.getDataNodesByTableName("logic_table");
@@ -793,5 +778,15 @@ public final class ShardingRuleTest {
     public void assertIsSupportAutoIncrement() {
         assertFalse(createMaximumShardingRule().isSupportAutoIncrement("logic_table"));
         assertTrue(createMaximumShardingRule().isSupportAutoIncrement("sub_logic_table"));
+    }
+    
+    @Test
+    public void assertGetDataNodesByTableNameForBroadcastTable() {
+        ShardingRule actual = createMaximumShardingRule();
+        Collection<DataNode> actualDataNodes = actual.getDataNodesByTableName("broadcast_table");
+        assertThat(actualDataNodes.size(), is(2));
+        Iterator<DataNode> actualDataNode = actualDataNodes.iterator();
+        assertThat(actualDataNode.next().getDataSourceName(), is("ds_0"));
+        assertThat(actualDataNode.next().getDataSourceName(), is("ds_1"));
     }
 }

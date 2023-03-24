@@ -655,16 +655,6 @@ public final class ShardingRule implements DatabaseRule, DataNodeContainedRule, 
                 .orElseGet(Collections::emptyMap);
     }
     
-    /**
-     * Get logic tables via actual table name.
-     *
-     * @param actualTable actual table name
-     * @return logic tables
-     */
-    public Collection<String> getLogicTablesByActualTable(final String actualTable) {
-        return tableRules.values().stream().filter(each -> each.isExisted(actualTable)).map(TableRule::getLogicTable).collect(Collectors.toSet());
-    }
-    
     @Override
     public Map<String, Collection<DataNode>> getAllDataNodes() {
         return shardingTableDataNodes;
@@ -672,6 +662,9 @@ public final class ShardingRule implements DatabaseRule, DataNodeContainedRule, 
     
     @Override
     public Collection<DataNode> getDataNodesByTableName(final String tableName) {
+        if (isBroadcastTable(tableName)) {
+            return new TableRule(dataSourceNames, tableName).getActualDataNodes();
+        }
         return shardingTableDataNodes.getOrDefault(tableName.toLowerCase(), Collections.emptyList());
     }
     
