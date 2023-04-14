@@ -1,11 +1,11 @@
 +++
 title = "SHOW STATUS FROM READWRITE_SPLITTING RULE"
-weight = 3
+weight = 2
 +++
 
 ### 描述
 
-`SHOW STATUS FROM READWRITE_SPLITTING RULE` 语法用于查询指定逻辑库中指定读写分离规则中读写分离存储单元状态
+`SHOW STATUS FROM READWRITE_SPLITTING RULE` 语法用于查询指定逻辑库中指定读写分离规则中读写分离存储单元状态。
 
 ### 语法
 
@@ -33,11 +33,11 @@ databaseName ::=
 
 ### 返回值说明
 
-| 列             | 说明           |
-|----------------|---------------|
-| resource       | 存储单元名称    |
-| status         | 存储单元状态    |
-| delay_time(ms) | 延迟时间        |
+| 列              | 说明     |
+|----------------|--------|
+| resource       | 存储单元名称 |
+| status         | 存储单元状态 |
+| delay_time(ms) | 延迟时间   |
 
 ### 示例
 

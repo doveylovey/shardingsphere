@@ -35,7 +35,6 @@ import org.apache.shardingsphere.proxy.backend.exception.BackendConnectionExcept
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.frontend.command.executor.CommandExecutor;
 import org.apache.shardingsphere.proxy.frontend.command.executor.QueryCommandExecutor;
-import org.apache.shardingsphere.proxy.frontend.context.FrontendContext;
 import org.apache.shardingsphere.proxy.frontend.spi.DatabaseProtocolFrontendEngine;
 import org.apache.shardingsphere.test.mock.AutoMockExtension;
 import org.apache.shardingsphere.test.mock.StaticMockSettings;
@@ -59,7 +58,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(AutoMockExtension.class)
 @StaticMockSettings(ProxyContext.class)
-public final class CommandExecutorTaskTest {
+class CommandExecutorTaskTest {
     
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private DatabaseProtocolFrontendEngine engine;
@@ -95,11 +94,8 @@ public final class CommandExecutorTaskTest {
     @Mock
     private DatabasePacket databasePacket;
     
-    @Mock
-    private FrontendContext frontendContext;
-    
     @BeforeEach
-    public void setup() {
+    void setup() {
         when(connectionSession.getBackendConnection()).thenReturn(backendConnection);
         when(handlerContext.channel().attr(CommonConstants.CHARSET_ATTRIBUTE_KEY).get()).thenReturn(StandardCharsets.UTF_8);
         when(ProxyContext.getInstance().getContextManager()).thenReturn(
@@ -107,7 +103,7 @@ public final class CommandExecutorTaskTest {
     }
     
     @Test
-    public void assertRunNeedFlushByFalse() throws SQLException, BackendConnectionException {
+    void assertRunNeedFlushByFalse() throws SQLException, BackendConnectionException {
         when(queryCommandExecutor.execute()).thenReturn(Collections.emptyList());
         when(engine.getCommandExecuteEngine().getCommandPacket(payload, commandPacketType, connectionSession)).thenReturn(commandPacket);
         when(engine.getCommandExecuteEngine().getCommandExecutor(commandPacketType, commandPacket, connectionSession)).thenReturn(queryCommandExecutor);
@@ -121,7 +117,7 @@ public final class CommandExecutorTaskTest {
     
     @SuppressWarnings("unchecked")
     @Test
-    public void assertRunNeedFlushByTrue() throws SQLException, BackendConnectionException {
+    void assertRunNeedFlushByTrue() throws SQLException, BackendConnectionException {
         when(queryCommandExecutor.execute()).thenReturn(Collections.singleton(databasePacket));
         when(engine.getCommandExecuteEngine().getCommandPacket(payload, commandPacketType, connectionSession)).thenReturn(commandPacket);
         when(engine.getCommandExecuteEngine().getCommandExecutor(commandPacketType, commandPacket, connectionSession)).thenReturn(queryCommandExecutor);
@@ -138,8 +134,7 @@ public final class CommandExecutorTaskTest {
     
     @SuppressWarnings("unchecked")
     @Test
-    public void assertRunByCommandExecutor() throws SQLException, BackendConnectionException {
-        when(engine.getFrontendContext()).thenReturn(frontendContext);
+    void assertRunByCommandExecutor() throws SQLException, BackendConnectionException {
         when(commandExecutor.execute()).thenReturn(Collections.singleton(databasePacket));
         when(engine.getCommandExecuteEngine().getCommandPacket(payload, commandPacketType, connectionSession)).thenReturn(commandPacket);
         when(engine.getCommandExecuteEngine().getCommandExecutor(commandPacketType, commandPacket, connectionSession)).thenReturn(commandExecutor);
@@ -155,7 +150,7 @@ public final class CommandExecutorTaskTest {
     
     @SuppressWarnings("unchecked")
     @Test
-    public void assertRunWithException() throws BackendConnectionException, SQLException {
+    void assertRunWithException() throws BackendConnectionException, SQLException {
         RuntimeException mockException = new RuntimeException("mock");
         doThrow(mockException).when(commandExecutor).execute();
         when(engine.getCodecEngine().createPacketPayload(message, StandardCharsets.UTF_8)).thenReturn(payload);
@@ -172,7 +167,7 @@ public final class CommandExecutorTaskTest {
     }
     
     @Test
-    public void assertRunWithOOMError() throws BackendConnectionException, SQLException {
+    void assertRunWithOOMError() throws BackendConnectionException, SQLException {
         doThrow(OutOfMemoryError.class).when(commandExecutor).execute();
         when(engine.getCodecEngine().createPacketPayload(message, StandardCharsets.UTF_8)).thenReturn(payload);
         when(engine.getCommandExecuteEngine().getCommandPacket(payload, commandPacketType, connectionSession)).thenReturn(commandPacket);

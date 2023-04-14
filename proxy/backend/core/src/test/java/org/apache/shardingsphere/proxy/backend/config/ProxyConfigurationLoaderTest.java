@@ -40,10 +40,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class ProxyConfigurationLoaderTest {
+class ProxyConfigurationLoaderTest {
     
     @Test
-    public void assertLoadEmptyConfiguration() throws IOException {
+    void assertLoadEmptyConfiguration() throws IOException {
         YamlProxyConfiguration actual = ProxyConfigurationLoader.load("/conf/empty/");
         YamlProxyServerConfiguration serverConfig = actual.getServerConfiguration();
         assertNull(serverConfig.getMode());
@@ -55,7 +55,7 @@ public final class ProxyConfigurationLoaderTest {
     }
     
     @Test
-    public void assertLoad() throws IOException {
+    void assertLoad() throws IOException {
         YamlProxyConfiguration actual = ProxyConfigurationLoader.load("/conf/config_loader/");
         Iterator<YamlRuleConfiguration> actualGlobalRules = actual.getServerConfiguration().getRules().iterator();
         // TODO assert mode
@@ -106,9 +106,8 @@ public final class ProxyConfigurationLoaderTest {
     }
     
     private void assertReadwriteSplittingRuleConfiguration(final YamlReadwriteSplittingDataSourceRuleConfiguration actual) {
-        assertNotNull(actual.getStaticStrategy());
-        assertThat(actual.getStaticStrategy().getWriteDataSourceName(), is("write_ds"));
-        assertThat(actual.getStaticStrategy().getReadDataSourceNames(), is(Arrays.asList("read_ds_0", "read_ds_1")));
+        assertThat(actual.getWriteDataSourceName(), is("write_ds"));
+        assertThat(actual.getReadDataSourceNames(), is(Arrays.asList("read_ds_0", "read_ds_1")));
     }
     
     private void assertEncryptRuleConfiguration(final YamlProxyDatabaseConfiguration actual) {

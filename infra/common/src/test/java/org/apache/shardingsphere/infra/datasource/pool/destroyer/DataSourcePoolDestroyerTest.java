@@ -20,6 +20,7 @@ package org.apache.shardingsphere.infra.datasource.pool.destroyer;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.shardingsphere.test.fixture.jdbc.MockedDataSource;
+import org.apache.shardingsphere.test.fixture.jdbc.MockedDriver;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
@@ -30,15 +31,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class DataSourcePoolDestroyerTest {
+class DataSourcePoolDestroyerTest {
     
     @Test
-    public void assertAsyncDestroyWithoutAutoCloseable() {
+    void assertAsyncDestroyWithoutAutoCloseable() {
         new DataSourcePoolDestroyer(new MockedDataSource()).asyncDestroy();
     }
     
     @Test
-    public void assertAsyncDestroyHikariDataSource() throws SQLException {
+    void assertAsyncDestroyHikariDataSource() throws SQLException {
         HikariDataSource dataSource = createHikariDataSource();
         try (Connection ignored = dataSource.getConnection()) {
             new DataSourcePoolDestroyer(dataSource).asyncDestroy();
@@ -56,10 +57,8 @@ public final class DataSourcePoolDestroyerTest {
     
     private HikariDataSource createHikariDataSource() {
         HikariConfig config = new HikariConfig();
-        config.setDriverClassName("org.h2.Driver");
-        config.setJdbcUrl("jdbc:h2:mem:foo_ds;DB_CLOSE_DELAY=-1");
-        config.setUsername("root");
-        config.setPassword("root");
+        config.setDriverClassName(MockedDriver.class.getName());
+        config.setJdbcUrl("mock:jdbc");
         return new HikariDataSource(config);
     }
 }

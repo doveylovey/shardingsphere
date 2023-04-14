@@ -35,7 +35,7 @@ public final class MySQLDatetime2BinlogProtocolValue implements MySQLBinlogProto
     @Override
     public Serializable read(final MySQLBinlogColumnDef columnDef, final MySQLPacketPayload payload) {
         long datetime = readDatetimeV2FromPayload(payload);
-        return 0 == datetime ? MySQLTimeValueUtil.DATETIME_OF_ZERO : readDatetime(columnDef, datetime, payload);
+        return 0 == datetime ? MySQLTimeValueUtils.DATETIME_OF_ZERO : readDatetime(columnDef, datetime, payload);
     }
     
     private long readDatetimeV2FromPayload(final MySQLPacketPayload payload) {
@@ -48,6 +48,9 @@ public final class MySQLDatetime2BinlogProtocolValue implements MySQLBinlogProto
     
     private Serializable readDatetime(final MySQLBinlogColumnDef columnDef, final long datetime, final MySQLPacketPayload payload) {
         long datetimeWithoutSign = datetime & (0x8000000000L - 1);
+        if (0 == datetimeWithoutSign) {
+            return MySQLTimeValueUtils.DATETIME_OF_ZERO;
+        }
         long date = datetimeWithoutSign >> 17;
         long yearAndMonth = date >> 5;
         int year = (int) (yearAndMonth / 13);

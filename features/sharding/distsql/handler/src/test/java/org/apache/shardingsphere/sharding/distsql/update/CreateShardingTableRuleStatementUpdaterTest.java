@@ -20,6 +20,7 @@ package org.apache.shardingsphere.sharding.distsql.update;
 import lombok.SneakyThrows;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 import org.apache.shardingsphere.distsql.handler.exception.DistSQLException;
+import org.apache.shardingsphere.sharding.exception.strategy.InvalidShardingStrategyConfigurationException;
 import org.apache.shardingsphere.distsql.parser.engine.spi.FeaturedDistSQLStatementParserFacade;
 import org.apache.shardingsphere.distsql.parser.segment.AlgorithmSegment;
 import org.apache.shardingsphere.distsql.parser.statement.DistSQLStatement;
@@ -75,7 +76,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public final class CreateShardingTableRuleStatementUpdaterTest {
+class CreateShardingTableRuleStatementUpdaterTest {
     
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private ShardingSphereDatabase database;
@@ -85,7 +86,7 @@ public final class CreateShardingTableRuleStatementUpdaterTest {
     private final CreateShardingTableRuleStatementUpdater updater = new CreateShardingTableRuleStatementUpdater();
     
     @BeforeEach
-    public void before() {
+    void before() {
         when(database.getName()).thenReturn("schema");
         ShardingSphereResourceMetaData resourceMetaData = new ShardingSphereResourceMetaData("sharding_db", createDataSource());
         when(database.getResourceMetaData()).thenReturn(resourceMetaData);
@@ -93,7 +94,7 @@ public final class CreateShardingTableRuleStatementUpdaterTest {
     }
     
     @Test
-    public void assertUpdate() {
+    void assertUpdate() {
         CreateShardingTableRuleStatement statement = new CreateShardingTableRuleStatement(false, Arrays.asList(createCompleteAutoTableRule(), createCompleteTableRule()));
         updater.checkSQLStatement(database, statement, currentRuleConfig);
         ShardingRuleConfiguration toBeCreatedRuleConfig = updater.buildToBeCreatedRuleConfiguration(currentRuleConfig, statement);
@@ -133,7 +134,7 @@ public final class CreateShardingTableRuleStatementUpdaterTest {
     }
     
     @Test
-    public void assertCheckCreateShardingStatement() {
+    void assertCheckCreateShardingStatement() {
         String sql = "CREATE SHARDING TABLE RULE t_order("
                 + "STORAGE_UNITS(ds_0,ds_1),"
                 + "SHARDING_COLUMN=order_id,"
@@ -144,7 +145,7 @@ public final class CreateShardingTableRuleStatementUpdaterTest {
     }
     
     @Test
-    public void assertCheckCreateShardingStatementThrows() {
+    void assertCheckCreateShardingStatementThrows() {
         String sql = "CREATE SHARDING TABLE RULE t_order("
                 + "STORAGE_UNITS(ds_0,ds_1),"
                 + "SHARDING_COLUMN=order_id,"
@@ -155,7 +156,51 @@ public final class CreateShardingTableRuleStatementUpdaterTest {
     }
     
     @Test
-    public void assertUpdateWithIfNotExistsStatement() {
+    void assertCheckCreateShardingStatementWithNoneDatabaseStrategy() {
+        String sql = "CREATE SHARDING TABLE RULE t_order("
+                + "DATANODES('ds_0.t_order_${0..1}'),"
+                + "DATABASE_STRATEGY(TYPE='NONE'),"
+                + "TABLE_STRATEGY(TYPE='standard',SHARDING_COLUMN=order_id,SHARDING_ALGORITHM(TYPE(NAME='inline',PROPERTIES('algorithm-expression'='t_order_${order_id % 2}'))))"
+                + ");";
+        CreateShardingTableRuleStatement distSQLStatement = (CreateShardingTableRuleStatement) getDistSQLStatement(sql);
+        updater.checkSQLStatement(database, distSQLStatement, null);
+    }
+    
+    @Test
+    void assertCheckCreateShardingStatementWithNoneDatabaseStrategyThrows() {
+        String sql = "CREATE SHARDING TABLE RULE t_order("
+                + "DATANODES('ds_${0..1}.t_order_${0..1}'),"
+                + "DATABASE_STRATEGY(TYPE='NONE'),"
+                + "TABLE_STRATEGY(TYPE='standard',SHARDING_COLUMN=order_id,SHARDING_ALGORITHM(TYPE(NAME='inline',PROPERTIES('algorithm-expression'='t_order_${order_id % 2}'))))"
+                + ");";
+        CreateShardingTableRuleStatement distSQLStatement = (CreateShardingTableRuleStatement) getDistSQLStatement(sql);
+        assertThrows(InvalidShardingStrategyConfigurationException.class, () -> updater.checkSQLStatement(database, distSQLStatement, null));
+    }
+    
+    @Test
+    void assertCheckCreateShardingStatementWithNoneTableStrategy() {
+        String sql = "CREATE SHARDING TABLE RULE t_order("
+                + "DATANODES('ds_${0..1}.t_order_0'),"
+                + "DATABASE_STRATEGY(TYPE='standard',SHARDING_COLUMN=user_id,SHARDING_ALGORITHM(TYPE(NAME='inline',PROPERTIES('algorithm-expression'='ds_${user_id % 2}')))),"
+                + "TABLE_STRATEGY(TYPE='NONE')"
+                + ");";
+        CreateShardingTableRuleStatement distSQLStatement = (CreateShardingTableRuleStatement) getDistSQLStatement(sql);
+        updater.checkSQLStatement(database, distSQLStatement, null);
+    }
+    
+    @Test
+    void assertCheckCreateShardingStatementWithNoneTableStrategyThrows() {
+        String sql = "CREATE SHARDING TABLE RULE t_order("
+                + "DATANODES('ds_${0..1}.t_order_${0..1}'),"
+                + "DATABASE_STRATEGY(TYPE='standard',SHARDING_COLUMN=user_id,SHARDING_ALGORITHM(TYPE(NAME='inline',PROPERTIES('algorithm-expression'='ds_${user_id % 2}')))),"
+                + "TABLE_STRATEGY(TYPE='NONE')"
+                + ");";
+        CreateShardingTableRuleStatement distSQLStatement = (CreateShardingTableRuleStatement) getDistSQLStatement(sql);
+        assertThrows(InvalidShardingStrategyConfigurationException.class, () -> updater.checkSQLStatement(database, distSQLStatement, null));
+    }
+    
+    @Test
+    void assertUpdateWithIfNotExistsStatement() {
         Collection<AbstractTableRuleSegment> segments = new LinkedList<>();
         segments.add(createCompleteAutoTableRule());
         segments.add(createCompleteTableRule());

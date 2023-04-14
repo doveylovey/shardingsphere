@@ -60,6 +60,7 @@ The following code of conduct is based on full compliance with [ASF CODE OF COND
  - Use forward semantics in priority for better understanding code logic in conditional expressions. For example: `if (null == param) {} else {}`.
  - Use concentrate `@SuppressWarnings("xxx")` instead of `@SuppressWarnings("all")`.
  - Avoid using Java Stream in hot methods, unless the performance of using Stream is better than using loop in that situation.
+ - Utility class should be named in the form of `xxUtils`.
 
 ## Contributor Covenant Unit Test of Conduct
 
@@ -77,7 +78,7 @@ The following code of conduct is based on full compliance with [ASF CODE OF COND
  - Test cases should be fully covered expect simply `getter /setter` methods, and declared static codes of SPI, such as: `getType / getOrder`.
  - Every test case need precised assertion, try not to use `not`, `containsString` to make assertions.
  - Environment preparation codes should be separate from test codes.
- - Only those that relate to `Mockito`, junit `Assert`, hamcrest `CoreMatchers` and `MatcherAssert` can use static import.
+ - Only those that relate to `Mockito`, junit `Assertions`, hamcrest `CoreMatchers` and `MatcherAssert` can use static import.
  - Usage of assertion methods: for boolean type asserts, `assertTrue` and `assertFalse` should be used, `assertNull` and `assertNotNull` should be used to assert whether the assertion is null, and `assertThat` should be used for other scenarios.
  - Usage of assertion methods:
    - Use `assertTrue` and `assertFalse` for boolean value;

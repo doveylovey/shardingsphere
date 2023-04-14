@@ -174,7 +174,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.Sim
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SubqueryTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.util.SQLUtil;
+import org.apache.shardingsphere.sql.parser.sql.common.util.SQLUtils;
 import org.apache.shardingsphere.sql.parser.sql.common.value.collection.CollectionValue;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 import org.apache.shardingsphere.sql.parser.sql.common.value.keyword.KeywordValue;
@@ -350,7 +350,7 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementP
     }
     
     private BinaryOperationExpression createPatternMatchingOperationSegment(final AExprContext ctx) {
-        String operator = getOriginalText(ctx.patternMatchingOperator());
+        String operator = getOriginalText(ctx.patternMatchingOperator()).toUpperCase();
         ExpressionSegment left = (ExpressionSegment) visit(ctx.aExpr(0));
         ListExpression right = new ListExpression(ctx.aExpr(1).start.getStartIndex(), ctx.aExpr().get(ctx.aExpr().size() - 1).stop.getStopIndex());
         for (int i = 1; i < ctx.aExpr().size(); i++) {
@@ -500,7 +500,7 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementP
             String dataType = null != ctx.constTypeName() ? ctx.constTypeName().getText() : ctx.funcName().getText();
             return new TypeCastExpression(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), ctx.getText(), expression, dataType);
         }
-        return SQLUtil.createLiteralExpression(value, ctx.start.getStartIndex(), ctx.stop.getStopIndex(), ctx.getText());
+        return SQLUtils.createLiteralExpression(value, ctx.start.getStartIndex(), ctx.stop.getStopIndex(), ctx.getText());
     }
     
     @Override

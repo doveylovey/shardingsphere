@@ -1,11 +1,11 @@
 +++
 title = "CREATE ENCRYPT RULE"
-weight = 2
+weight = 1
 +++
 
 ## 描述
 
-`CREATE ENCRYPT RULE` 语法用于创建数据加密规则
+`CREATE ENCRYPT RULE` 语法用于创建数据加密规则。
 
 ### 语法定义
 

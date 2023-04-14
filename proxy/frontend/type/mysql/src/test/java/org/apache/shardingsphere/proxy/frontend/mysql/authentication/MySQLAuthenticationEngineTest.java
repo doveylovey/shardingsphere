@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.Attribute;
 import lombok.SneakyThrows;
+import org.apache.shardingsphere.authority.provider.simple.model.privilege.AllPrivilegesPermittedShardingSpherePrivileges;
 import org.apache.shardingsphere.authority.rule.AuthorityRule;
 import org.apache.shardingsphere.db.protocol.constant.CommonConstants;
 import org.apache.shardingsphere.db.protocol.mysql.constant.MySQLCapabilityFlag;
@@ -31,6 +32,10 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLErrPacket
 import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLOKPacket;
 import org.apache.shardingsphere.db.protocol.mysql.packet.handshake.MySQLHandshakePacket;
 import org.apache.shardingsphere.db.protocol.mysql.payload.MySQLPacketPayload;
+import org.apache.shardingsphere.dialect.exception.syntax.database.UnknownDatabaseException;
+import org.apache.shardingsphere.dialect.mysql.exception.AccessDeniedException;
+import org.apache.shardingsphere.dialect.mysql.exception.DatabaseAccessDeniedException;
+import org.apache.shardingsphere.dialect.mysql.exception.HandshakeException;
 import org.apache.shardingsphere.dialect.mysql.vendor.MySQLVendorError;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
@@ -66,6 +71,7 @@ import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -78,21 +84,21 @@ import static org.mockito.Mockito.when;
 @ExtendWith(AutoMockExtension.class)
 @StaticMockSettings(ProxyContext.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-public final class MySQLAuthenticationEngineTest {
+class MySQLAuthenticationEngineTest {
     
     private final MySQLAuthenticationEngine authenticationEngine = new MySQLAuthenticationEngine();
     
     private final byte[] authResponse = {-27, 89, -20, -27, 65, -120, -64, -101, 86, -100, -108, -100, 6, -125, -37, 117, 14, -43, 95, -113};
     
     @Test
-    public void assertHandshake() {
+    void assertHandshake() {
         ChannelHandlerContext context = mockChannelHandlerContext();
         assertTrue(authenticationEngine.handshake(context) > 0);
         verify(context).writeAndFlush(any(MySQLHandshakePacket.class));
     }
     
     @Test
-    public void assertBadHandshakeReceived() {
+    void assertBadHandshakeReceived() {
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
         ContextManager contextManager = mockContextManager(rule);
@@ -100,9 +106,7 @@ public final class MySQLAuthenticationEngineTest {
         ChannelHandlerContext context = mockChannelHandlerContext();
         authenticationEngine.handshake(context);
         try (MockedConstruction<MySQLErrPacket> ignored = mockConstruction(MySQLErrPacket.class, this::assertBadHandshakeError)) {
-            authenticationEngine.authenticate(context, new MySQLPacketPayload(Unpooled.wrappedBuffer(new byte[]{0x02, 0x03}), StandardCharsets.UTF_8));
-            verify(context).writeAndFlush(any(MySQLErrPacket.class));
-            verify(context).close();
+            assertThrows(HandshakeException.class, () -> authenticationEngine.authenticate(context, new MySQLPacketPayload(Unpooled.wrappedBuffer(new byte[]{0x02, 0x03}), StandardCharsets.UTF_8)));
         }
     }
     
@@ -114,7 +118,7 @@ public final class MySQLAuthenticationEngineTest {
     
     @SuppressWarnings("unchecked")
     @Test
-    public void assertAuthenticationMethodMismatch() {
+    void assertAuthenticationMethodMismatch() {
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
@@ -136,7 +140,7 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     @Test
-    public void assertAuthenticationSwitchResponse() {
+    void assertAuthenticationSwitchResponse() {
         setConnectionPhase(MySQLConnectionPhase.AUTHENTICATION_METHOD_MISMATCH);
         MySQLPacketPayload payload = mock(MySQLPacketPayload.class);
         Channel channel = mock(Channel.class);
@@ -146,6 +150,9 @@ public final class MySQLAuthenticationEngineTest {
         when(channelHandlerContext.channel()).thenReturn(channel);
         setAuthenticationResult();
         AuthorityRule rule = mock(AuthorityRule.class);
+        ShardingSphereUser user = new ShardingSphereUser("root", "", "127.0.0.1");
+        when(rule.findUser(user.getGrantee())).thenReturn(Optional.of(user));
+        when(rule.findPrivileges(user.getGrantee())).thenReturn(Optional.of(new AllPrivilegesPermittedShardingSpherePrivileges()));
         when(rule.getAuthenticatorType(any())).thenReturn("");
         ContextManager contextManager = mockContextManager(rule);
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
@@ -159,7 +166,7 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     @Test
-    public void assertAuthenticateFailedWithAbsentUser() {
+    void assertAuthenticateFailedWithAbsentUser() {
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
@@ -169,15 +176,13 @@ public final class MySQLAuthenticationEngineTest {
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
         when(ProxyContext.getInstance().databaseExists("foo_db")).thenReturn(true);
         try (MockedConstruction<MySQLErrPacket> ignored = mockConstruction(MySQLErrPacket.class, (mock, mockContext) -> assertAuthenticationErrorPacket(mockContext.arguments()))) {
-            authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse));
-            verify(context).writeAndFlush(any(MySQLErrPacket.class));
-            verify(context).close();
+            assertThrows(AccessDeniedException.class, () -> authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse)));
         }
     }
     
     @SuppressWarnings({"rawtypes", "unused"})
     @Test
-    public void assertAuthenticateFailedWithUnAuthenticatedUser() {
+    void assertAuthenticateFailedWithUnAuthenticatedUser() {
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
@@ -191,9 +196,7 @@ public final class MySQLAuthenticationEngineTest {
                 MockedConstruction<AuthenticatorFactory> mockedAuthenticatorFactory = mockConstruction(AuthenticatorFactory.class,
                         (mock, mockContext) -> when(mock.newInstance(user)).thenReturn(mock(Authenticator.class)));
                 MockedConstruction<MySQLErrPacket> mockedErrPacket = mockConstruction(MySQLErrPacket.class, (mock, mockContext) -> assertAuthenticationErrorPacket(mockContext.arguments()))) {
-            authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse));
-            verify(context).writeAndFlush(any(MySQLErrPacket.class));
-            verify(context).close();
+            assertThrows(AccessDeniedException.class, () -> authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse)));
         }
     }
     
@@ -203,7 +206,7 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     @Test
-    public void assertAuthenticateFailedWithDatabaseAccessDenied() {
+    void assertAuthenticateFailedWithDatabaseAccessDenied() {
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
@@ -214,9 +217,7 @@ public final class MySQLAuthenticationEngineTest {
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
         when(ProxyContext.getInstance().databaseExists("foo_db")).thenReturn(true);
         try (MockedConstruction<MySQLErrPacket> ignored = mockConstruction(MySQLErrPacket.class, (mock, mockContext) -> assertDatabaseAccessDeniedErrorPacket(mockContext.arguments()))) {
-            authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse));
-            verify(context).writeAndFlush(any(MySQLErrPacket.class));
-            verify(context).close();
+            assertThrows(DatabaseAccessDeniedException.class, () -> authenticationEngine.authenticate(context, getPayload("root", "foo_db", authResponse)));
         }
     }
     
@@ -226,7 +227,7 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     @Test
-    public void assertAuthenticateFailedWithInvalidDatabase() {
+    void assertAuthenticateFailedWithInvalidDatabase() {
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
@@ -234,9 +235,7 @@ public final class MySQLAuthenticationEngineTest {
         ContextManager contextManager = mockContextManager(rule);
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
         try (MockedConstruction<MySQLErrPacket> ignored = mockConstruction(MySQLErrPacket.class, (mock, mockContext) -> assertInvalidDatabaseErrorPacket(mockContext.arguments()))) {
-            authenticationEngine.authenticate(context, getPayload("root", "invalid_db", authResponse));
-            verify(context).writeAndFlush(any(MySQLErrPacket.class));
-            verify(context).close();
+            assertThrows(UnknownDatabaseException.class, () -> authenticationEngine.authenticate(context, getPayload("root", "invalid_db", authResponse)));
         }
     }
     
@@ -246,7 +245,7 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     @Test
-    public void assertAuthenticateSuccess() {
+    void assertAuthenticateSuccess() {
         setConnectionPhase(MySQLConnectionPhase.AUTH_PHASE_FAST_PATH);
         AuthorityRule rule = mock(AuthorityRule.class);
         when(rule.getAuthenticatorType(any())).thenReturn("");

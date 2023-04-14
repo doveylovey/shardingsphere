@@ -43,7 +43,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 // TODO add jdbc
-public final class ShowProcessListE2EIT {
+class ShowProcessListE2EIT {
     
     private static final ShowProcessListEnvironment ENV = ShowProcessListEnvironment.getInstance();
     
@@ -52,7 +52,7 @@ public final class ShowProcessListE2EIT {
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
     @ArgumentsSource(TestCaseArgumentsProvider.class)
-    public void assertShowProcessList(final ShowProcessListTestParameter testParam) throws SQLException, InterruptedException {
+    void assertShowProcessList(final ShowProcessListTestParameter testParam) throws SQLException, InterruptedException {
         try (ClusterShowProcessListContainerComposer containerComposer = new ClusterShowProcessListContainerComposer(testParam)) {
             containerComposer.start();
             CompletableFuture<Void> executeSelectSleep = CompletableFuture.runAsync(getExecuteSleepThread("proxy", containerComposer));
@@ -119,7 +119,9 @@ public final class ShowProcessListE2EIT {
             Collection<Arguments> result = new LinkedList<>();
             for (String each : ENV.getScenarios()) {
                 for (String runMode : ENV.getRunModes()) {
-                    result.add(Arguments.of(new ShowProcessListTestParameter(new MySQLDatabaseType(), each, runMode)));
+                    for (String governanceType : ENV.getGovernanceCenters()) {
+                        result.add(Arguments.of(new ShowProcessListTestParameter(new MySQLDatabaseType(), each, runMode, governanceType)));
+                    }
                 }
             }
             return result.stream();

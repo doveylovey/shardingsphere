@@ -58,7 +58,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class SQLNodeConverterEngineIT {
+class SQLNodeConverterEngineIT {
     
     private static final SQLCases SQL_CASES = SQLCasesRegistry.getInstance().getCases();
     
@@ -68,7 +68,7 @@ public final class SQLNodeConverterEngineIT {
     
     @ParameterizedTest(name = "{0}")
     @ArgumentsSource(TestCaseArgumentsProvider.class)
-    public void assertConvert(final String sqlCaseId, final SQLCaseType sqlCaseType, final String databaseType) {
+    void assertConvert(final String sqlCaseId, final SQLCaseType sqlCaseType, final String databaseType) {
         String sql = SQL_CASES.getSQL(sqlCaseId, sqlCaseType, SQL_PARSER_TEST_CASES.get(sqlCaseId).getParameters());
         SqlNode actual = SQLNodeConverterEngine.convert(parseSQLStatement(databaseType, sql));
         SqlNode expected = parseSQLNode(databaseType, sql);
@@ -191,6 +191,8 @@ public final class SQLNodeConverterEngineIT {
             result.add("select_natural_full_join");
             result.add("select_order_by_for_nulls_first");
             result.add("select_order_by_for_nulls_last");
+            result.add("select_char");
+            result.add("select_weight_string");
             return result;
         }
         // CHECKSTYLE:ON

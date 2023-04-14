@@ -40,17 +40,15 @@ rules:
 - !READWRITE_SPLITTING
   dataSources:
     readwrite_ds:
-      staticStrategy:
-        writeDataSourceName: write_ds
-        readDataSourceNames:
-          - read_ds_0
-          - read_ds_1
+      writeDataSourceName: write_ds
+      readDataSourceNames:
+        - read_ds_0
+        - read_ds_1
+      transactionalReadQueryStrategy: PRIMARY
       loadBalancerName: random
   loadBalancers:
     random:
       type: RANDOM
-      props:
-        transaction-read-query-strategy: FIXED_PRIMARY
 ```
 
 ## Related References

@@ -1,11 +1,11 @@
 +++
 title = "SET DIST VARIABLE"
-weight = 4
+weight = 3
 +++
 
 ### 描述
 
-`SET DIST VARIABLE` 语法用于设置系统变量
+`SET DIST VARIABLE` 语法用于设置系统变量。
 
 ### 语法
 

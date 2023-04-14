@@ -63,6 +63,7 @@ chapter = true
  - 条件表达式中，优先使用正向语义，以便于理解代码逻辑。例如：`if (null == param) {} else {}`。
  - 使用具体的 `@SuppressWarnings("xxx")` 代替 `@SuppressWarnings("all")`。
  - 热点方法内应避免使用 Java Stream，除非该场景下使用 Stream 的性能优于普通循环。
+ - 工具类名称命名为 `xxUtils`。
 
 ## 单元测试规范
 
@@ -79,7 +80,7 @@ chapter = true
  - 除去简单的 `getter /setter` 方法，以及声明 SPI 的静态代码，如：`getType / getOrder`，单元测试需全覆盖。
  - 每个测试用例需精确断言，尽量不使用 `not`、`containsString` 断言。
  - 准备环境的代码和测试代码分离。
- - 只有 Mockito，junit `Assert`，hamcrest `CoreMatchers` 和 `MatcherAssert` 相关可以使用 static import。
+ - 只有 Mockito，junit `Assertions`，hamcrest `CoreMatchers` 和 `MatcherAssert` 相关可以使用 static import。
  - 数据断言规范应遵循：
     - 布尔类型断言应使用 `assertTrue` 和 `assertFalse`；
     - 空值断言应使用 `assertNull` 和 `assertNotNull`；

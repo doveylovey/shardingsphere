@@ -92,7 +92,7 @@ public abstract class TransactionBaseE2EIT {
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
     @ArgumentsSource(TestCaseArgumentsProvider.class)
-    public void assertTransaction(final TransactionTestParameter testParam) throws SQLException {
+    void assertTransaction(final TransactionTestParameter testParam) throws SQLException {
         if (null == testParam) {
             return;
         }
@@ -155,7 +155,7 @@ public abstract class TransactionBaseE2EIT {
     private void doCallTestCases(final TransactionTestParameter testParam, final TransactionType transactionType, final String provider, final TransactionContainerComposer containerComposer) {
         for (Class<? extends BaseTransactionTestCase> each : testParam.getTransactionTestCaseClasses()) {
             if (!Arrays.asList(each.getAnnotation(TransactionTestCase.class).transactionTypes()).contains(transactionType)) {
-                return;
+                continue;
             }
             log.info("Call transaction IT {} -> {} -> {} -> {} test begin.", testParam, transactionType, provider, each.getSimpleName());
             try {

@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.readwritesplitting.algorithm.loadbalance;
 
-import org.apache.shardingsphere.infra.context.transaction.TransactionConnectionContext;
 import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.readwritesplitting.spi.ReadQueryLoadBalanceAlgorithm;
 import org.junit.jupiter.api.Test;
@@ -28,25 +27,23 @@ import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class RandomReadQueryLoadBalanceAlgorithmTest {
+class RandomReadQueryLoadBalanceAlgorithmTest {
     
     @Test
-    public void assertGetDataSourceWithDefaultStrategy() {
+    void assertGetDataSourceWithDefaultStrategy() {
         ReadQueryLoadBalanceAlgorithm loadBalanceAlgorithm = TypedSPILoader.getService(ReadQueryLoadBalanceAlgorithm.class, "RANDOM", new Properties());
         String writeDataSourceName = "test_write_ds";
         String readDataSourceName1 = "test_read_ds_1";
         String readDataSourceName2 = "test_read_ds_2";
         List<String> readDataSourceNames = Arrays.asList(readDataSourceName1, readDataSourceName2);
-        TransactionConnectionContext context = new TransactionConnectionContext();
-        assertRandomReadQueryLoadBalance(readDataSourceNames, loadBalanceAlgorithm, writeDataSourceName, context);
-        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames, context)));
-        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames, context)));
+        assertRandomReadQueryLoadBalance(readDataSourceNames, loadBalanceAlgorithm, writeDataSourceName);
+        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames)));
+        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames)));
     }
     
-    private void assertRandomReadQueryLoadBalance(final List<String> readDataSourceNames, final ReadQueryLoadBalanceAlgorithm loadBalanceAlgorithm, final String writeDataSourceName,
-                                                  final TransactionConnectionContext context) {
-        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames, context)));
-        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames, context)));
-        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames, context)));
+    private void assertRandomReadQueryLoadBalance(final List<String> readDataSourceNames, final ReadQueryLoadBalanceAlgorithm loadBalanceAlgorithm, final String writeDataSourceName) {
+        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames)));
+        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames)));
+        assertTrue(readDataSourceNames.contains(loadBalanceAlgorithm.getDataSource("ds", writeDataSourceName, readDataSourceNames)));
     }
 }

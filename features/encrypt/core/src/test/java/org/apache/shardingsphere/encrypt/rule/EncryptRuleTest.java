@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -36,28 +35,28 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class EncryptRuleTest {
+class EncryptRuleTest {
     
     @Test
-    public void assertFindEncryptTable() {
+    void assertFindEncryptTable() {
         assertTrue(new EncryptRule(createEncryptRuleConfiguration()).findEncryptTable("t_encrypt").isPresent());
     }
     
     @Test
-    public void assertFindEncryptor() {
+    void assertFindEncryptor() {
         assertTrue(new EncryptRule(createEncryptRuleConfiguration()).findEncryptor("t_encrypt", "pwd").isPresent());
     }
     
     @Test
-    public void assertNotFindEncryptor() {
+    void assertNotFindEncryptor() {
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).findEncryptor("t_encrypt", "other_column").isPresent());
     }
     
     @Test
-    public void assertGetEncryptValues() {
+    void assertGetEncryptValues() {
         List<Object> encryptAssistedQueryValues = new EncryptRule(createEncryptRuleConfiguration())
                 .getEncryptValues(DefaultDatabase.LOGIC_NAME, DefaultDatabase.LOGIC_NAME, "t_encrypt", "pwd", Collections.singletonList(null));
         for (Object each : encryptAssistedQueryValues) {
@@ -66,28 +65,28 @@ public final class EncryptRuleTest {
     }
     
     @Test
-    public void assertGetCipherColumnWhenEncryptColumnExist() {
+    void assertGetCipherColumnWhenEncryptColumnExist() {
         assertThat(new EncryptRule(createEncryptRuleConfiguration()).getCipherColumn("t_encrypt", "pwd"), is("pwd_cipher"));
     }
     
     @Test
-    public void assertGetCipherColumnWhenNoEncryptColumn() {
+    void assertGetCipherColumnWhenNoEncryptColumn() {
         // TODO should not throw NPE
         assertThrows(NullPointerException.class, () -> new EncryptRule(createEncryptRuleConfiguration()).getCipherColumn("t_encrypt", "pwd_cipher"));
     }
     
     @Test
-    public void assertGetLogicAndCipherColumns() {
+    void assertGetLogicAndCipherColumns() {
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).getLogicAndCipherColumns("t_encrypt").isEmpty());
     }
     
     @Test
-    public void assertFindAssistedQueryColumn() {
+    void assertFindAssistedQueryColumn() {
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).findAssistedQueryColumn("t_encrypt", "pwd_cipher").isPresent());
     }
     
     @Test
-    public void assertGetEncryptAssistedQueryValues() {
+    void assertGetEncryptAssistedQueryValues() {
         List<Object> encryptAssistedQueryValues = new EncryptRule(createEncryptRuleConfiguration())
                 .getEncryptAssistedQueryValues(DefaultDatabase.LOGIC_NAME, DefaultDatabase.LOGIC_NAME, "t_encrypt", "pwd", Collections.singletonList(null));
         for (Object each : encryptAssistedQueryValues) {
@@ -96,24 +95,24 @@ public final class EncryptRuleTest {
     }
     
     @Test
-    public void assertGetAssistedQueryColumns() {
+    void assertGetAssistedQueryColumns() {
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).getAssistedQueryColumns("t_encrypt").isEmpty());
     }
     
     @Test
-    public void assertFindPlainColumn() {
+    void assertFindPlainColumn() {
         assertTrue(new EncryptRule(createEncryptRuleConfiguration()).findPlainColumn("t_encrypt", "pwd").isPresent());
         assertTrue(new EncryptRule(createEncryptRuleConfiguration()).findPlainColumn("t_encrypt", "credit_card".toLowerCase()).isPresent());
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).findPlainColumn("t_encrypt", "notExistLogicColumn").isPresent());
     }
     
     @Test
-    public void assertFindLikeQueryColumn() {
+    void assertFindLikeQueryColumn() {
         assertFalse(new EncryptRule(createEncryptRuleConfiguration()).findLikeQueryColumn("t_encrypt", "pwd_cipher").isPresent());
     }
     
     @Test
-    public void assertGetEncryptLikeQueryValues() {
+    void assertGetEncryptLikeQueryValues() {
         List<Object> encryptLikeQueryValues = new EncryptRule(createEncryptRuleConfiguration())
                 .getEncryptLikeQueryValues(DefaultDatabase.LOGIC_NAME, DefaultDatabase.LOGIC_NAME, "t_encrypt", "pwd", Collections.singletonList(null));
         for (Object actual : encryptLikeQueryValues) {
@@ -122,17 +121,17 @@ public final class EncryptRuleTest {
     }
     
     @Test
-    public void assertGetTables() {
+    void assertGetTables() {
         assertThat(new EncryptRule(createEncryptRuleConfiguration()).getTables(), is(Collections.singleton("t_encrypt")));
     }
     
     @Test
-    public void assertGetTableWithLowercase() {
+    void assertGetTableWithLowercase() {
         assertThat(new EncryptRule(createEncryptRuleConfigurationWithUpperCaseLogicTable()).getTables(), is(Collections.singleton("t_encrypt")));
     }
     
     @Test
-    public void assertTheSameLogicTable() {
+    void assertTheSameLogicTable() {
         Collection<String> logicTables = new EncryptRule(createEncryptRuleConfiguration()).getTables();
         Collection<String> theSameLogicTables = new EncryptRule(createEncryptRuleConfigurationWithUpperCaseLogicTable()).getTables();
         assertThat(logicTables, is(theSameLogicTables));
@@ -145,18 +144,18 @@ public final class EncryptRuleTest {
                 new EncryptColumnRuleConfiguration("pwd", "pwd_cipher", "pwd_assist", "pwd_like", "pwd_plain", "test_encryptor", "test_encryptor", "like_encryptor", null);
         EncryptColumnRuleConfiguration creditCardColumnConfig = new EncryptColumnRuleConfiguration("credit_card", "credit_card_cipher", "", "", "credit_card_plain", "test_encryptor", null);
         EncryptTableRuleConfiguration tableConfig = new EncryptTableRuleConfiguration("t_encrypt", Arrays.asList(pwdColumnConfig, creditCardColumnConfig), null);
-        return new EncryptRuleConfiguration(Collections.singleton(tableConfig), getEncryptors(queryAssistedEncryptConfig, queryLikeEncryptConfig));
+        return new EncryptRuleConfiguration(Collections.singleton(tableConfig), getEncryptors(queryAssistedEncryptConfig), getLikeEncryptors(queryLikeEncryptConfig));
     }
     
     @Test
-    public void assertAssistedQueryEncryptorNameSpecified() {
+    void assertAssistedQueryEncryptorNameSpecified() {
         EncryptColumnRuleConfiguration pwdColumnConfig =
                 new EncryptColumnRuleConfiguration("pwd", "pwd_cipher", "pwd_assist", "", "pwd_plain", "test_encryptor", "assisted_query_test_encryptor", null, null);
         assertThat(pwdColumnConfig.getAssistedQueryEncryptorName(), is("assisted_query_test_encryptor"));
     }
     
     @Test
-    public void assertLikeQueryEncryptorNameSpecified() {
+    void assertLikeQueryEncryptorNameSpecified() {
         EncryptColumnRuleConfiguration pwdColumnConfig =
                 new EncryptColumnRuleConfiguration("pwd", "pwd_cipher", "", "pwd_like", "pwd_plain", "test_encryptor", "", "like_query_test_encryptor", null);
         assertThat(pwdColumnConfig.getLikeQueryEncryptorName(), is("like_query_test_encryptor"));
@@ -168,13 +167,14 @@ public final class EncryptRuleTest {
         EncryptColumnRuleConfiguration pwdColumnConfig = new EncryptColumnRuleConfiguration("pwd", "pwd_cipher", "", "", "pwd_plain", "test_encryptor", null);
         EncryptColumnRuleConfiguration creditCardColumnConfig = new EncryptColumnRuleConfiguration("credit_card", "credit_card_cipher", "", "", "credit_card_plain", "test_encryptor", null);
         EncryptTableRuleConfiguration tableConfig = new EncryptTableRuleConfiguration("T_ENCRYPT", Arrays.asList(pwdColumnConfig, creditCardColumnConfig), null);
-        return new EncryptRuleConfiguration(Collections.singleton(tableConfig), getEncryptors(queryAssistedEncryptConfig, queryLikeEncryptConfig));
+        return new EncryptRuleConfiguration(Collections.singleton(tableConfig), getEncryptors(queryAssistedEncryptConfig), getLikeEncryptors(queryLikeEncryptConfig));
     }
     
-    private Map<String, AlgorithmConfiguration> getEncryptors(final AlgorithmConfiguration queryAssistedEncryptConfig, final AlgorithmConfiguration queryLikeEncryptConfig) {
-        Map<String, AlgorithmConfiguration> result = new HashMap<>(2, 1);
-        result.put("test_encryptor", queryAssistedEncryptConfig);
-        result.put("like_encryptor", queryLikeEncryptConfig);
-        return result;
+    private Map<String, AlgorithmConfiguration> getEncryptors(final AlgorithmConfiguration queryAssistedEncryptConfig) {
+        return Collections.singletonMap("test_encryptor", queryAssistedEncryptConfig);
+    }
+    
+    private Map<String, AlgorithmConfiguration> getLikeEncryptors(final AlgorithmConfiguration queryLikeEncryptConfig) {
+        return Collections.singletonMap("like_encryptor", queryLikeEncryptConfig);
     }
 }

@@ -1,11 +1,11 @@
 +++
 title = "SHOW DIST VARIABLE"
-weight = 5
+weight = 4
 +++
 
 ### 描述
 
-`SHOW DIST VARIABLE` 语法用于查询 `PROXY` 系统变量配置
+`SHOW DIST VARIABLE` 语法用于查询 `PROXY` 系统变量配置。
 
 ### 语法
 
@@ -26,10 +26,10 @@ variableName ::=
 
 ### 返回值说明
 
-| 列            | 说明        |
-|---------------|------------|
-| variable_name | 系统变量名称|
-| variable_value| 系统变量值  |
+| 列              | 说明     |
+|----------------|--------|
+| variable_name  | 系统变量名称 |
+| variable_value | 系统变量值  |
 
 ### 补充说明
 

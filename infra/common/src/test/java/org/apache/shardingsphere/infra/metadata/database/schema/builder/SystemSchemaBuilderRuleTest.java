@@ -26,22 +26,28 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public final class SystemSchemaBuilderRuleTest {
+class SystemSchemaBuilderRuleTest {
     
     @Test
-    public void assertValueOfSchemaPathSuccess() {
-        SystemSchemaBuilderRule actual = SystemSchemaBuilderRule.valueOf(new MySQLDatabaseType().getType(), "information_schema");
-        assertThat(actual, is(SystemSchemaBuilderRule.MYSQL_INFORMATION_SCHEMA));
-        assertThat(actual.getTables().size(), is(15));
+    void assertValueOfSchemaPathSuccess() {
+        SystemSchemaBuilderRule actualInformationSchema = SystemSchemaBuilderRule.valueOf(new MySQLDatabaseType().getType(), "information_schema");
+        assertThat(actualInformationSchema, is(SystemSchemaBuilderRule.MYSQL_INFORMATION_SCHEMA));
+        assertThat(actualInformationSchema.getTables().size(), is(61));
+        SystemSchemaBuilderRule actualMySQLSchema = SystemSchemaBuilderRule.valueOf(new MySQLDatabaseType().getType(), "mysql");
+        assertThat(actualMySQLSchema, is(SystemSchemaBuilderRule.MYSQL_MYSQL));
+        assertThat(actualMySQLSchema.getTables().size(), is(31));
+        SystemSchemaBuilderRule actualPerformanceSchema = SystemSchemaBuilderRule.valueOf(new MySQLDatabaseType().getType(), "performance_schema");
+        assertThat(actualPerformanceSchema, is(SystemSchemaBuilderRule.MYSQL_PERFORMANCE_SCHEMA));
+        assertThat(actualPerformanceSchema.getTables().size(), is(39));
     }
     
     @Test
-    public void assertValueOfSchemaPathFailure() {
+    void assertValueOfSchemaPathFailure() {
         assertThrows(NullPointerException.class, () -> SystemSchemaBuilderRule.valueOf(new MySQLDatabaseType().getType(), "test"));
     }
     
     @Test
-    public void assertIsisSystemTable() {
+    void assertIsisSystemTable() {
         assertTrue(SystemSchemaBuilderRule.isSystemTable("information_schema", "columns"));
         assertTrue(SystemSchemaBuilderRule.isSystemTable("pg_catalog", "pg_database"));
         assertFalse(SystemSchemaBuilderRule.isSystemTable("sharding_db", "t_order"));

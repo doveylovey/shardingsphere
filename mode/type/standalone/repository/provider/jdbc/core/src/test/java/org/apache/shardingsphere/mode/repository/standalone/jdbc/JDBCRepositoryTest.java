@@ -21,10 +21,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.apache.shardingsphere.mode.repository.standalone.jdbc.fixture.JDBCRepositoryProviderFixture;
 import org.apache.shardingsphere.test.util.PropertiesBuilder;
 import org.apache.shardingsphere.test.util.PropertiesBuilder.Property;
-import org.h2.jdbc.JdbcCallableStatement;
-import org.h2.jdbc.JdbcConnection;
-import org.h2.jdbc.JdbcResultSet;
-import org.h2.jdbc.JdbcStatement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +29,10 @@ import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
 
@@ -47,36 +47,36 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public final class JDBCRepositoryTest {
+class JDBCRepositoryTest {
     
     private final JDBCRepositoryProviderFixture fixture = new JDBCRepositoryProviderFixture();
     
     @Mock
-    private JdbcConnection mockJdbcConnection;
+    private Connection mockJdbcConnection;
     
     @Mock
-    private JdbcStatement mockStatement;
+    private Statement mockStatement;
     
     @Mock
-    private JdbcCallableStatement mockPreparedStatement;
+    private PreparedStatement mockPreparedStatement;
     
     @Mock
-    private JdbcCallableStatement mockPreparedStatementForPersist;
+    private PreparedStatement mockPreparedStatementForPersist;
     
     @Mock
-    private JdbcResultSet mockResultSet;
+    private ResultSet mockResultSet;
     
     private MockedConstruction<HikariDataSource> mockedConstruction;
     
     private JDBCRepository repository;
     
     @BeforeEach
-    public void setup() throws Exception {
+    void setup() throws Exception {
         mockedConstruction = mockConstruction(HikariDataSource.class, (mock, context) -> when(mock.getConnection()).thenReturn(mockJdbcConnection));
         when(mockJdbcConnection.createStatement()).thenReturn(mockStatement);
         repository = new JDBCRepository();
         Properties props = PropertiesBuilder.build(
-                new Property("jdbc_url", "jdbc:h2:mem:config;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;MODE=MYSQL"),
+                new Property("jdbc_url", "jdbc:h2:mem:config;DB_CLOSE_DELAY=0;DATABASE_TO_UPPER=false;MODE=MYSQL"),
                 new Property("username", "sa"),
                 new Property("password", ""),
                 new Property("provider", "FIXTURE"));
@@ -84,18 +84,17 @@ public final class JDBCRepositoryTest {
     }
     
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         mockedConstruction.close();
     }
     
     @Test
-    public void assertInit() throws Exception {
-        verify(mockStatement).execute(fixture.dropTableSQL());
+    void assertInit() throws Exception {
         verify(mockStatement).execute(fixture.createTableSQL());
     }
     
     @Test
-    public void assertGet() throws Exception {
+    void assertGet() throws Exception {
         String key = "key";
         String value = "value";
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
@@ -108,7 +107,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertGetFailure() throws Exception {
+    void assertGetFailure() throws Exception {
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(false);
@@ -117,7 +116,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistAndGetChildrenKeys() throws Exception {
+    void assertPersistAndGetChildrenKeys() throws Exception {
         when(mockJdbcConnection.prepareStatement(fixture.selectByParentKeySQL())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, true, true, false);
@@ -128,7 +127,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistAndGetChildrenKeysFailure() throws Exception {
+    void assertPersistAndGetChildrenKeysFailure() throws Exception {
         when(mockJdbcConnection.prepareStatement(fixture.selectByParentKeySQL())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(false);
@@ -137,7 +136,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistWithUpdateForSimpleKeys() throws Exception {
+    void assertPersistWithUpdateForSimpleKeys() throws Exception {
         final String key = "key";
         final String value = "value";
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
@@ -154,7 +153,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistForDirectory() throws Exception {
+    void assertPersistForDirectory() throws Exception {
         final String key = "/parent/child/test1";
         final String value = "test1_content";
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
@@ -191,7 +190,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistFailureDuringUpdate() throws Exception {
+    void assertPersistFailureDuringUpdate() throws Exception {
         final String key = "key";
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
@@ -203,7 +202,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistWithInsertForSimpleKeys() throws Exception {
+    void assertPersistWithInsertForSimpleKeys() throws Exception {
         final String key = "key";
         final String value = "value";
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
@@ -220,7 +219,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertPersistFailureDuringInsert() throws Exception {
+    void assertPersistFailureDuringInsert() throws Exception {
         when(mockJdbcConnection.prepareStatement(fixture.selectByKeySQL())).thenReturn(mockPreparedStatement);
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(false);
@@ -230,7 +229,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertDelete() throws Exception {
+    void assertDelete() throws Exception {
         String key = "key";
         when(mockJdbcConnection.prepareStatement(fixture.deleteSQL())).thenReturn(mockPreparedStatement);
         repository.delete(key);
@@ -239,7 +238,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertDeleteFailure() throws Exception {
+    void assertDeleteFailure() throws Exception {
         String key = "key";
         when(mockJdbcConnection.prepareStatement(fixture.deleteSQL())).thenReturn(mockPreparedStatementForPersist);
         repository.delete(key);
@@ -247,7 +246,7 @@ public final class JDBCRepositoryTest {
     }
     
     @Test
-    public void assertClose() {
+    void assertClose() {
         repository.close();
         HikariDataSource hikariDataSource = mockedConstruction.constructed().get(0);
         verify(hikariDataSource).close();

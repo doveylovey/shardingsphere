@@ -17,9 +17,6 @@
 
 package org.apache.shardingsphere.proxy.backend.handler.distsql.rql.rule;
 
-import org.apache.shardingsphere.dbdiscovery.api.config.DatabaseDiscoveryRuleConfiguration;
-import org.apache.shardingsphere.dbdiscovery.api.config.rule.DatabaseDiscoveryDataSourceRuleConfiguration;
-import org.apache.shardingsphere.dbdiscovery.rule.DatabaseDiscoveryRule;
 import org.apache.shardingsphere.distsql.handler.query.RQLExecutor;
 import org.apache.shardingsphere.distsql.parser.statement.rql.show.ShowRulesUsedStorageUnitStatement;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
@@ -34,7 +31,6 @@ import org.apache.shardingsphere.mask.api.config.rule.MaskTableRuleConfiguration
 import org.apache.shardingsphere.mask.rule.MaskRule;
 import org.apache.shardingsphere.readwritesplitting.api.ReadwriteSplittingRuleConfiguration;
 import org.apache.shardingsphere.readwritesplitting.api.rule.ReadwriteSplittingDataSourceRuleConfiguration;
-import org.apache.shardingsphere.readwritesplitting.api.strategy.StaticReadwriteSplittingStrategyConfiguration;
 import org.apache.shardingsphere.readwritesplitting.rule.ReadwriteSplittingRule;
 import org.apache.shardingsphere.shadow.api.config.ShadowRuleConfiguration;
 import org.apache.shardingsphere.shadow.api.config.datasource.ShadowDataSourceConfiguration;
@@ -59,15 +55,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public final class ShowRulesUsedStorageUnitExecutorTest {
+class ShowRulesUsedStorageUnitExecutorTest {
     
     @Test
-    public void assertGetRowData() {
+    void assertGetRowData() {
         RQLExecutor<ShowRulesUsedStorageUnitStatement> executor = new ShowRulesUsedStorageUnitExecutor();
         ShowRulesUsedStorageUnitStatement sqlStatement = mock(ShowRulesUsedStorageUnitStatement.class);
         when(sqlStatement.getStorageUnitName()).thenReturn(Optional.of("foo_ds"));
         Collection<LocalDataQueryResultRow> rowData = executor.getRows(mockDatabase(), sqlStatement);
-        assertThat(rowData.size(), is(8));
+        assertThat(rowData.size(), is(7));
         Iterator<LocalDataQueryResultRow> actual = rowData.iterator();
         LocalDataQueryResultRow row = actual.next();
         assertThat(row.getCell(1), is("sharding"));
@@ -81,9 +77,6 @@ public final class ShowRulesUsedStorageUnitExecutorTest {
         row = actual.next();
         assertThat(row.getCell(1), is("readwrite_splitting"));
         assertThat(row.getCell(2), is("readwrite_splitting_source"));
-        row = actual.next();
-        assertThat(row.getCell(1), is("db_discovery"));
-        assertThat(row.getCell(2), is("db_discovery_group_name"));
         row = actual.next();
         assertThat(row.getCell(1), is("encrypt"));
         assertThat(row.getCell(2), is("encrypt_table"));
@@ -99,7 +92,7 @@ public final class ShowRulesUsedStorageUnitExecutorTest {
     private ShardingSphereDatabase mockDatabase() {
         ShardingSphereDatabase result = mock(ShardingSphereDatabase.class);
         ShardingSphereRuleMetaData ruleMetaData = new ShardingSphereRuleMetaData(
-                Arrays.asList(mockShardingRule(), mockReadwriteSplittingRule(), mockDatabaseDiscoveryRule(), mockEncryptRule(), mockShadowRule(), mockMaskRule()));
+                Arrays.asList(mockShardingRule(), mockReadwriteSplittingRule(), mockEncryptRule(), mockShadowRule(), mockMaskRule()));
         when(result.getRuleMetaData()).thenReturn(ruleMetaData);
         ShardingSphereResourceMetaData resourceMetaData = new ShardingSphereResourceMetaData("sharding_db", Collections.singletonMap("foo_ds", new MockedDataSource()));
         when(result.getResourceMetaData()).thenReturn(resourceMetaData);
@@ -118,16 +111,8 @@ public final class ShowRulesUsedStorageUnitExecutorTest {
     private ReadwriteSplittingRule mockReadwriteSplittingRule() {
         ReadwriteSplittingRule result = mock(ReadwriteSplittingRule.class);
         ReadwriteSplittingRuleConfiguration config = mock(ReadwriteSplittingRuleConfiguration.class);
-        when(config.getDataSources()).thenReturn(Collections.singleton(new ReadwriteSplittingDataSourceRuleConfiguration("readwrite_splitting_source",
-                new StaticReadwriteSplittingStrategyConfiguration("foo_ds", Arrays.asList("foo_ds", "bar_ds")), null, "")));
-        when(result.getConfiguration()).thenReturn(config);
-        return result;
-    }
-    
-    private DatabaseDiscoveryRule mockDatabaseDiscoveryRule() {
-        DatabaseDiscoveryRule result = mock(DatabaseDiscoveryRule.class);
-        DatabaseDiscoveryRuleConfiguration config = mock(DatabaseDiscoveryRuleConfiguration.class);
-        when(config.getDataSources()).thenReturn(Collections.singleton(new DatabaseDiscoveryDataSourceRuleConfiguration("db_discovery_group_name", Arrays.asList("foo_ds", "bar_ds"), "", "")));
+        when(config.getDataSources())
+                .thenReturn(Collections.singleton(new ReadwriteSplittingDataSourceRuleConfiguration("readwrite_splitting_source", "foo_ds", Arrays.asList("foo_ds", "bar_ds"), "")));
         when(result.getConfiguration()).thenReturn(config);
         return result;
     }
@@ -157,7 +142,7 @@ public final class ShowRulesUsedStorageUnitExecutorTest {
     }
     
     @Test
-    public void assertGetEmptyRowData() {
+    void assertGetEmptyRowData() {
         ShardingSphereDatabase database = mockEmptyDatabase();
         RQLExecutor<ShowRulesUsedStorageUnitStatement> executor = new ShowRulesUsedStorageUnitExecutor();
         ShowRulesUsedStorageUnitStatement sqlStatement = mock(ShowRulesUsedStorageUnitStatement.class);
@@ -175,7 +160,7 @@ public final class ShowRulesUsedStorageUnitExecutorTest {
     }
     
     @Test
-    public void assertGetColumnNames() {
+    void assertGetColumnNames() {
         RQLExecutor<ShowRulesUsedStorageUnitStatement> executor = new ShowRulesUsedStorageUnitExecutor();
         Collection<String> columns = executor.getColumnNames();
         assertThat(columns.size(), is(2));

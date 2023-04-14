@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.encrypt.rewrite.impl;
 
-import org.apache.shardingsphere.encrypt.api.encrypt.standard.StandardEncryptAlgorithm;
+import org.apache.shardingsphere.encrypt.spi.EncryptAlgorithm;
 import org.apache.shardingsphere.encrypt.rewrite.token.generator.EncryptAlterTableTokenGenerator;
 import org.apache.shardingsphere.encrypt.rewrite.token.pojo.EncryptAlterTableToken;
 import org.apache.shardingsphere.encrypt.rule.EncryptColumn;
@@ -48,12 +48,12 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public final class EncryptAlterTableTokenGeneratorTest {
+class EncryptAlterTableTokenGeneratorTest {
     
     private EncryptAlterTableTokenGenerator generator;
     
     @BeforeEach
-    public void setup() {
+    void setup() {
         generator = new EncryptAlterTableTokenGenerator();
         generator.setEncryptRule(mockEncryptRule());
     }
@@ -66,7 +66,7 @@ public final class EncryptAlterTableTokenGeneratorTest {
         when(result.findPlainColumn("t_encrypt", "certificate_number")).thenReturn(Optional.of("certificate_number_plain"));
         EncryptTable encryptTable = mock(EncryptTable.class);
         when(encryptTable.getLogicColumns()).thenReturn(Collections.singleton("t_encrypt"));
-        StandardEncryptAlgorithm<?, ?> encryptAlgorithm = mock(StandardEncryptAlgorithm.class);
+        EncryptAlgorithm<?, ?> encryptAlgorithm = mock(EncryptAlgorithm.class);
         when(result.findEncryptor("t_encrypt", "certificate_number")).thenReturn(Optional.of(encryptAlgorithm));
         when(result.findEncryptor("t_encrypt", "certificate_number_new")).thenReturn(Optional.of(encryptAlgorithm));
         when(result.findEncryptTable("t_encrypt")).thenReturn(Optional.of(encryptTable));
@@ -85,7 +85,7 @@ public final class EncryptAlterTableTokenGeneratorTest {
     }
     
     @Test
-    public void assertAddColumnGenerateSQLTokens() {
+    void assertAddColumnGenerateSQLTokens() {
         Collection<SQLToken> sqlTokens = generator.generateSQLTokens(buildAddColumnStatementContext());
         assertThat(sqlTokens.size(), is(5));
         Iterator<SQLToken> iterator = sqlTokens.iterator();
@@ -118,7 +118,7 @@ public final class EncryptAlterTableTokenGeneratorTest {
     }
     
     @Test
-    public void assertModifyColumnGenerateSQLTokens() {
+    void assertModifyColumnGenerateSQLTokens() {
         Collection<SQLToken> sqlTokens = generator.generateSQLTokens(buildModifyColumnStatementContext());
         assertThat(sqlTokens.size(), is(5));
         Iterator<SQLToken> iterator = sqlTokens.iterator();
@@ -151,7 +151,7 @@ public final class EncryptAlterTableTokenGeneratorTest {
     }
     
     @Test
-    public void assertChangeColumnGenerateSQLTokens() {
+    void assertChangeColumnGenerateSQLTokens() {
         Collection<SQLToken> sqlTokens = generator.generateSQLTokens(buildChangeColumnStatementContext());
         assertThat(sqlTokens.size(), is(7));
         Iterator<SQLToken> iterator = sqlTokens.iterator();
