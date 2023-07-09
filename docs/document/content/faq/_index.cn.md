@@ -5,6 +5,14 @@ weight = 8
 chapter = true
 +++
 
+## MODE
+
+### [MODE] 集群模式 `Cluster` 和 `Compatible_Cluster` 区别?
+
+回答:
+
+在 5.4.0 版本中调整了元数据存储结构，`Cluster` 代表新版本的元数据结构，`Compatible_Cluster` 则代表 5.4.0 之前版本的元数据结构。
+
 ## JDBC
 
 ### [JDBC] 引入 `shardingsphere-transaction-xa-core` 后，如何避免 spring-boot 自动加载默认的 JtaTransactionManager？
@@ -15,24 +23,47 @@ chapter = true
 ### [JDBC] Oracle 表名、字段名配置大小写在加载 `metadata` 元数据时结果不正确？
 回答：
 需要注意，Oracle 表名和字段名，默认元数据都是大写，除非建表语句中带双引号，如 `CREATE TABLE "TableName"("Id" number)` 元数据为双引号中内容，可参考以下SQL查看元数据的具体情况：
-```
+```sql
 SELECT OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS WHERE TABLE_NAME IN ('TableName') 
 ```
 ShardingSphere 使用 `OracleTableMetaDataLoader` 对 Oracle 元数据进行加载，配置时需确保表名、字段名的大小写配置与数据库中的一致。
 ShardingSphere 查询元数据关键SQL:
+```java
+ private String getTableMetaDataSQL(final Collection<String> tables, final DatabaseMetaData metaData) throws SQLException {
+     StringBuilder stringBuilder = new StringBuilder(28);
+     if (versionContainsIdentityColumn(metaData)) {
+         stringBuilder.append(", IDENTITY_COLUMN");
+     }
+     if (versionContainsCollation(metaData)) {
+         stringBuilder.append(", COLLATION");
+     }
+     String collation = stringBuilder.toString();
+     return tables.isEmpty() ? String.format(TABLE_META_DATA_SQL, collation)
+             : String.format(TABLE_META_DATA_SQL_IN_TABLES, collation, tables.stream().map(each -> String.format("'%s'", each)).collect(Collectors.joining(",")));
+ }
 ```
-    private String getTableMetaDataSQL(final Collection<String> tables, final DatabaseMetaData metaData) throws SQLException {
-        StringBuilder stringBuilder = new StringBuilder(28);
-        if (versionContainsIdentityColumn(metaData)) {
-            stringBuilder.append(", IDENTITY_COLUMN");
-        }
-        if (versionContainsCollation(metaData)) {
-            stringBuilder.append(", COLLATION");
-        }
-        String collation = stringBuilder.toString();
-        return tables.isEmpty() ? String.format(TABLE_META_DATA_SQL, collation)
-                : String.format(TABLE_META_DATA_SQL_IN_TABLES, collation, tables.stream().map(each -> String.format("'%s'", each)).collect(Collectors.joining(",")));
-    }
+
+### [JDBC] 使用 MySQL XA 事务时报 `SQLException: Unable to unwrap to interface com.mysql.jdbc.Connection` 异常
+
+回答：
+
+多个 MySQL 驱动之间不兼容。由于优先加载了类路径下 MySQL5 版本的驱动类，当试图调用 MySQL8 驱动里的 `unwrap` 方法时，类型转换异常。
+
+解决方案：
+检查类路径下是否同时存在 MySQL5 和 MySQL8 的驱动，只保留对应版本的一个驱动包即可。
+
+异常堆栈如下：
+```
+Caused by: java.sql.SQLException: Unable to unwrap to interface com.mysql.jdbc.Connection
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:129)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:97)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:89)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:63)
+	at com.mysql.cj.jdbc.ConnectionImpl.unwrap(ConnectionImpl.java:2650)
+	at com.zaxxer.hikari.pool.ProxyConnection.unwrap(ProxyConnection.java:481)
+	at org.apache.shardingsphere.transaction.xa.jta.connection.dialect.MySQLXAConnectionWrapper.wrap(MySQLXAConnectionWrapper.java:46)
+	at org.apache.shardingsphere.transaction.xa.jta.datasource.XATransactionDataSource.getConnection(XATransactionDataSource.java:89)
+	at org.apache.shardingsphere.transaction.xa.XAShardingSphereTransactionManager.getConnection(XAShardingSphereTransactionManager.java:96
 ```
 
 ## Proxy
@@ -137,7 +168,7 @@ ShardingSphere 采用 snowflake 算法作为默认的分布式自增主键策略
 
 [Service Provider Interface (SPI)](https://docs.oracle.com/javase/tutorial/sound/SPI-intro.html) 是一种为了被第三方实现或扩展的 API，除了实现接口外，还需要在 META-INF/services 中创建对应文件来指定 SPI 的实现类，JVM 才会加载这些服务。
 具体的 SPI 使用方式，请大家自行搜索。
-与分布式主键 `KeyGenerateAlgorithm` 接口相同，其他 ShardingSphere 的[扩展功能](/cn/concepts/pluggable/)也需要用相同的方式注入才能生效。
+与分布式主键 `KeyGenerateAlgorithm` 接口相同，其他 ShardingSphere 的扩展功能也需要用相同的方式注入才能生效。
 
 ### [分片] ShardingSphere 除了支持自带的分布式自增主键之外，还能否支持原生的自增主键？
 
@@ -146,18 +177,6 @@ ShardingSphere 采用 snowflake 算法作为默认的分布式自增主键策略
 是的，可以支持。但原生自增主键有使用限制，即不能将原生自增主键同时作为分片键使用。
 由于 ShardingSphere 并不知晓数据库的表结构，而原生自增主键是不包含在原始 SQL 中内的，因此 ShardingSphere 无法将该字段解析为分片字段。如自增主键非分片键，则无需关注，可正常返回；若自增主键同时作为分片键使用，ShardingSphere 无法解析其分片值，导致 SQL 路由至多张表，从而影响应用的正确性。
 而原生自增主键返回的前提条件是 INSERT SQL 必须最终路由至一张表，因此，面对返回多表的 INSERT SQL，自增主键则会返回零。
-
-## 数据加密
-
-### [数据加密] JPA 和 数据加密无法一起使用，如何解决？
-
-回答：
-
-由于数据加密的 DDL 尚未开发完成，因此对于自动生成 DDL 语句的 JPA 与 数据加密一起使用时，会导致 JPA 的实体类（Entity）无法同时满足 DDL 和 DML 的情况。
-解决方案如下：
-1. 以需要加密的逻辑列名编写 JPA 的实体类（Entity）。
-2. 关闭 JPA 的 auto-ddl，如 auto-ddl=none。
-3. 手动建表，建表时应使用数据加密配置的 `cipherColumn`,`plainColumn` 和 `assistedQueryColumn` 代替逻辑列。
 
 ## DistSQL
 
@@ -287,7 +306,7 @@ https://ourcodeworld.com/articles/read/109/how-to-solve-filename-too-long-error-
 
 回答：
 
-ShardingSphere 中很多功能实现类的加载方式是通过 [SPI](/cn/concepts/pluggable/) 注入的方式完成的，如分布式主键，注册中心等；这些功能通过配置中 type 类型来寻找对应的 SPI 实现，因此必须在配置文件中指定类型。
+ShardingSphere 中很多功能实现类的加载方式是通过 SPI 注入的方式完成的，如分布式主键，注册中心等；这些功能通过配置中 type 类型来寻找对应的 SPI 实现，因此必须在配置文件中指定类型。
 
 ### [其他] 服务启动时如何加快 `metadata` 加载速度？
 

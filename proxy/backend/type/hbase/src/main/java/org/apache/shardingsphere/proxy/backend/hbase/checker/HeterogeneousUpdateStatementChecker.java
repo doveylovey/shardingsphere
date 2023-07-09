@@ -26,29 +26,33 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * Checker for update statement.
+ * Update statement checker.
  */
-public class HeterogeneousUpdateStatementChecker extends CommonHeterogeneousSQLStatementChecker<UpdateStatement> {
+public final class HeterogeneousUpdateStatementChecker extends CommonHeterogeneousSQLStatementChecker {
+    
+    private final UpdateStatement sqlStatement;
     
     public HeterogeneousUpdateStatementChecker(final UpdateStatement sqlStatement) {
         super(sqlStatement);
+        this.sqlStatement = sqlStatement;
     }
     
     @Override
     public void execute() {
-        Optional<WhereSegment> whereSegment = getSqlStatement().getWhere();
-        if (whereSegment.isPresent() && whereSegment.get().getExpr() instanceof InExpression) {
+        Optional<WhereSegment> whereSegment = sqlStatement.getWhere();
+        Preconditions.checkArgument(whereSegment.isPresent(), "Must contain where segment.");
+        if (whereSegment.get().getExpr() instanceof InExpression) {
             checkInExpressionIsExpected(whereSegment.get().getExpr());
         } else {
-            checkIsSinglePointQuery(whereSegment);
+            checkIsSinglePointQuery(whereSegment.get());
         }
         checkAssignmentIsOk();
     }
     
     private void checkAssignmentIsOk() {
-        Collection<AssignmentSegment> assignmentSegments = getSqlStatement().getSetAssignment().getAssignments();
+        Collection<AssignmentSegment> assignmentSegments = sqlStatement.getSetAssignment().getAssignments();
         for (AssignmentSegment assignmentSegment : assignmentSegments) {
-            Preconditions.checkArgument(isAllowExpressionSegment(assignmentSegment.getValue()), "Assigment must is literal or parameter marker");
+            Preconditions.checkArgument(isAllowExpressionSegment(assignmentSegment.getValue()), "Assignment must is literal or parameter marker.");
             boolean isRowKey = ALLOW_KEYS.stream().anyMatch(each -> each.equalsIgnoreCase(assignmentSegment.getColumns().iterator().next().getIdentifier().getValue()));
             Preconditions.checkArgument(!isRowKey, "Do not allow update rowKey");
         }

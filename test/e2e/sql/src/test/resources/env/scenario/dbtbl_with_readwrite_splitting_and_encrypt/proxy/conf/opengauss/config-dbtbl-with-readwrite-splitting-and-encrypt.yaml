@@ -200,6 +200,9 @@ dataSources:
     minPoolSize: 2
 
 rules:
+- !SINGLE
+  tables:
+    - "*.*.*"
 - !SHARDING
   tables:
     t_order:
@@ -294,9 +297,6 @@ rules:
   bindingTables:
     - ref_0:t_user,t_user_item,t_user_details
     - ref_1:t_order,t_order_item
-  broadcastTables:
-    - t_product_category
-    - t_country
   shardingAlgorithms:
     it_standard_fixture:
       type: IT.STANDARD.FIXTURE
@@ -321,6 +321,11 @@ rules:
   auditors:
     auditor_constant:
       type: IT.AUDITOR.FIXTURE
+
+- !BROADCAST
+  tables:
+    - t_country
+    - t_product_category
 
 - !READWRITE_SPLITTING
   dataSources:
@@ -388,28 +393,28 @@ rules:
     t_user:
       columns:
         pwd:
-          plainColumn: pwd_plain
-          cipherColumn: pwd_cipher
-          encryptorName: aes_encryptor
+          cipher:
+            name: pwd_cipher
+            encryptorName: aes_encryptor
     t_user_details:
       columns:
         number:
-          plainColumn: number_plain
-          cipherColumn: number_cipher
-          encryptorName: aes_encryptor
+          cipher:
+            name: number_cipher
+            encryptorName: aes_encryptor
         number_new:
-          plainColumn: number_new_plain
-          cipherColumn: number_new_cipher
-          encryptorName: aes_encryptor
+          cipher:
+            name: number_new_cipher
+            encryptorName: aes_encryptor
     t_user_encrypt_federate:
       columns:
         pwd:
-          plainColumn: plain_pwd
-          cipherColumn: cipher_pwd
-          encryptorName: aes_encryptor
+          cipher:
+            name: cipher_pwd
+            encryptorName: aes_encryptor
     t_user_encrypt_federate_sharding:
       columns:
         pwd:
-          plainColumn: plain_pwd
-          cipherColumn: cipher_pwd
-          encryptorName: aes_encryptor
+          cipher:
+            name: cipher_pwd
+            encryptorName: aes_encryptor

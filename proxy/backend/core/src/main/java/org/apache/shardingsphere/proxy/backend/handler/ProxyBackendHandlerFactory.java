@@ -26,13 +26,13 @@ import org.apache.shardingsphere.distsql.parser.statement.DistSQLStatement;
 import org.apache.shardingsphere.distsql.parser.statement.ral.QueryableRALStatement;
 import org.apache.shardingsphere.distsql.parser.statement.rql.RQLStatement;
 import org.apache.shardingsphere.distsql.parser.statement.rul.RULStatement;
-import org.apache.shardingsphere.infra.binder.QueryContext;
 import org.apache.shardingsphere.infra.binder.SQLStatementContextFactory;
 import org.apache.shardingsphere.infra.binder.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.executor.audit.SQLAuditEngine;
 import org.apache.shardingsphere.infra.hint.HintValueContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
+import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.state.cluster.ClusterState;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.util.exception.external.sql.type.generic.UnsupportedSQLOperationException;
@@ -49,7 +49,7 @@ import org.apache.shardingsphere.proxy.backend.handler.extra.ExtraProxyBackendHa
 import org.apache.shardingsphere.proxy.backend.handler.skip.SkipBackendHandler;
 import org.apache.shardingsphere.proxy.backend.handler.transaction.TransactionBackendHandlerFactory;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
-import org.apache.shardingsphere.proxy.backend.state.spi.ProxyClusterState;
+import org.apache.shardingsphere.proxy.backend.state.ProxyClusterState;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.EmptyStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.FlushStatement;
@@ -77,16 +77,18 @@ public final class ProxyBackendHandlerFactory {
      * @param databaseType database type
      * @param sql SQL to be executed
      * @param connectionSession connection session
+     * @param hintValueContext hint value context
      * @return created instance
      * @throws SQLException SQL exception
      */
-    public static ProxyBackendHandler newInstance(final DatabaseType databaseType, final String sql, final ConnectionSession connectionSession) throws SQLException {
+    public static ProxyBackendHandler newInstance(final DatabaseType databaseType, final String sql,
+                                                  final ConnectionSession connectionSession, final HintValueContext hintValueContext) throws SQLException {
         if (Strings.isNullOrEmpty(SQLUtils.trimComment(sql))) {
             return new SkipBackendHandler(new EmptyStatement());
         }
         SQLParserRule sqlParserRule = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData().getSingleRule(SQLParserRule.class);
         SQLStatement sqlStatement = sqlParserRule.getSQLParserEngine(getProtocolType(databaseType, connectionSession).getType()).parse(sql, false);
-        return newInstance(databaseType, sql, sqlStatement, connectionSession, new HintValueContext());
+        return newInstance(databaseType, sql, sqlStatement, connectionSession, hintValueContext);
     }
     
     /**
@@ -105,7 +107,7 @@ public final class ProxyBackendHandlerFactory {
         if (sqlStatement instanceof EmptyStatement) {
             return new SkipBackendHandler(sqlStatement);
         }
-        SQLStatementContext<?> sqlStatementContext = sqlStatement instanceof DistSQLStatement ? new DistSQLStatementContext((DistSQLStatement) sqlStatement)
+        SQLStatementContext sqlStatementContext = sqlStatement instanceof DistSQLStatement ? new DistSQLStatementContext((DistSQLStatement) sqlStatement)
                 : SQLStatementContextFactory.newInstance(ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData(), sqlStatement, connectionSession.getDefaultDatabaseName());
         QueryContext queryContext = new QueryContext(sqlStatementContext, sql, Collections.emptyList(), hintValueContext);
         connectionSession.setQueryContext(queryContext);
@@ -122,10 +124,9 @@ public final class ProxyBackendHandlerFactory {
      * @return created instance
      * @throws SQLException SQL exception
      */
-    @SuppressWarnings("unchecked")
     public static ProxyBackendHandler newInstance(final DatabaseType databaseType, final QueryContext queryContext, final ConnectionSession connectionSession,
                                                   final boolean preferPreparedStatement) throws SQLException {
-        SQLStatementContext<?> sqlStatementContext = queryContext.getSqlStatementContext();
+        SQLStatementContext sqlStatementContext = queryContext.getSqlStatementContext();
         SQLStatement sqlStatement = sqlStatementContext.getSqlStatement();
         databaseType.handleRollbackOnly(connectionSession.getTransactionStatus().isRollbackOnly(), sqlStatement);
         checkUnsupportedSQLStatement(sqlStatement);
@@ -140,9 +141,9 @@ public final class ProxyBackendHandlerFactory {
         String sql = queryContext.getSql();
         handleAutoCommit(sqlStatement, connectionSession);
         if (sqlStatement instanceof TCLStatement) {
-            return TransactionBackendHandlerFactory.newInstance((SQLStatementContext<TCLStatement>) sqlStatementContext, sql, connectionSession);
+            return TransactionBackendHandlerFactory.newInstance(sqlStatementContext, sql, connectionSession);
         }
-        Optional<ProxyBackendHandler> backendHandler = DatabaseAdminBackendHandlerFactory.newInstance(databaseType, sqlStatementContext, connectionSession, sql);
+        Optional<ProxyBackendHandler> backendHandler = DatabaseAdminBackendHandlerFactory.newInstance(databaseType, sqlStatementContext, connectionSession, sql, queryContext.getParameters());
         if (backendHandler.isPresent()) {
             return backendHandler.get();
         }
@@ -157,11 +158,14 @@ public final class ProxyBackendHandlerFactory {
         String databaseName = sqlStatementContext.getTablesContext().getDatabaseName().isPresent()
                 ? sqlStatementContext.getTablesContext().getDatabaseName().get()
                 : connectionSession.getDatabaseName();
+        if (null == databaseName) {
+            return DatabaseBackendHandlerFactory.newInstance(queryContext, connectionSession, preferPreparedStatement);
+        }
         AuthorityRule authorityRule = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData().getSingleRule(AuthorityRule.class);
         ShardingSphereDatabase database = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getDatabase(databaseName);
         new AuthorityChecker(authorityRule, connectionSession.getGrantee()).checkPrivileges(databaseName, sqlStatementContext.getSqlStatement());
-        SQLAuditEngine.audit(sqlStatementContext, queryContext.getParameters(),
-                ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData(), database, connectionSession.getGrantee());
+        SQLAuditEngine.audit(sqlStatementContext, queryContext.getParameters(), ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData(),
+                database, connectionSession.getGrantee(), queryContext.getHintValueContext());
         backendHandler = DatabaseAdminBackendHandlerFactory.newInstance(databaseType, sqlStatementContext, connectionSession);
         return backendHandler.orElseGet(() -> DatabaseBackendHandlerFactory.newInstance(queryContext, connectionSession, preferPreparedStatement));
     }
@@ -184,7 +188,7 @@ public final class ProxyBackendHandlerFactory {
     
     private static void handleAutoCommit(final SQLStatement sqlStatement, final ConnectionSession connectionSession) {
         if (AutoCommitUtils.needOpenTransaction(sqlStatement)) {
-            connectionSession.getBackendConnection().handleAutoCommit();
+            connectionSession.getDatabaseConnectionManager().handleAutoCommit();
         }
     }
     

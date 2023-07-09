@@ -1,6 +1,6 @@
 +++
 title = "Mixed Rules"
-weight = 9
+weight = 10
 +++
 
 ## Background
@@ -51,14 +51,15 @@ rules:
     <table_name>: # Encryption table name
       columns:
         <column_name> (+): # Encrypt logic column name
-          plainColumn (?): # Plain column name
-          cipherColumn: # Cipher column name
-          encryptorName: # Cipher encrypt algorithm name
-          assistedQueryColumn (?):  # Assisted query column name
-          assistedQueryEncryptorName:  # Assisted query encrypt algorithm name
-          likeQueryColumn (?):  # Like query column name
-          likeQueryEncryptorName:  # Like query encrypt algorithm name
-      queryWithCipherColumn(?): # The current table whether query with cipher column for data encrypt. 
+          cipher:
+            name: # Cipher column name
+            encryptorName: # Cipher encrypt algorithm name
+          assistedQuery (?):
+            name: # Assisted query column name
+            encryptorName:  # Assisted query encrypt algorithm name
+          likeQuery (?):
+            name: # Like query column name
+            encryptorName:  # Like query encrypt algorithm name 
 ```
 
 ## Samples
@@ -102,24 +103,25 @@ rules:
       type: AES
       props:
         aes-key-value: 123456abc
-    md5_encryptor:
+    assisted_encryptor:
       type: MD5
-  likeEncryptors:
     like_encryptor:
       type: CHAR_DIGEST_LIKE
   tables:
     t_encrypt:
       columns:
         user_id:
-          plainColumn: user_plain
-          cipherColumn: user_cipher
-          encryptorName: aes_encryptor
-          assistedQueryColumn: assisted_query_user
-          assistedQueryEncryptorName: aes_encryptor
-          likeQueryColumn: like_query_user
-          likeQueryEncryptorName: like_encryptor
+          cipher:
+            name: user_cipher
+            encryptorName: aes_encryptor
+          assistedQuery:
+            name: assisted_query_user
+            encryptorName: assisted_encryptor
+          likeQuery:
+            name: like_query_user
+            encryptorName: like_encryptor
         order_id:
-          cipherColumn: order_cipher
-          encryptorName: md5_encryptor
-      queryWithCipherColumn: true
+          cipher:
+            name: order_cipher
+            encryptorName: aes_encryptor
 ```

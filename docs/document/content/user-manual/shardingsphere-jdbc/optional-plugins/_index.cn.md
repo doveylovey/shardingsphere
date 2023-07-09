@@ -4,7 +4,7 @@ weight = 6
 +++
 
 ShardingSphere 默认情况下仅包含核心 SPI 的实现，在 Git Source 存在一部分包含第三方依赖的 SPI
-实现的插件未包含在内。可在 https://central.sonatype.dev/ 进行检索。
+实现的插件未包含在内。可在 https://central.sonatype.com/ 进行检索。
 
 所有插件对应的 SPI 和 SPI 的已有实现类均可在 https://shardingsphere.apache.org/document/current/cn/dev-manual/ 检索。
 
@@ -23,12 +23,9 @@ ShardingSphere 默认情况下仅包含核心 SPI 的实现，在 Git Source 存
 - `org.apache.shardingsphere:shardingsphere-postgresql-dialect-exception`，数据库网关的 PostgreSQL 实现
 - `org.apache.shardingsphere:shardingsphere-readwrite-splitting-core`，读写分离核心
 - `org.apache.shardingsphere:shardingsphere-shadow-core`，影子库核心
-- `org.apache.shardingsphere:shardingsphere-sharding-cache`，分片缓存，参考未关闭的 https://github.com/apache/shardingsphere/issues/21223
 - `org.apache.shardingsphere:shardingsphere-sharding-core`，数据分片核心
 - `org.apache.shardingsphere:shardingsphere-single-core`，单表（所有的分片数据源中仅唯一存在的表）核心
 - `org.apache.shardingsphere:shardingsphere-sql-federation-core`，联邦查询执行器核心
-- `org.apache.shardingsphere:shardingsphere-sql-federation-executor-advanced`，联邦查询执行器的 `advanced` 实现
-- `org.apache.shardingsphere:shardingsphere-sql-federation-executor-original`，联邦查询执行器的 `original` 实现
 - `org.apache.shardingsphere:shardingsphere-sql-parser-mysql`， SQL 解析的 MySQL 方言实现
 - `org.apache.shardingsphere:shardingsphere-sql-parser-opengauss`， SQL 解析的 OpenGauss 方言实现
 - `org.apache.shardingsphere:shardingsphere-sql-parser-oracle`， SQL 解析的 Oracle 方言解析实现

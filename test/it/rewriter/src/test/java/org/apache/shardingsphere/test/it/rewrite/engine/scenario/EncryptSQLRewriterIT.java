@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.test.it.rewrite.engine.scenario;
 
-import com.google.common.base.Preconditions;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
@@ -44,6 +43,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -56,8 +56,7 @@ class EncryptSQLRewriterIT extends SQLRewriterIT {
     
     @Override
     protected YamlRootConfiguration createRootConfiguration(final SQLRewriteEngineTestParameters testParams) throws IOException {
-        URL url = EncryptSQLRewriterIT.class.getClassLoader().getResource(testParams.getRuleFile());
-        Preconditions.checkNotNull(url, "Can not find rewrite rule yaml configuration");
+        URL url = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(testParams.getRuleFile()), "Can not find rewrite rule yaml configuration");
         return YamlEngine.unmarshal(new File(url.getFile()), YamlRootConfiguration.class);
     }
     
@@ -72,7 +71,14 @@ class EncryptSQLRewriterIT extends SQLRewriterIT {
         when(result.getVisibleColumnNames("t_account_bak")).thenReturn(Arrays.asList("account_id", "certificate_number", "password", "amount"));
         when(result.getVisibleColumnNames("t_account_detail")).thenReturn(Arrays.asList("account_id", "certificate_number", "password", "amount"));
         when(result.getVisibleColumnNames("t_order")).thenReturn(Arrays.asList("ORDER_ID", "USER_ID", "CONTENT"));
+        when(result.getTable("t_account")).thenReturn(new ShardingSphereTable("t_account", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
+        when(result.getTable("t_account_bak")).thenReturn(new ShardingSphereTable("t_account_bak", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
+        when(result.getTable("t_account_detail")).thenReturn(new ShardingSphereTable("t_account_detail", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
         when(result.getTable("t_order")).thenReturn(new ShardingSphereTable("t_order", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
+        when(result.containsTable("t_account")).thenReturn(true);
+        when(result.containsTable("t_account_bak")).thenReturn(true);
+        when(result.containsTable("t_account_detail")).thenReturn(true);
+        when(result.containsTable("t_order")).thenReturn(true);
         return Collections.singletonMap(schemaName, result);
     }
     

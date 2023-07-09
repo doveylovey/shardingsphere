@@ -24,9 +24,7 @@ import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRule
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.traffic.rule.TrafficRule;
 import org.apache.shardingsphere.traffic.rule.builder.DefaultTrafficRuleConfigurationBuilder;
-import org.apache.shardingsphere.transaction.core.TransactionTypeHolder;
 import org.apache.shardingsphere.transaction.rule.TransactionRule;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
@@ -36,6 +34,7 @@ import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -43,50 +42,59 @@ import static org.mockito.Mockito.when;
 
 class ConnectionAdapterTest {
     
-    @AfterEach
-    void tearDown() {
-        TransactionTypeHolder.clear();
-    }
-    
     @Test
     void assertGetWarnings() throws SQLException {
-        assertNull(createConnectionAdaptor().getWarnings());
+        try (Connection actual = createConnectionAdaptor()) {
+            assertNull(actual.getWarnings());
+        }
     }
     
     @Test
     void assertClearWarnings() throws SQLException {
-        createConnectionAdaptor().clearWarnings();
+        try (Connection actual = createConnectionAdaptor()) {
+            assertDoesNotThrow(actual::clearWarnings);
+        }
     }
     
     @Test
     void assertGetHoldability() throws SQLException {
-        assertThat(createConnectionAdaptor().getHoldability(), is(ResultSet.CLOSE_CURSORS_AT_COMMIT));
+        try (Connection actual = createConnectionAdaptor()) {
+            assertThat(actual.getHoldability(), is(ResultSet.CLOSE_CURSORS_AT_COMMIT));
+        }
     }
     
     @Test
     void assertSetHoldability() throws SQLException {
-        createConnectionAdaptor().setHoldability(ResultSet.CONCUR_READ_ONLY);
-        assertThat(createConnectionAdaptor().getHoldability(), is(ResultSet.CLOSE_CURSORS_AT_COMMIT));
+        try (Connection actual = createConnectionAdaptor()) {
+            actual.setHoldability(ResultSet.CONCUR_READ_ONLY);
+        }
+        try (Connection actual = createConnectionAdaptor()) {
+            assertThat(actual.getHoldability(), is(ResultSet.CLOSE_CURSORS_AT_COMMIT));
+        }
     }
     
     @Test
     void assertGetCatalog() throws SQLException {
-        assertNull(createConnectionAdaptor().getCatalog());
+        try (Connection actual = createConnectionAdaptor()) {
+            assertNull(actual.getCatalog());
+        }
     }
     
     @Test
     void assertSetCatalog() throws SQLException {
-        Connection actual = createConnectionAdaptor();
-        actual.setCatalog("");
-        assertNull(actual.getCatalog());
+        try (Connection actual = createConnectionAdaptor()) {
+            actual.setCatalog("");
+            assertNull(actual.getCatalog());
+        }
     }
     
     @Test
     void assertSetSchema() throws SQLException {
-        Connection actual = createConnectionAdaptor();
-        String originalSchema = actual.getSchema();
-        actual.setSchema("");
-        assertThat(actual.getSchema(), is(originalSchema));
+        try (Connection actual = createConnectionAdaptor()) {
+            String originalSchema = actual.getSchema();
+            actual.setSchema("");
+            assertThat(actual.getSchema(), is(originalSchema));
+        }
     }
     
     private Connection createConnectionAdaptor() {

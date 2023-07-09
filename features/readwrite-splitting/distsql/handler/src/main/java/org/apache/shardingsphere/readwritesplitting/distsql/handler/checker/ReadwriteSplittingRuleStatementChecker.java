@@ -18,6 +18,8 @@
 package org.apache.shardingsphere.readwritesplitting.distsql.handler.checker;
 
 import com.google.common.base.Strings;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.distsql.handler.exception.rule.DuplicateRuleException;
 import org.apache.shardingsphere.distsql.handler.exception.rule.InvalidRuleConfigurationException;
 import org.apache.shardingsphere.distsql.handler.exception.rule.MissingRequiredRuleException;
@@ -29,21 +31,24 @@ import org.apache.shardingsphere.infra.util.exception.ShardingSpherePrecondition
 import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.readwritesplitting.api.ReadwriteSplittingRuleConfiguration;
 import org.apache.shardingsphere.readwritesplitting.api.rule.ReadwriteSplittingDataSourceRuleConfiguration;
+import org.apache.shardingsphere.readwritesplitting.api.transaction.TransactionalReadQueryStrategy;
 import org.apache.shardingsphere.readwritesplitting.distsql.parser.segment.ReadwriteSplittingRuleSegment;
 import org.apache.shardingsphere.readwritesplitting.spi.ReadQueryLoadBalanceAlgorithm;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
-import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
  * Readwrite-splitting rule statement checker.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ReadwriteSplittingRuleStatementChecker {
     
     /**
@@ -60,6 +65,7 @@ public final class ReadwriteSplittingRuleStatementChecker {
         String databaseName = database.getName();
         checkDataSourcesExist(databaseName, segments, database);
         checkDuplicatedDataSourceNames(databaseName, segments, currentRuleConfig, true);
+        checkTransactionalReadQueryStrategy(segments);
         checkLoadBalancers(segments);
     }
     
@@ -77,6 +83,7 @@ public final class ReadwriteSplittingRuleStatementChecker {
         checkRuleNamesExist(segments, currentRuleConfig, databaseName);
         checkDataSourcesExist(databaseName, segments, database);
         checkDuplicatedDataSourceNames(databaseName, segments, currentRuleConfig, false);
+        checkTransactionalReadQueryStrategy(segments);
         checkLoadBalancers(segments);
     }
     
@@ -113,7 +120,7 @@ public final class ReadwriteSplittingRuleStatementChecker {
     
     private static Collection<String> getDuplicated(final Collection<String> required) {
         return required.stream().collect(Collectors.groupingBy(each -> each, Collectors.counting())).entrySet().stream()
-                .filter(each -> each.getValue() > 1).map(Map.Entry::getKey).collect(Collectors.toSet());
+                .filter(each -> each.getValue() > 1).map(Entry::getKey).collect(Collectors.toSet());
     }
     
     private static void checkDuplicateRuleNamesWithExistsDataSources(final ShardingSphereDatabase database, final Collection<ReadwriteSplittingRuleSegment> segments) {
@@ -140,20 +147,12 @@ public final class ReadwriteSplittingRuleStatementChecker {
     
     private static void checkDataSourcesExist(final String databaseName, final Collection<ReadwriteSplittingRuleSegment> segments, final ShardingSphereDatabase database) {
         Collection<String> requiredDataSources = new LinkedHashSet<>();
-        Collection<String> requiredLogicalDataSources = new LinkedHashSet<>();
         segments.forEach(each -> {
-            if (Strings.isNullOrEmpty(each.getAutoAwareResource())) {
-                requiredDataSources.add(each.getWriteDataSource());
-                requiredDataSources.addAll(each.getReadDataSources());
-            } else {
-                requiredLogicalDataSources.add(each.getAutoAwareResource());
-            }
+            requiredDataSources.add(each.getWriteDataSource());
+            requiredDataSources.addAll(each.getReadDataSources());
         });
         Collection<String> notExistedDataSources = database.getResourceMetaData().getNotExistedDataSources(requiredDataSources);
         ShardingSpherePreconditions.checkState(notExistedDataSources.isEmpty(), () -> new MissingRequiredStorageUnitsException(databaseName, notExistedDataSources));
-        Collection<String> logicalDataSources = getLogicDataSources(database);
-        Collection<String> notExistedLogicalDataSources = requiredLogicalDataSources.stream().filter(each -> !logicalDataSources.contains(each)).collect(Collectors.toSet());
-        ShardingSpherePreconditions.checkState(notExistedLogicalDataSources.isEmpty(), () -> new MissingRequiredStorageUnitsException(databaseName, notExistedLogicalDataSources));
     }
     
     private static Collection<String> getLogicDataSources(final ShardingSphereDatabase database) {
@@ -205,6 +204,17 @@ public final class ReadwriteSplittingRuleStatementChecker {
             ShardingSpherePreconditions.checkState(readDataSourceNames.add(each),
                     () -> new InvalidRuleConfigurationException(
                             "Readwrite-splitting", segment.getName(), String.format("Can not config duplicate read storage unit `%s` in database `%s`.", each, databaseName)));
+        }
+    }
+    
+    private static void checkTransactionalReadQueryStrategy(final Collection<ReadwriteSplittingRuleSegment> segments) {
+        Collection<String> validStrategyNames = Arrays.stream(TransactionalReadQueryStrategy.values()).map(Enum::name).collect(Collectors.toSet());
+        for (ReadwriteSplittingRuleSegment each : segments) {
+            if (null != each.getTransactionalReadQueryStrategy()) {
+                ShardingSpherePreconditions.checkState(validStrategyNames.contains(each.getTransactionalReadQueryStrategy().toUpperCase()),
+                        () -> new InvalidRuleConfigurationException(
+                                "Readwrite-splitting", each.getName(), String.format("Invalid transactional read query strategy `%s`.", each.getTransactionalReadQueryStrategy())));
+            }
         }
     }
     

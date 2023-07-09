@@ -1,6 +1,6 @@
 +++
 title = "数据分片路由缓存"
-weight = 10
+weight = 11
 +++
 
 ## 背景信息
@@ -20,7 +20,11 @@ weight = 10
 
 ```yaml
 rules:
-  - !SHARDING_CACHE
+- !SHARDING
+  tables:
+  shardingAlgorithms:
+  # ...
+  shardingCache:    
     allowedMaxSqlLength: 512 # 允许缓存的 SQL 长度限制
     routeCache:
       initialCapacity: 65536 # 缓存初始容量

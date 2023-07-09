@@ -55,8 +55,14 @@ public final class ShardingSphereResourceMetaData {
         dataSourceMetaDataMap = createDataSourceMetaDataMap(enabledDataSources, storageTypes);
     }
     
+    public ShardingSphereResourceMetaData(final Map<String, DataSource> dataSources) {
+        this.dataSources = dataSources;
+        storageTypes = DatabaseTypeEngine.getStorageTypes(dataSources);
+        dataSourceMetaDataMap = createDataSourceMetaDataMap(dataSources, storageTypes);
+    }
+    
     private Map<String, DatabaseType> createStorageTypes(final Map<String, DataSource> enabledDataSources) {
-        Map<String, DatabaseType> result = new LinkedHashMap<>(dataSources.size(), 1);
+        Map<String, DatabaseType> result = new LinkedHashMap<>(dataSources.size(), 1F);
         for (Entry<String, DataSource> entry : dataSources.entrySet()) {
             DatabaseType storageType = enabledDataSources.containsKey(entry.getKey()) ? DatabaseTypeEngine.getStorageType(Collections.singletonList(entry.getValue()))
                     : DatabaseTypeEngine.getStorageType(Collections.emptyList());
@@ -66,7 +72,7 @@ public final class ShardingSphereResourceMetaData {
     }
     
     private Map<String, DataSourceMetaData> createDataSourceMetaDataMap(final Map<String, DataSource> dataSources, final Map<String, DatabaseType> storageTypes) {
-        Map<String, DataSourceMetaData> result = new LinkedHashMap<>(dataSources.size(), 1);
+        Map<String, DataSourceMetaData> result = new LinkedHashMap<>(dataSources.size(), 1F);
         for (Entry<String, DataSource> entry : dataSources.entrySet()) {
             Map<String, Object> standardProps = DataSourcePropertiesCreator.create(entry.getValue()).getConnectionPropertySynonyms().getStandardProperties();
             DatabaseType storageType = storageTypes.get(entry.getKey());

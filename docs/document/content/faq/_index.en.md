@@ -5,6 +5,15 @@ weight = 8
 chapter = true
 +++
 
+## MODE
+
+### [MODE] What is the difference between cluster mode `Cluster` and `Compatible_Cluster`?
+
+Answer:
+
+The metadata structure was adjusted in version 5.4.0, `Cluster` represents the metadata structure of the new version, 
+and `Compatible_Cluster` represents the metadata structure of versions before 5.4.0.
+
 ## JDBC
 
 ### [JDBC] Found a JtaTransactionManager in spring boot project when integrating with XAtransaction.
@@ -15,28 +24,52 @@ Answer:
 
 ### [JDBC] The tableName and columnName configured in yaml or properties leading incorrect result when loading Oracle metadata？
 
-Answer：
+Answer:
 
 Note that, in Oracle's metadata, the tableName and columnName is default UPPERCASE, while double-quoted such as `CREATE TABLE "TableName"("Id" number)` the tableName and columnName is the actual content double-quoted, refer to the following SQL for the reality in metadata:
-```
+```sql
 SELECT OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS WHERE TABLE_NAME IN ('TableName') 
 ```
 ShardingSphere uses the `OracleTableMetaDataLoader` to load the metadata, keep the tableName and columnName in the yaml or properties consistent with the metadata.
 ShardingSphere assembled the SQL using the following code:
-```
-    private String getTableMetaDataSQL(final Collection<String> tables, final DatabaseMetaData metaData) throws SQLException {
-        StringBuilder stringBuilder = new StringBuilder(28);
-        if (versionContainsIdentityColumn(metaData)) {
-            stringBuilder.append(", IDENTITY_COLUMN");
-        }
-        if (versionContainsCollation(metaData)) {
-            stringBuilder.append(", COLLATION");
-        }
-        String collation = stringBuilder.toString();
-        return tables.isEmpty() ? String.format(TABLE_META_DATA_SQL, collation)
-                : String.format(TABLE_META_DATA_SQL_IN_TABLES, collation, tables.stream().map(each -> String.format("'%s'", each)).collect(Collectors.joining(",")));
-    }
+```java
+ private String getTableMetaDataSQL(final Collection<String> tables, final DatabaseMetaData metaData) throws SQLException {
+     StringBuilder stringBuilder = new StringBuilder(28);
+     if (versionContainsIdentityColumn(metaData)) {
+         stringBuilder.append(", IDENTITY_COLUMN");
+     }
+     if (versionContainsCollation(metaData)) {
+         stringBuilder.append(", COLLATION");
+     }
+     String collation = stringBuilder.toString();
+     return tables.isEmpty() ? String.format(TABLE_META_DATA_SQL, collation)
+             : String.format(TABLE_META_DATA_SQL_IN_TABLES, collation, tables.stream().map(each -> String.format("'%s'", each)).collect(Collectors.joining(",")));
+ }
 ``` 
+
+### [JDBC] `SQLException: Unable to unwrap to interface com.mysql.jdbc.Connection` exception thrown when using MySQL XA transaction
+
+Answer:
+
+Incompatibility between multiple MySQL drivers. Because the MySQL5 version of the driver class under the class path is loaded first, when trying to call the `unwrap` method in the MySQL8 driver, the type conversion exception occurs.
+
+The solutions:
+Check whether there are both MySQL5 and MySQL8 drivers in the class path, and only keep one driver package of the corresponding version.
+
+The exception stack is as follows:
+```
+Caused by: java.sql.SQLException: Unable to unwrap to interface com.mysql.jdbc.Connection
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:129)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:97)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:89)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:63)
+	at com.mysql.cj.jdbc.ConnectionImpl.unwrap(ConnectionImpl.java:2650)
+	at com.zaxxer.hikari.pool.ProxyConnection.unwrap(ProxyConnection.java:481)
+	at org.apache.shardingsphere.transaction.xa.jta.connection.dialect.MySQLXAConnectionWrapper.wrap(MySQLXAConnectionWrapper.java:46)
+	at org.apache.shardingsphere.transaction.xa.jta.datasource.XATransactionDataSource.getConnection(XATransactionDataSource.java:89)
+	at org.apache.shardingsphere.transaction.xa.XAShardingSphereTransactionManager.getConnection(XAShardingSphereTransactionManager.java:96
+```
+
 ## Proxy
 
 ### [Proxy] In Windows environment, could not find or load main class org.apache.shardingsphere.proxy.Bootstrap, how to solve it?
@@ -140,7 +173,7 @@ Answer:
 
 [Service Provider Interface (SPI)](https://docs.oracle.com/javase/tutorial/sound/SPI-intro.html) is a kind of API for the third party to implement or expand. Except implementing interface, you also need to create a corresponding file in `META-INF/services` to make the JVM load these SPI implementations.
 More detail for SPI usage, please search by yourself.
-Other ShardingSphere [functionality implementation](/en/concepts/pluggable/) will take effect in the same way.
+Other ShardingSphere functionality implementation will take effect in the same way.
 
 ### [Sharding] In addition to internal distributed primary key, does ShardingSphere support other native auto-increment keys?
 
@@ -149,18 +182,6 @@ Answer:
 Yes. But there is restriction to the use of native auto-increment keys, which means they cannot be used as sharding keys at the same time.
 Since ShardingSphere does not have the database table structure and native auto-increment key is not included in original SQL, it cannot parse that field to the sharding field. If the auto-increment key is not sharding key, it can be returned normally and is needless to be cared. But if the auto-increment key is also used as sharding key, ShardingSphere cannot parse its sharding value, which will make SQL routed to multiple tables and influence the rightness of the application.
 The premise for returning native auto-increment key is that INSERT SQL is eventually routed to one table. Therefore, auto-increment key will return zero when INSERT SQL returns multiple tables.
-
-## Encryption
-
-### [Encryption] How to solve that `data encryption` can't work with JPA?
-
-Answer:
-
-Because DDL for data encryption has not yet finished, JPA Entity cannot meet the DDL and DML at the same time, when JPA that automatically generates DDL is used with data encryption.
-The solutions are as follows:
-1. Create JPA Entity with logicColumn which needs to encrypt.
-2. Disable JPA auto-ddl, For example setting auto-ddl=none.
-3. Create table manually. Table structure should use `cipherColumn`,`plainColumn` and `assistedQueryColumn` to replace the logicColumn.
 
 ## DistSQL
 
@@ -293,7 +314,7 @@ https://ourcodeworld.com/articles/read/109/how-to-solve-filename-too-long-error-
 
 Answer:
 
-In Apache ShardingSphere, many functionality implementation are uploaded through [SPI](/en/concepts/pluggable/), such as Distributed Primary Key. These functions load SPI implementation by configuring the `type`, so the `type` must be specified in the configuration file.
+In Apache ShardingSphere, many functionality implementation are uploaded through SPI, such as Distributed Primary Key. These functions load SPI implementation by configuring the `type`, so the `type` must be specified in the configuration file.
 
 ### [Other] How to speed up the metadata loading when service starts up?
 

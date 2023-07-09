@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.test.it.rewrite.engine.scenario;
 
-import com.google.common.base.Preconditions;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereColumn;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereIndex;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
@@ -41,8 +40,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.Mockito.mock;
@@ -53,8 +53,7 @@ class ShardingSQLRewriterIT extends SQLRewriterIT {
     
     @Override
     protected YamlRootConfiguration createRootConfiguration(final SQLRewriteEngineTestParameters testParams) throws IOException {
-        URL url = ShardingSQLRewriterIT.class.getClassLoader().getResource(testParams.getRuleFile());
-        Preconditions.checkNotNull(url, "Can not find rewrite rule yaml configuration");
+        URL url = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(testParams.getRuleFile()), "Can not find rewrite rule yaml configuration");
         return YamlEngine.unmarshal(new File(url.getFile()), YamlRootConfiguration.class);
     }
     
@@ -72,8 +71,9 @@ class ShardingSQLRewriterIT extends SQLRewriterIT {
         ShardingSphereSchema result = mock(ShardingSphereSchema.class);
         when(result.getAllTableNames()).thenReturn(Arrays.asList("t_account", "t_account_detail"));
         ShardingSphereTable accountTableMetaData = mock(ShardingSphereTable.class);
-        when(accountTableMetaData.getColumns()).thenReturn(createColumnMetaDataMap());
-        when(accountTableMetaData.getIndexes()).thenReturn(Collections.singletonMap("status_idx_exist", new ShardingSphereIndex("status_idx_exist")));
+        when(accountTableMetaData.getColumnValues()).thenReturn(createColumnMetaDataMap());
+        when(accountTableMetaData.getIndexValues()).thenReturn(Collections.singletonList(new ShardingSphereIndex("status_idx_exist")));
+        when(accountTableMetaData.containsIndex("status_idx_exist")).thenReturn(true);
         when(accountTableMetaData.getPrimaryKeyColumns()).thenReturn(Collections.singletonList("account_id"));
         when(result.containsTable("t_account")).thenReturn(true);
         when(result.getTable("t_account")).thenReturn(accountTableMetaData);
@@ -85,14 +85,24 @@ class ShardingSQLRewriterIT extends SQLRewriterIT {
         when(result.getVisibleColumnNames("t_user")).thenReturn(new ArrayList<>(Arrays.asList("id", "content")));
         when(result.getVisibleColumnNames("t_user_extend")).thenReturn(new ArrayList<>(Arrays.asList("user_id", "content")));
         when(result.containsColumn("t_account", "account_id")).thenReturn(true);
+        when(result.containsTable("t_account")).thenReturn(true);
+        when(result.containsTable("t_account_detail")).thenReturn(true);
+        when(result.containsTable("t_user")).thenReturn(true);
+        when(result.containsTable("t_user_extend")).thenReturn(true);
+        when(result.containsTable("t_single")).thenReturn(true);
+        when(result.containsTable("t_single_extend")).thenReturn(true);
+        when(result.containsTable("t_config")).thenReturn(true);
+        when(result.containsTable("T_ROLE")).thenReturn(true);
+        when(result.containsTable("T_ROLE_ADMIN")).thenReturn(true);
+        when(result.containsTable("t_account_view")).thenReturn(true);
         return Collections.singletonMap(schemaName, result);
     }
     
-    private Map<String, ShardingSphereColumn> createColumnMetaDataMap() {
-        Map<String, ShardingSphereColumn> result = new LinkedHashMap<>(3, 1);
-        result.put("account_id", new ShardingSphereColumn("account_id", Types.INTEGER, true, true, false, true, false));
-        result.put("amount", mock(ShardingSphereColumn.class));
-        result.put("status", mock(ShardingSphereColumn.class));
+    private Collection<ShardingSphereColumn> createColumnMetaDataMap() {
+        Collection<ShardingSphereColumn> result = new LinkedList<>();
+        result.add(new ShardingSphereColumn("account_id", Types.INTEGER, true, true, false, true, false));
+        result.add(mock(ShardingSphereColumn.class));
+        result.add(mock(ShardingSphereColumn.class));
         return result;
     }
     

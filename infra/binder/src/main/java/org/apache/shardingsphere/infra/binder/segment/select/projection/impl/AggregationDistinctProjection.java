@@ -21,6 +21,7 @@ import lombok.Getter;
 import org.apache.shardingsphere.infra.binder.segment.select.projection.Projection;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.sql.parser.sql.common.enums.AggregationType;
+import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 
 /**
  * Aggregation distinct projection.
@@ -52,8 +53,11 @@ public final class AggregationDistinctProjection extends AggregationProjection {
     }
     
     @Override
-    public Projection cloneWithOwner(final String ownerName) {
-        // TODO replace column owner when AggregationDistinctProjection contains owner
-        return new AggregationDistinctProjection(startIndex, stopIndex, getType(), getInnerExpression(), getAlias().orElse(null), distinctInnerExpression, getDatabaseType());
+    public Projection transformSubqueryProjection(final IdentifierValue subqueryTableAlias, final IdentifierValue originalOwner, final IdentifierValue originalName) {
+        // TODO replace getAlias with aliasIdentifier
+        if (getAlias().isPresent()) {
+            return new ColumnProjection(subqueryTableAlias, new IdentifierValue(getAlias().get()), null);
+        }
+        return new AggregationDistinctProjection(startIndex, stopIndex, getType(), getInnerExpression(), null, distinctInnerExpression, getDatabaseType());
     }
 }

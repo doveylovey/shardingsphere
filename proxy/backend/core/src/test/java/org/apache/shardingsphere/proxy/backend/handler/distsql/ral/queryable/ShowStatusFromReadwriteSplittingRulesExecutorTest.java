@@ -64,7 +64,7 @@ class ShowStatusFromReadwriteSplittingRulesExecutorTest {
     void assertGetColumns() {
         ShowStatusFromReadwriteSplittingRulesExecutor executor = new ShowStatusFromReadwriteSplittingRulesExecutor();
         Collection<String> columns = executor.getColumnNames();
-        assertThat(columns.size(), is(3));
+        assertThat(columns.size(), is(2));
         Iterator<String> iterator = columns.iterator();
         assertThat(iterator.next(), is("storage_unit"));
         assertThat(iterator.next(), is("status"));
@@ -93,6 +93,7 @@ class ShowStatusFromReadwriteSplittingRulesExecutorTest {
                 new ShardingSphereRuleMetaData(Collections.singletonList(mock(ShardingSphereRule.class))), Collections.emptyMap());
         Map<String, ShardingSphereDatabase> databaseMap = new LinkedHashMap<>();
         databaseMap.put("readwrite_db", database);
-        return new ShardingSphereMetaData(databaseMap, new ShardingSphereRuleMetaData(Collections.emptyList()), new ConfigurationProperties(new Properties()));
+        return new ShardingSphereMetaData(databaseMap, mock(ShardingSphereResourceMetaData.class),
+                new ShardingSphereRuleMetaData(Collections.emptyList()), new ConfigurationProperties(new Properties()));
     }
 }

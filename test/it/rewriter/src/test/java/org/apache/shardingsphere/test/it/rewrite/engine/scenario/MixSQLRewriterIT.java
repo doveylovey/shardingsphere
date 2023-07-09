@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.test.it.rewrite.engine.scenario;
 
-import com.google.common.base.Preconditions;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereColumn;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereIndex;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
@@ -38,8 +37,9 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -49,8 +49,7 @@ class MixSQLRewriterIT extends SQLRewriterIT {
     
     @Override
     protected YamlRootConfiguration createRootConfiguration(final SQLRewriteEngineTestParameters testParams) throws IOException {
-        URL url = MixSQLRewriterIT.class.getClassLoader().getResource(testParams.getRuleFile());
-        Preconditions.checkNotNull(url, "Can not find rewrite rule yaml configurations");
+        URL url = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(testParams.getRuleFile()), "Can not find rewrite rule yaml configurations");
         return YamlEngine.unmarshal(new File(url.getFile()), YamlRootConfiguration.class);
     }
     
@@ -59,13 +58,15 @@ class MixSQLRewriterIT extends SQLRewriterIT {
         ShardingSphereSchema result = mock(ShardingSphereSchema.class);
         when(result.getAllTableNames()).thenReturn(Arrays.asList("t_account", "t_account_bak", "t_account_detail"));
         ShardingSphereTable accountTable = mock(ShardingSphereTable.class);
-        when(accountTable.getColumns()).thenReturn(createColumns());
-        when(accountTable.getIndexes()).thenReturn(Collections.singletonMap("index_name", new ShardingSphereIndex("index_name")));
+        when(accountTable.getColumnValues()).thenReturn(createColumns());
+        when(accountTable.getIndexValues()).thenReturn(Collections.singletonList(new ShardingSphereIndex("index_name")));
         when(result.containsTable("t_account")).thenReturn(true);
-        when(result.getTable("t_account")).thenReturn(accountTable);
-        ShardingSphereTable accountBakTable = mock(ShardingSphereTable.class);
-        when(accountBakTable.getColumns()).thenReturn(createColumns());
         when(result.containsTable("t_account_bak")).thenReturn(true);
+        when(result.containsTable("t_account_detail")).thenReturn(true);
+        ShardingSphereTable accountBakTable = mock(ShardingSphereTable.class);
+        when(accountBakTable.getColumnValues()).thenReturn(createColumns());
+        when(result.containsTable("t_account_bak")).thenReturn(true);
+        when(result.getTable("t_account")).thenReturn(accountTable);
         when(result.getTable("t_account_bak")).thenReturn(accountBakTable);
         when(result.getTable("t_account_detail")).thenReturn(mock(ShardingSphereTable.class));
         when(result.getAllColumnNames("t_account")).thenReturn(Arrays.asList("account_id", "password", "amount", "status"));
@@ -83,12 +84,12 @@ class MixSQLRewriterIT extends SQLRewriterIT {
     protected void mockDataSource(final Map<String, DataSource> dataSources) {
     }
     
-    private Map<String, ShardingSphereColumn> createColumns() {
-        Map<String, ShardingSphereColumn> result = new LinkedHashMap<>(4, 1);
-        result.put("account_id", new ShardingSphereColumn("account_id", Types.INTEGER, true, true, false, true, false));
-        result.put("password", mock(ShardingSphereColumn.class));
-        result.put("amount", mock(ShardingSphereColumn.class));
-        result.put("status", mock(ShardingSphereColumn.class));
+    private Collection<ShardingSphereColumn> createColumns() {
+        Collection<ShardingSphereColumn> result = new LinkedList<>();
+        result.add(new ShardingSphereColumn("account_id", Types.INTEGER, true, true, false, true, false));
+        result.add(mock(ShardingSphereColumn.class));
+        result.add(mock(ShardingSphereColumn.class));
+        result.add(mock(ShardingSphereColumn.class));
         return result;
     }
 }

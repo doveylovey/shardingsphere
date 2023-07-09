@@ -17,20 +17,25 @@
 
 package org.apache.shardingsphere.proxy.backend.handler.distsql.ral.queryable;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.shardingsphere.distsql.handler.ral.query.MetaDataRequiredQueryableRALExecutor;
 import org.apache.shardingsphere.distsql.parser.statement.ral.queryable.ExportMetaDataStatement;
+import org.apache.shardingsphere.globalclock.core.provider.GlobalClockProvider;
+import org.apache.shardingsphere.globalclock.core.rule.GlobalClockRule;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.util.spi.type.ordered.OrderedSPILoader;
+import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.infra.util.yaml.YamlEngine;
 import org.apache.shardingsphere.infra.yaml.config.swapper.rule.YamlRuleConfigurationSwapper;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.distsql.export.ExportedClusterInfo;
 import org.apache.shardingsphere.proxy.backend.distsql.export.ExportedMetaData;
+import org.apache.shardingsphere.proxy.backend.distsql.export.ExportedSnapshotInfo;
 import org.apache.shardingsphere.proxy.backend.util.ExportUtils;
-import org.apache.shardingsphere.proxy.backend.util.JsonUtils;
+import org.apache.shardingsphere.infra.util.json.JsonUtils;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -60,8 +65,8 @@ public final class ExportMetaDataExecutor implements MetaDataRequiredQueryableRA
             return Collections.singleton(new LocalDataQueryResultRow(ProxyContext.getInstance().getContextManager().getInstanceContext().getInstance().getCurrentInstanceId(), LocalDateTime.now(),
                     String.format("Successfully exported to：'%s'", filePath)));
         }
-        return Collections.singleton(
-                new LocalDataQueryResultRow(ProxyContext.getInstance().getContextManager().getInstanceContext().getInstance().getCurrentInstanceId(), LocalDateTime.now(), exportedData));
+        return Collections.singleton(new LocalDataQueryResultRow(
+                ProxyContext.getInstance().getContextManager().getInstanceContext().getInstance().getCurrentInstanceId(), LocalDateTime.now(), Base64.encodeBase64String(exportedData.getBytes())));
     }
     
     private String generateExportData(final ShardingSphereMetaData metaData) {
@@ -72,6 +77,7 @@ public final class ExportMetaDataExecutor implements MetaDataRequiredQueryableRA
         exportedMetaData.setRules(generateRulesData(metaData.getGlobalRuleMetaData().getConfigurations()));
         ExportedClusterInfo exportedClusterInfo = new ExportedClusterInfo();
         exportedClusterInfo.setMetaData(exportedMetaData);
+        generateSnapshotInfo(metaData, exportedClusterInfo);
         return JsonUtils.toJsonString(exportedClusterInfo);
     }
     
@@ -108,6 +114,19 @@ public final class ExportMetaDataExecutor implements MetaDataRequiredQueryableRA
             result.append(YamlEngine.marshal(Collections.singletonList(entry.getValue().swapToYamlConfiguration(entry.getKey()))));
         }
         return result.toString();
+    }
+    
+    private void generateSnapshotInfo(final ShardingSphereMetaData metaData, final ExportedClusterInfo exportedClusterInfo) {
+        GlobalClockRule globalClockRule = metaData.getGlobalRuleMetaData().getSingleRule(GlobalClockRule.class);
+        if (globalClockRule.getConfiguration().isEnabled()) {
+            GlobalClockProvider globalClockProvider = TypedSPILoader.getService(GlobalClockProvider.class,
+                    globalClockRule.getGlobalClockProviderType(), globalClockRule.getConfiguration().getProps());
+            long csn = globalClockProvider.getCurrentTimestamp();
+            ExportedSnapshotInfo snapshotInfo = new ExportedSnapshotInfo();
+            snapshotInfo.setCsn(String.valueOf(csn));
+            snapshotInfo.setCreateTime(LocalDateTime.now());
+            exportedClusterInfo.setSnapshotInfo(snapshotInfo);
+        }
     }
     
     @Override

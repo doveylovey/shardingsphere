@@ -19,6 +19,7 @@ package org.apache.shardingsphere.encrypt.distsql.handler.query;
 
 import org.apache.shardingsphere.distsql.handler.query.RQLExecutor;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnItemRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.rule.EncryptTableRuleConfiguration;
 import org.apache.shardingsphere.encrypt.distsql.parser.statement.ShowEncryptRulesStatement;
@@ -54,28 +55,25 @@ class ShowEncryptRuleExecutorTest {
         assertThat(row.getCell(1), is("t_encrypt"));
         assertThat(row.getCell(2), is("user_id"));
         assertThat(row.getCell(3), is("user_cipher"));
-        assertThat(row.getCell(4), is("user_plain"));
-        assertThat(row.getCell(5), is("user_assisted"));
-        assertThat(row.getCell(6), is("user_like"));
-        assertThat(row.getCell(7), is("md5"));
+        assertThat(row.getCell(4), is("user_assisted"));
+        assertThat(row.getCell(5), is("user_like"));
+        assertThat(row.getCell(6), is("md5"));
+        assertThat(row.getCell(7), is(""));
         assertThat(row.getCell(8), is(""));
         assertThat(row.getCell(9), is(""));
         assertThat(row.getCell(10), is(""));
         assertThat(row.getCell(11), is(""));
-        assertThat(row.getCell(12), is(""));
-        assertThat(row.getCell(13), is("true"));
     }
     
     @Test
     void assertGetColumnNames() {
         RQLExecutor<ShowEncryptRulesStatement> executor = new ShowEncryptRuleExecutor();
         Collection<String> columns = executor.getColumnNames();
-        assertThat(columns.size(), is(13));
+        assertThat(columns.size(), is(11));
         Iterator<String> iterator = columns.iterator();
         assertThat(iterator.next(), is("table"));
         assertThat(iterator.next(), is("logic_column"));
         assertThat(iterator.next(), is("cipher_column"));
-        assertThat(iterator.next(), is("plain_column"));
         assertThat(iterator.next(), is("assisted_query_column"));
         assertThat(iterator.next(), is("like_query_column"));
         assertThat(iterator.next(), is("encryptor_type"));
@@ -84,7 +82,6 @@ class ShowEncryptRuleExecutorTest {
         assertThat(iterator.next(), is("assisted_query_props"));
         assertThat(iterator.next(), is("like_query_type"));
         assertThat(iterator.next(), is("like_query_props"));
-        assertThat(iterator.next(), is("query_with_cipher_column"));
     }
     
     private ShardingSphereDatabase mockDatabase() {
@@ -96,8 +93,10 @@ class ShowEncryptRuleExecutorTest {
     }
     
     private RuleConfiguration getRuleConfiguration() {
-        EncryptColumnRuleConfiguration encryptColumnRuleConfig = new EncryptColumnRuleConfiguration("user_id", "user_cipher", "user_assisted", "user_like", "user_plain", "test", null);
-        EncryptTableRuleConfiguration encryptTableRuleConfig = new EncryptTableRuleConfiguration("t_encrypt", Collections.singleton(encryptColumnRuleConfig), null);
+        EncryptColumnRuleConfiguration encryptColumnRuleConfig = new EncryptColumnRuleConfiguration("user_id", new EncryptColumnItemRuleConfiguration("user_cipher", "test"));
+        encryptColumnRuleConfig.setAssistedQuery(new EncryptColumnItemRuleConfiguration("user_assisted", "foo_assist_query_encryptor"));
+        encryptColumnRuleConfig.setLikeQuery(new EncryptColumnItemRuleConfiguration("user_like", "foo_like_encryptor"));
+        EncryptTableRuleConfiguration encryptTableRuleConfig = new EncryptTableRuleConfiguration("t_encrypt", Collections.singleton(encryptColumnRuleConfig));
         AlgorithmConfiguration shardingSphereAlgorithmConfig = new AlgorithmConfiguration("md5", new Properties());
         return new EncryptRuleConfiguration(Collections.singleton(encryptTableRuleConfig), Collections.singletonMap("test", shardingSphereAlgorithmConfig));
     }

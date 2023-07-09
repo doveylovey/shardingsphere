@@ -20,13 +20,14 @@ package org.apache.shardingsphere.infra.executor.sql.execute.result.query;
 import org.apache.shardingsphere.infra.executor.sql.execute.result.ExecuteResult;
 
 import java.io.InputStream;
+import java.io.Reader;
 import java.sql.SQLException;
 import java.util.Calendar;
 
 /**
  * Query result.
  */
-public interface QueryResult extends ExecuteResult {
+public interface QueryResult extends ExecuteResult, AutoCloseable {
     
     /**
      * Iterate next data.
@@ -68,6 +69,15 @@ public interface QueryResult extends ExecuteResult {
     InputStream getInputStream(int columnIndex, String type) throws SQLException;
     
     /**
+     * Get CharacterStream.
+     *
+     * @param columnIndex column index
+     * @return reader
+     * @throws SQLException SQL exception
+     */
+    Reader getCharacterStream(int columnIndex) throws SQLException;
+    
+    /**
      * Judge result set is null or not.
      *
      * @return result set is null or not
@@ -81,11 +91,4 @@ public interface QueryResult extends ExecuteResult {
      * @return query result meta data
      */
     QueryResultMetaData getMetaData();
-    
-    /**
-     * Close.
-     *
-     * @throws SQLException SQL exception
-     */
-    void close() throws SQLException;
 }

@@ -34,6 +34,7 @@ import org.apache.shardingsphere.sharding.exception.algorithm.keygen.SnowflakeCl
 import org.apache.shardingsphere.sharding.spi.KeyGenerateAlgorithm;
 import org.apache.shardingsphere.test.util.PropertiesBuilder;
 import org.apache.shardingsphere.test.util.PropertiesBuilder.Property;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.configuration.plugins.Plugins;
 
@@ -47,6 +48,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -77,7 +80,7 @@ class SnowflakeKeyGenerateAlgorithmTest {
         if (algorithm instanceof InstanceContextAware) {
             ((InstanceContextAware) algorithm).setInstanceContext(INSTANCE);
         }
-        Set<Comparable<?>> actual = new HashSet<>(taskNumber, 1);
+        Set<Comparable<?>> actual = new HashSet<>(taskNumber, 1F);
         for (int i = 0; i < taskNumber; i++) {
             actual.add(executor.submit((Callable<Comparable<?>>) algorithm::generateKey).get());
         }
@@ -114,7 +117,7 @@ class SnowflakeKeyGenerateAlgorithmTest {
     }
     
     @Test
-    void assertLastDigitalOfGenerateKeyDifferentMillisecond() throws InterruptedException {
+    void assertLastDigitalOfGenerateKeyDifferentMillisecond() {
         SnowflakeKeyGenerateAlgorithm.setTimeService(new TimeService());
         KeyGenerateAlgorithm algorithm = TypedSPILoader.getService(KeyGenerateAlgorithm.class, "SNOWFLAKE", PropertiesBuilder.build(new Property("max-vibration-offset", "3")));
         if (algorithm instanceof InstanceContextAware) {
@@ -122,16 +125,16 @@ class SnowflakeKeyGenerateAlgorithmTest {
         }
         String actualGenerateKey0 = Long.toBinaryString(Long.parseLong(algorithm.generateKey().toString()));
         assertThat(Integer.parseInt(actualGenerateKey0.substring(actualGenerateKey0.length() - 3), 2), is(0));
-        Thread.sleep(2L);
+        Awaitility.await().pollDelay(2L, TimeUnit.MILLISECONDS).until(() -> true);
         String actualGenerateKey1 = Long.toBinaryString(Long.parseLong(algorithm.generateKey().toString()));
         assertThat(Integer.parseInt(actualGenerateKey1.substring(actualGenerateKey1.length() - 3), 2), is(1));
-        Thread.sleep(2L);
+        Awaitility.await().pollDelay(2L, TimeUnit.MILLISECONDS).until(() -> true);
         String actualGenerateKey2 = Long.toBinaryString(Long.parseLong(algorithm.generateKey().toString()));
         assertThat(Integer.parseInt(actualGenerateKey2.substring(actualGenerateKey2.length() - 3), 2), is(2));
-        Thread.sleep(2L);
+        Awaitility.await().pollDelay(2L, TimeUnit.MILLISECONDS).until(() -> true);
         String actualGenerateKey3 = Long.toBinaryString(Long.parseLong(algorithm.generateKey().toString()));
         assertThat(Integer.parseInt(actualGenerateKey3.substring(actualGenerateKey3.length() - 3), 2), is(3));
-        Thread.sleep(2L);
+        Awaitility.await().pollDelay(2L, TimeUnit.MILLISECONDS).until(() -> true);
         String actualGenerateKey4 = Long.toBinaryString(Long.parseLong(algorithm.generateKey().toString()));
         assertThat(Integer.parseInt(actualGenerateKey4.substring(actualGenerateKey4.length() - 3), 2), is(0));
     }
@@ -144,7 +147,7 @@ class SnowflakeKeyGenerateAlgorithmTest {
         if (algorithm instanceof InstanceContextAware) {
             ((InstanceContextAware) algorithm).setInstanceContext(INSTANCE);
         }
-        setLastMilliseconds(algorithm, timeService.getCurrentMillis() + 2);
+        setLastMillis(algorithm, timeService.getCurrentMillis() + 2);
         List<Comparable<?>> expected = Arrays.asList(4194304L, 8388609L, 8388610L, 12582912L, 12582913L, 16777217L, 16777218L, 20971520L, 20971521L, 25165825L);
         List<Comparable<?>> actual = new ArrayList<>(DEFAULT_KEY_AMOUNT);
         for (int i = 0; i < DEFAULT_KEY_AMOUNT; i++) {
@@ -161,11 +164,11 @@ class SnowflakeKeyGenerateAlgorithmTest {
         if (algorithm instanceof InstanceContextAware) {
             ((InstanceContextAware) algorithm).setInstanceContext(INSTANCE);
         }
-        setLastMilliseconds(algorithm, timeService.getCurrentMillis() + 2);
+        setLastMillis(algorithm, timeService.getCurrentMillis() + 2);
         assertThrows(SnowflakeClockMoveBackException.class, () -> batchGenerate(algorithm));
     }
     
-    private static void batchGenerate(final KeyGenerateAlgorithm algorithm) {
+    private void batchGenerate(final KeyGenerateAlgorithm algorithm) {
         for (int i = 0; i < DEFAULT_KEY_AMOUNT; i++) {
             algorithm.generateKey();
         }
@@ -179,7 +182,7 @@ class SnowflakeKeyGenerateAlgorithmTest {
         if (algorithm instanceof InstanceContextAware) {
             ((InstanceContextAware) algorithm).setInstanceContext(INSTANCE);
         }
-        setLastMilliseconds(algorithm, timeService.getCurrentMillis());
+        setLastMillis(algorithm, timeService.getCurrentMillis());
         setSequence(algorithm, (1 << DEFAULT_SEQUENCE_BITS) - 1L);
         List<Comparable<?>> expected = Arrays.asList(4194304L, 4194305L, 4194306L, 8388608L, 8388609L, 8388610L, 12582913L, 12582914L, 12582915L, 16777216L);
         List<Comparable<?>> actual = new ArrayList<>(DEFAULT_KEY_AMOUNT);
@@ -190,13 +193,13 @@ class SnowflakeKeyGenerateAlgorithmTest {
     }
     
     @SneakyThrows(ReflectiveOperationException.class)
-    private void setLastMilliseconds(final KeyGenerateAlgorithm algorithm, final Number value) {
-        Plugins.getMemberAccessor().set(SnowflakeKeyGenerateAlgorithm.class.getDeclaredField("lastMilliseconds"), algorithm, value);
+    private void setLastMillis(final KeyGenerateAlgorithm algorithm, final Number value) {
+        Plugins.getMemberAccessor().set(SnowflakeKeyGenerateAlgorithm.class.getDeclaredField("lastMillis"), algorithm, new AtomicLong(value.longValue()));
     }
     
     @SneakyThrows(ReflectiveOperationException.class)
     private void setSequence(final KeyGenerateAlgorithm algorithm, final Number value) {
-        Plugins.getMemberAccessor().set(SnowflakeKeyGenerateAlgorithm.class.getDeclaredField("sequence"), algorithm, value);
+        Plugins.getMemberAccessor().set(SnowflakeKeyGenerateAlgorithm.class.getDeclaredField("sequence"), algorithm, new AtomicLong(value.longValue()));
     }
     
     @Test

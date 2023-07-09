@@ -51,12 +51,7 @@ public final class SingleStandardRouteEngine implements SingleRouteEngine {
     
     private final SQLStatement sqlStatement;
     
-    /**
-     * Route for single table.
-     *
-     * @param routeContext route context
-     * @param singleRule single rule
-     */
+    @Override
     public void route(final RouteContext routeContext, final SingleRule singleRule) {
         if (routeContext.getRouteUnits().isEmpty() || sqlStatement instanceof SelectStatement) {
             route0(routeContext, singleRule);
@@ -82,15 +77,16 @@ public final class SingleStandardRouteEngine implements SingleRouteEngine {
     private void route0(final RouteContext routeContext, final SingleRule rule) {
         if (sqlStatement instanceof CreateTableStatement) {
             QualifiedTable table = singleTableNames.iterator().next();
-            Optional<DataNode> dataNodeOptional = rule.findSingleTableDataNode(table.getSchemaName(), table.getTableName());
-            if (!dataNodeOptional.isPresent()) {
-                String dataSourceName = rule.assignNewDataSourceName();
-                routeContext.getRouteUnits().add(new RouteUnit(new RouteMapper(dataSourceName, dataSourceName), Collections.singleton(new RouteMapper(table.getTableName(), table.getTableName()))));
-            } else if (CreateTableStatementHandler.ifNotExists((CreateTableStatement) sqlStatement)) {
+            Optional<DataNode> dataNodeOptional = rule.findTableDataNode(table.getSchemaName(), table.getTableName());
+            boolean containsIfNotExists = CreateTableStatementHandler.ifNotExists((CreateTableStatement) sqlStatement);
+            if (dataNodeOptional.isPresent() && containsIfNotExists) {
                 String dataSourceName = dataNodeOptional.map(DataNode::getDataSourceName).orElse(null);
                 routeContext.getRouteUnits().add(new RouteUnit(new RouteMapper(dataSourceName, dataSourceName), Collections.singleton(new RouteMapper(table.getTableName(), table.getTableName()))));
-            } else {
+            } else if (dataNodeOptional.isPresent()) {
                 throw new TableExistsException(table.getTableName());
+            } else {
+                String dataSourceName = rule.assignNewDataSourceName();
+                routeContext.getRouteUnits().add(new RouteUnit(new RouteMapper(dataSourceName, dataSourceName), Collections.singleton(new RouteMapper(table.getTableName(), table.getTableName()))));
             }
         } else if (sqlStatement instanceof AlterTableStatement || sqlStatement instanceof DropTableStatement || rule.isAllTablesInSameDataSource(routeContext, singleTableNames)) {
             fillRouteContext(rule, routeContext, rule.getSingleTableNames(singleTableNames));
@@ -100,7 +96,7 @@ public final class SingleStandardRouteEngine implements SingleRouteEngine {
     private void fillRouteContext(final SingleRule singleRule, final RouteContext routeContext, final Collection<QualifiedTable> logicTables) {
         for (QualifiedTable each : logicTables) {
             String tableName = each.getTableName();
-            Optional<DataNode> dataNode = singleRule.findSingleTableDataNode(each.getSchemaName(), tableName);
+            Optional<DataNode> dataNode = singleRule.findTableDataNode(each.getSchemaName(), tableName);
             if (!dataNode.isPresent()) {
                 throw new SingleTableNotFoundException(tableName);
             }

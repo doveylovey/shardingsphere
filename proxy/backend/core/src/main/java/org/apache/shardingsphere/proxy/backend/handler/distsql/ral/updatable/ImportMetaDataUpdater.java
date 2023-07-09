@@ -17,6 +17,7 @@
 
 package org.apache.shardingsphere.proxy.backend.handler.distsql.ral.updatable;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.apache.shardingsphere.distsql.handler.ral.update.RALUpdater;
 import org.apache.shardingsphere.distsql.parser.statement.ral.updatable.ImportMetaDataStatement;
@@ -29,7 +30,7 @@ import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.distsql.export.ExportedClusterInfo;
 import org.apache.shardingsphere.proxy.backend.distsql.export.ExportedMetaData;
 import org.apache.shardingsphere.proxy.backend.exception.FileIOException;
-import org.apache.shardingsphere.proxy.backend.util.JsonUtils;
+import org.apache.shardingsphere.infra.util.json.JsonUtils;
 import org.apache.shardingsphere.proxy.backend.util.YamlDatabaseConfigurationImportExecutor;
 
 import java.io.File;
@@ -37,7 +38,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Objects;
 
 /**
  * Import meta data updater.
@@ -59,23 +59,22 @@ public final class ImportMetaDataUpdater implements RALUpdater<ImportMetaDataSta
                 throw new FileIOException(ex);
             }
         } else {
-            jsonMetaDataConfig = sqlStatement.getMetaDataValue();
+            jsonMetaDataConfig = new String(Base64.decodeBase64(sqlStatement.getMetaDataValue()));
         }
         ExportedClusterInfo exportedClusterInfo = JsonUtils.readValue(jsonMetaDataConfig, ExportedClusterInfo.class);
         ExportedMetaData exportedMetaData = exportedClusterInfo.getMetaData();
         importServerConfig(exportedMetaData);
         importDatabase(exportedMetaData);
-        // TODO restore snapshot info
     }
     
     private void importServerConfig(final ExportedMetaData exportedMetaData) {
         YamlProxyServerConfiguration yamlServerConfig = YamlEngine.unmarshal(exportedMetaData.getRules() + System.lineSeparator() + exportedMetaData.getProps(), YamlProxyServerConfiguration.class);
-        if (Objects.isNull(yamlServerConfig)) {
+        if (null == yamlServerConfig) {
             return;
         }
         Collection<RuleConfiguration> rules = ruleConfigSwapperEngine.swapToRuleConfigurations(yamlServerConfig.getRules());
-        ProxyContext.getInstance().getContextManager().getMetaDataContexts().getPersistService().getGlobalRuleService().persist(rules);
-        ProxyContext.getInstance().getContextManager().getMetaDataContexts().getPersistService().getPropsService().persist(yamlServerConfig.getProps());
+        ProxyContext.getInstance().getContextManager().getInstanceContext().getModeContextManager().alterGlobalRuleConfiguration(rules);
+        ProxyContext.getInstance().getContextManager().getInstanceContext().getModeContextManager().alterProperties(yamlServerConfig.getProps());
     }
     
     private void importDatabase(final ExportedMetaData exportedMetaData) {

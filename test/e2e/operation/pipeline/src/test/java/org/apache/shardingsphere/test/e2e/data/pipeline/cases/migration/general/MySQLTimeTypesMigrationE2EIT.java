@@ -38,7 +38,7 @@ import java.sql.SQLException;
  * 1) datetime,timestamp,date default null
  */
 @PipelineE2ESettings(fetchSingle = true, database = @PipelineE2ESettings.PipelineE2EDatabaseSettings(type = "MySQL", scenarioFiles = "env/common/none.xml"))
-public class MySQLTimeTypesMigrationE2EIT extends AbstractMigrationE2EIT {
+class MySQLTimeTypesMigrationE2EIT extends AbstractMigrationE2EIT {
     
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
@@ -56,6 +56,7 @@ public class MySQLTimeTypesMigrationE2EIT extends AbstractMigrationE2EIT {
             containerComposer.waitJobPrepareSuccess(String.format("SHOW MIGRATION STATUS '%s'", jobId));
             insertOneRecordWithZeroValue(containerComposer, 2);
             containerComposer.waitIncrementTaskFinished(String.format("SHOW MIGRATION STATUS '%s'", jobId));
+            loadAllSingleTables(containerComposer);
             assertCheckMigrationSuccess(containerComposer, jobId, "DATA_MATCH");
         }
     }

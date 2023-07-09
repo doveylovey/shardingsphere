@@ -40,12 +40,14 @@ public final class ShardingSphereResultSetUtils {
      * Create column label and index map.
      *
      * @param sqlStatementContext SQL statement context
+     * @param selectContainsEnhancedTable select contains enhanced table
      * @param resultSetMetaData meta data of result set
      * @return column label and index map
      * @throws SQLException SQL exception
      */
-    public static Map<String, Integer> createColumnLabelAndIndexMap(final SQLStatementContext<?> sqlStatementContext, final ResultSetMetaData resultSetMetaData) throws SQLException {
-        if (hasSelectExpandProjections(sqlStatementContext)) {
+    public static Map<String, Integer> createColumnLabelAndIndexMap(final SQLStatementContext sqlStatementContext, final boolean selectContainsEnhancedTable,
+                                                                    final ResultSetMetaData resultSetMetaData) throws SQLException {
+        if (selectContainsEnhancedTable && hasSelectExpandProjections(sqlStatementContext)) {
             return createColumnLabelAndIndexMapWithExpandProjections((SelectStatementContext) sqlStatementContext);
         }
         Map<String, Integer> result = new CaseInsensitiveMap<>(resultSetMetaData.getColumnCount(), 1);
@@ -57,7 +59,7 @@ public final class ShardingSphereResultSetUtils {
     
     private static Map<String, Integer> createColumnLabelAndIndexMapWithExpandProjections(final SelectStatementContext statementContext) {
         List<Projection> actualProjections = statementContext.getProjectionsContext().getExpandProjections();
-        Map<String, Integer> result = new CaseInsensitiveMap<>(actualProjections.size(), 1);
+        Map<String, Integer> result = new CaseInsensitiveMap<>(actualProjections.size(), 1F);
         for (int columnIndex = actualProjections.size(); columnIndex > 0; columnIndex--) {
             Projection projection = actualProjections.get(columnIndex - 1);
             result.put(DerivedColumn.isDerivedColumnName(projection.getColumnLabel()) ? projection.getExpression() : projection.getColumnLabel(), columnIndex);
@@ -65,7 +67,7 @@ public final class ShardingSphereResultSetUtils {
         return result;
     }
     
-    private static boolean hasSelectExpandProjections(final SQLStatementContext<?> sqlStatementContext) {
+    private static boolean hasSelectExpandProjections(final SQLStatementContext sqlStatementContext) {
         return sqlStatementContext instanceof SelectStatementContext && !((SelectStatementContext) sqlStatementContext).getProjectionsContext().getExpandProjections().isEmpty();
     }
 }

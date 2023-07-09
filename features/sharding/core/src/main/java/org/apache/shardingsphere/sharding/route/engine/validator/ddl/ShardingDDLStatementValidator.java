@@ -26,16 +26,13 @@ import org.apache.shardingsphere.sharding.route.engine.validator.ShardingStateme
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.DDLStatement;
 
 import java.util.Collection;
 
 /**
  * Sharding DDL statement validator.
- * 
- * @param <T> type of SQL statement
  */
-public abstract class ShardingDDLStatementValidator<T extends DDLStatement> implements ShardingStatementValidator<T> {
+public abstract class ShardingDDLStatementValidator implements ShardingStatementValidator {
     
     /**
      * Validate sharding table.
@@ -95,8 +92,7 @@ public abstract class ShardingDDLStatementValidator<T extends DDLStatement> impl
      * @return route unit and data node are different size or not
      */
     protected boolean isRouteUnitDataNodeDifferentSize(final ShardingRule shardingRule, final RouteContext routeContext, final String tableName) {
-        return (shardingRule.isShardingTable(tableName) || shardingRule.isBroadcastTable(tableName))
-                && shardingRule.getTableRule(tableName).getActualDataNodes().size() != routeContext.getRouteUnits().size();
+        return shardingRule.isShardingTable(tableName) && shardingRule.getTableRule(tableName).getActualDataNodes().size() != routeContext.getRouteUnits().size();
     }
     
     /**
@@ -107,6 +103,6 @@ public abstract class ShardingDDLStatementValidator<T extends DDLStatement> impl
      * @return whether schema contains index or not
      */
     protected boolean isSchemaContainsIndex(final ShardingSphereSchema schema, final IndexSegment index) {
-        return schema.getAllTableNames().stream().anyMatch(each -> schema.getTable(each).getIndexes().containsKey(index.getIndexName().getIdentifier().getValue()));
+        return schema.getAllTableNames().stream().anyMatch(each -> schema.getTable(each).containsIndex(index.getIndexName().getIdentifier().getValue()));
     }
 }

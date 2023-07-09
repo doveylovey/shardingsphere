@@ -24,7 +24,7 @@ import org.apache.shardingsphere.infra.binder.statement.ddl.AlterViewStatementCo
 import org.apache.shardingsphere.infra.binder.statement.ddl.CreateViewStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.ddl.DropViewStatementContext;
 import org.apache.shardingsphere.infra.binder.type.CursorAvailable;
-import org.apache.shardingsphere.infra.context.ConnectionContext;
+import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
 import org.apache.shardingsphere.infra.route.context.RouteMapper;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
     
-    private final SQLStatementContext<?> sqlStatementContext;
+    private final SQLStatementContext sqlStatementContext;
     
     private final Collection<String> logicTables;
     
@@ -60,13 +60,7 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
         RouteContext result = new RouteContext();
         String dataSourceName = getDataSourceName(shardingRule.getDataSourceNames());
         RouteMapper dataSourceMapper = new RouteMapper(dataSourceName, dataSourceName);
-        if (shardingRule.isAllBroadcastTables(logicTables)) {
-            List<RouteMapper> tableMappers = new ArrayList<>(logicTables.size());
-            for (String each : logicTables) {
-                tableMappers.add(new RouteMapper(each, each));
-            }
-            result.getRouteUnits().add(new RouteUnit(dataSourceMapper, tableMappers));
-        } else if (logicTables.isEmpty()) {
+        if (logicTables.isEmpty()) {
             result.getRouteUnits().add(new RouteUnit(dataSourceMapper, Collections.emptyList()));
         } else if (1 == logicTables.size()) {
             String logicTableName = logicTables.iterator().next();
@@ -87,7 +81,7 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
         return sqlStatementContext instanceof CursorAvailable || isViewStatementContext(sqlStatementContext) ? dataSourceNames.iterator().next() : getRandomDataSourceName(dataSourceNames);
     }
     
-    private boolean isViewStatementContext(final SQLStatementContext<?> sqlStatementContext) {
+    private boolean isViewStatementContext(final SQLStatementContext sqlStatementContext) {
         return sqlStatementContext instanceof CreateViewStatementContext || sqlStatementContext instanceof AlterViewStatementContext || sqlStatementContext instanceof DropViewStatementContext;
     }
     
@@ -100,7 +94,7 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
             DataNode dataNode = tableRule.getActualDataNodes().get(0);
             tableMappers.add(new RouteMapper(each, dataNode.getTableName()));
             Set<String> currentDataSourceNames = tableRule.getActualDataNodes().stream().map(DataNode::getDataSourceName).collect(
-                    Collectors.toCollection(() -> new LinkedHashSet<>(tableRule.getActualDataSourceNames().size())));
+                    Collectors.toCollection(() -> new LinkedHashSet<>(tableRule.getActualDataSourceNames().size(), 1F)));
             if (first) {
                 availableDataSourceNames = currentDataSourceNames;
                 first = false;
@@ -116,8 +110,8 @@ public final class ShardingUnicastRoutingEngine implements ShardingRouteEngine {
     }
     
     private String getRandomDataSourceName(final Collection<String> dataSourceNames) {
-        Collection<String> preferredDataSourceNames = connectionContext.getPreferredDataSourceNames();
-        List<String> availableDataSourceNames = new ArrayList<>(!preferredDataSourceNames.isEmpty() ? preferredDataSourceNames : dataSourceNames);
+        Collection<String> usedDataSourceNames = connectionContext.getUsedDataSourceNames();
+        List<String> availableDataSourceNames = new ArrayList<>(usedDataSourceNames.isEmpty() ? dataSourceNames : usedDataSourceNames);
         return availableDataSourceNames.get(ThreadLocalRandom.current().nextInt(availableDataSourceNames.size()));
     }
 }

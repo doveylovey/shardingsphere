@@ -40,29 +40,24 @@ import java.util.stream.Collectors;
 
 public abstract class AbstractEncryptDriverTest extends AbstractDriverTest {
     
-    private static ShardingSphereDataSource queryWithPlainDataSource;
-    
     private static ShardingSphereDataSource queryWithCipherDataSource;
     
     private static final List<String> ACTUAL_DATA_SOURCE_NAMES = Collections.singletonList("encrypt");
-    
-    private static final String CONFIG_FILE_WITH_QUERY_WITH_PLAIN = "config/config-encrypt-query-with-plain.yaml";
     
     private static final String CONFIG_FILE_WITH_QUERY_WITH_CIPHER = "config/config-encrypt-query-with-cipher.yaml";
     
     @BeforeAll
     static void initEncryptDataSource() throws SQLException, IOException {
-        if (null != queryWithPlainDataSource && null != queryWithCipherDataSource) {
+        if (null != queryWithCipherDataSource) {
             return;
         }
         DataSource dataSource = getDataSourceMap().values().iterator().next();
-        queryWithPlainDataSource = (ShardingSphereDataSource) YamlShardingSphereDataSourceFactory.createDataSource(dataSource, getFile(CONFIG_FILE_WITH_QUERY_WITH_CIPHER));
-        queryWithCipherDataSource = (ShardingSphereDataSource) YamlShardingSphereDataSourceFactory.createDataSource(dataSource, getFile(CONFIG_FILE_WITH_QUERY_WITH_PLAIN));
+        queryWithCipherDataSource = (ShardingSphereDataSource) YamlShardingSphereDataSourceFactory.createDataSource(dataSource, getFile(CONFIG_FILE_WITH_QUERY_WITH_CIPHER));
     }
     
     private static File getFile(final String fileName) {
         return new File(Objects.requireNonNull(
-                AbstractEncryptDriverTest.class.getClassLoader().getResource(fileName), String.format("File `%s` is not existed.", fileName)).getFile());
+                Thread.currentThread().getContextClassLoader().getResource(fileName), String.format("File `%s` is not existed.", fileName)).getFile());
     }
     
     private static Map<String, DataSource> getDataSourceMap() {
@@ -71,15 +66,15 @@ public abstract class AbstractEncryptDriverTest extends AbstractDriverTest {
     
     @BeforeEach
     void initTable() {
-        try (Connection connection = queryWithPlainDataSource.getConnection()) {
-            RunScript.execute(connection, new InputStreamReader(Objects.requireNonNull(AbstractDriverTest.class.getClassLoader().getResourceAsStream("sql/encrypt_data.sql"))));
+        try (Connection connection = queryWithCipherDataSource.getConnection()) {
+            RunScript.execute(connection, new InputStreamReader(Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResourceAsStream("sql/encrypt_data.sql"))));
         } catch (final SQLException ex) {
             throw new RuntimeException(ex);
         }
     }
     
     protected final Connection getEncryptConnection() {
-        return queryWithPlainDataSource.getConnection();
+        return queryWithCipherDataSource.getConnection();
     }
     
     protected final ShardingSphereConnection getEncryptConnectionWithProps() {
@@ -88,11 +83,6 @@ public abstract class AbstractEncryptDriverTest extends AbstractDriverTest {
     
     @AfterAll
     static void close() throws Exception {
-        if (null == queryWithPlainDataSource) {
-            return;
-        }
-        queryWithPlainDataSource.close();
-        queryWithPlainDataSource = null;
         if (null == queryWithCipherDataSource) {
             return;
         }

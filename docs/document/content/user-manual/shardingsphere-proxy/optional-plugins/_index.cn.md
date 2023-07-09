@@ -4,7 +4,7 @@ weight = 6
 +++
 
 ShardingSphere 默认情况下仅包含核心 SPI 的实现，在 Git Source 存在一部分包含第三方依赖的 SPI
-实现的插件未包含在内。可在 https://central.sonatype.dev/ 进行检索。
+实现的插件未包含在内。可在 https://central.sonatype.com/ 进行检索。
 
 所有插件对应的 SPI 和 SPI 的已有实现类均可在 https://shardingsphere.apache.org/document/current/cn/dev-manual/ 检索。
 
@@ -22,7 +22,6 @@ ShardingSphere 默认情况下仅包含核心 SPI 的实现，在 Git Source 存
 - `org.apache.shardingsphere:shardingsphere-proxy-frontend-postgresql`，用于 ShardingSphere-Proxy 解析与适配访问数据库的协议的 PostgreSQL 实现
 - `org.apache.shardingsphere:shardingsphere-proxy-frontend-opengauss`，用于 ShardingSphere-Proxy 解析与适配访问数据库的协议的 openGauss 实现
 - `org.apache.shardingsphere:shardingsphere-proxy-backend-core`， ShardingSphere Proxy 的后端核心模块
-- `org.apache.shardingsphere:shardingsphere-sharding-cache`， 分片缓存，参考未关闭的 https://github.com/apache/shardingsphere/issues/21223
 - `org.apache.shardingsphere:shardingsphere-standalone-mode-core`，单机模式配置信息持久化定义核心
 
 对于核心的 `org.apache.shardingsphere:shardingsphere-jdbc-core`，其内置插件参考[ShardingSphere-JDBC 可选插件](/cn/user-manual/shardingsphere-jdbc/optional-plugins/)。
@@ -32,7 +31,7 @@ ShardingSphere 默认情况下仅包含核心 SPI 的实现，在 Git Source 存
 下以 `groupId:artifactId` 的表现形式列出所有的可选插件。
 
 - 单机模式配置信息持久化定义
-  - `org.apache.shardingsphere:shardingsphere-standalone-mode-repository-jdbc-mysql`，基于 MySQL 的持久化
+  - `org.apache.shardingsphere:shardingsphere-standalone-mode-repository-jdbc`，基于 JDBC 的持久化
 - 集群模式配置信息持久化定义
   - `org.apache.shardingsphere:shardingsphere-cluster-mode-repository-nacos`，基于 Nacos 的持久化实现
   - `org.apache.shardingsphere:shardingsphere-cluster-mode-repository-consul`，基于 Consul 的持久化实现

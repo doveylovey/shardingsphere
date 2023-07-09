@@ -46,7 +46,7 @@ public abstract class EmbeddedStorageContainer implements EmbeddedITContainer, S
     
     private final Map<String, DataSource> expectedDataSourceMap;
     
-    public EmbeddedStorageContainer(final DatabaseType databaseType, final String scenario) {
+    protected EmbeddedStorageContainer(final DatabaseType databaseType, final String scenario) {
         this.databaseType = databaseType;
         this.scenario = scenario;
         actualDataSourceMap = createActualDataSourceMap();
@@ -56,7 +56,7 @@ public abstract class EmbeddedStorageContainer implements EmbeddedITContainer, S
     @SneakyThrows({IOException.class, JAXBException.class})
     private Map<String, DataSource> createActualDataSourceMap() {
         Collection<String> databaseNames = DatabaseEnvironmentManager.getDatabaseNames(scenario);
-        Map<String, DataSource> result = new LinkedHashMap<>(databaseNames.size(), 1);
+        Map<String, DataSource> result = new LinkedHashMap<>(databaseNames.size(), 1F);
         databaseNames.forEach(each -> result.put(each, StorageContainerUtils.generateDataSource(DataSourceEnvironment.getURL(databaseType, null, 0, scenario + each),
                 "root", "Root@123")));
         return result;
@@ -65,7 +65,7 @@ public abstract class EmbeddedStorageContainer implements EmbeddedITContainer, S
     @SneakyThrows({IOException.class, JAXBException.class})
     private Map<String, DataSource> createExpectedDataSourceMap() {
         Collection<String> databaseNames = DatabaseEnvironmentManager.getExpectedDatabaseNames(scenario);
-        Map<String, DataSource> result = new LinkedHashMap<>(databaseNames.size(), 1);
+        Map<String, DataSource> result = new LinkedHashMap<>(databaseNames.size(), 1F);
         databaseNames.forEach(each -> result.put(each, StorageContainerUtils.generateDataSource(DataSourceEnvironment.getURL(databaseType, null, 0, scenario + each),
                 "root", "Root@123")));
         return result;

@@ -17,6 +17,8 @@
 
 package org.apache.shardingsphere.test.it.sql.parser.internal.asserts.statement.ral.impl.updatable;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.parser.distsql.parser.segment.CacheOptionSegment;
 import org.apache.shardingsphere.parser.distsql.parser.statement.updatable.AlterSQLParserRuleStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * Alter SQL parser rule statement assert.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AlterSQLParserRuleStatementAssert {
     
     /**
@@ -52,9 +55,8 @@ public final class AlterSQLParserRuleStatementAssert {
             assertNull(actual, assertContext.getText("Actual statement should not exist."));
         } else {
             assertNotNull(actual, assertContext.getText("Actual statement should exist."));
+            assertThat(actual.getInitialCapacity(), is(expected.getInitialCapacity()));
+            assertThat(actual.getMaximumSize(), is(expected.getMaximumSize()));
         }
-        assertNotNull(actual);
-        assertThat(actual.getInitialCapacity(), is(expected.getInitialCapacity()));
-        assertThat(actual.getMaximumSize(), is(expected.getMaximumSize()));
     }
 }

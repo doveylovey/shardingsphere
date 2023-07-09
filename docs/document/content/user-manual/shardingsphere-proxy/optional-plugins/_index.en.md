@@ -4,7 +4,7 @@ weight = 6
 +++
 
 ShardingSphere only includes the implementation of the core SPI by default, and there is a part of the SPI that contains third-party dependencies in Git Source
-Implemented plugins are not included. Retrievable at https://central.sonatype.dev/.
+Implemented plugins are not included. Retrievable at https://central.sonatype.com/.
 
 SPI and existing implementation classes of SPI corresponding to all plugins can be retrieved at https://shardingsphere.apache.org/document/current/cn/dev-manual/.
 
@@ -22,7 +22,6 @@ All the built-in plugins for ShardingSphere-Proxy are listed below in the form o
 - `org.apache.shardingsphere:shardingsphere-proxy-frontend-postgresql`, a PostgreSQL implementation for ShardingSphere-Proxy to parse and adapt the protocol for accessing the database
 - `org.apache.shardingsphere:shardingsphere-proxy-frontend-opengauss`, an openGauss implementation for ShardingSphere-Proxy to parse and adapt the protocol for accessing the database
 - `org.apache.shardingsphere:shardingsphere-proxy-backend-core`, the backend core for ShardingSphere Proxy
-- `org.apache.shardingsphere:shardingsphere-sharding-cache`, sharding cache, refer to https://github.com/apache/shardingsphere/issues/21223
 - `org.apache.shardingsphere:shardingsphere-standalone-mode-core`, the persistence definition core of single-machine mode configuration information
 
 For the core `org.apache.shardingsphere:shardingsphere-jdbc-core`,Its built-in plugins reference[ShardingSphere-JDBC Optional Plugins](/en/user-manual/shardingsphere-jdbc/optional-plugins/).
@@ -32,7 +31,7 @@ If ShardingSphere Proxy needs to use optional plugins, you need to download the 
 All optional plugins are listed below in the form of `groupId:artifactId`.
 
 - Standalone mode configuration information persistence definition
-  - `org.apache.shardingsphere:shardingsphere-standalone-mode-repository-jdbc-mysql`, MySQL based persistence
+  - `org.apache.shardingsphere:shardingsphere-standalone-mode-repository-jdbc`, JDBC based persistence
 - Cluster mode configuration information persistence definition
   - `org.apache.shardingsphere:shardingsphere-cluster-mode-repository-nacos`, Nacos based persistence
   - `org.apache.shardingsphere:shardingsphere-cluster-mode-repository-consul`, Consul based persistence

@@ -51,6 +51,7 @@ public final class InstanceContext {
     
     private final ModeContextManager modeContextManager;
     
+    @SuppressWarnings("rawtypes")
     private final LockContext lockContext;
     
     private final EventBusContext eventBusContext;
@@ -177,6 +178,6 @@ public final class InstanceContext {
      * @return true if is cluster, else false
      */
     public boolean isCluster() {
-        return "Cluster".equals(modeConfiguration.getType());
+        return "Cluster".equals(modeConfiguration.getType()) || "Compatible_Cluster".equals(modeConfiguration.getType());
     }
 }

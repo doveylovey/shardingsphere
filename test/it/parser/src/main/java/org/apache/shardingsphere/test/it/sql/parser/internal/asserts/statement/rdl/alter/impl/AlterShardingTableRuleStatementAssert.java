@@ -56,11 +56,11 @@ public final class AlterShardingTableRuleStatementAssert {
         if (ExistingAssert.assertIs(assertContext, actual, expected)) {
             if (expected instanceof AlterShardingAutoTableRuleStatementTestCase) {
                 AlterShardingAutoTableRuleStatementTestCase autoTableRuleStatementTestCase = (AlterShardingAutoTableRuleStatementTestCase) expected;
-                Collection<AutoTableRuleSegment> actualAutoTableRules = actual.getRules().stream().map(each -> (AutoTableRuleSegment) each).collect(Collectors.toList());
+                Collection<AutoTableRuleSegment> actualAutoTableRules = actual.getRules().stream().map(AutoTableRuleSegment.class::cast).collect(Collectors.toList());
                 assertShardingAutoTableRules(assertContext, actualAutoTableRules, autoTableRuleStatementTestCase.getRules());
             } else {
                 AlterShardingTableRuleStatementTestCase tableRuleStatementTestCase = (AlterShardingTableRuleStatementTestCase) expected;
-                Collection<TableRuleSegment> actualTableRules = actual.getRules().stream().map(each -> (TableRuleSegment) each).collect(Collectors.toList());
+                Collection<TableRuleSegment> actualTableRules = actual.getRules().stream().map(TableRuleSegment.class::cast).collect(Collectors.toList());
                 assertShardingTableRules(assertContext, actualTableRules, tableRuleStatementTestCase.getRules());
             }
         }
@@ -72,9 +72,8 @@ public final class AlterShardingTableRuleStatementAssert {
         } else {
             assertNotNull(actual, assertContext.getText("Actual sharding auto table rule should exist."));
             int count = 0;
-            for (AutoTableRuleSegment tableRuleSegment : actual) {
-                ExpectedAutoTableRule expectedTableRule = expected.get(count);
-                AutoTableRuleAssert.assertIs(assertContext, tableRuleSegment, expectedTableRule);
+            for (AutoTableRuleSegment each : actual) {
+                AutoTableRuleAssert.assertIs(assertContext, each, expected.get(count));
                 count++;
             }
         }
@@ -86,9 +85,8 @@ public final class AlterShardingTableRuleStatementAssert {
         } else {
             assertNotNull(actual, assertContext.getText("Actual sharding table rule should exist."));
             int count = 0;
-            for (TableRuleSegment tableRuleSegment : actual) {
-                ExpectedTableRule expectedTableRule = expected.get(count);
-                TableRuleAssert.assertIs(assertContext, tableRuleSegment, expectedTableRule);
+            for (TableRuleSegment each : actual) {
+                TableRuleAssert.assertIs(assertContext, each, expected.get(count));
                 count++;
             }
         }

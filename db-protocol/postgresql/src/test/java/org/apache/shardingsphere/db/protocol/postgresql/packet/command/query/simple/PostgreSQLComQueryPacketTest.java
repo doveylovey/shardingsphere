@@ -38,10 +38,10 @@ class PostgreSQLComQueryPacketTest {
     @Test
     void assertNewInstance() {
         when(payload.readStringNul()).thenReturn("sql");
-        PostgreSQLComQueryPacket actual = new PostgreSQLComQueryPacket(payload);
+        PostgreSQLComQueryPacket actual = new PostgreSQLComQueryPacket(payload, false);
         actual.write(payload);
         verify(payload).readInt4();
-        assertThat(actual.getSql(), is("sql"));
+        assertThat(actual.getSQL(), is("sql"));
         assertThat(actual.getIdentifier(), is(PostgreSQLCommandPacketType.SIMPLE_QUERY));
     }
 }

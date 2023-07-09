@@ -65,7 +65,7 @@ public final class HBaseHeterogeneousUtils {
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             found++;
-            Preconditions.checkState(found <= replacements.length, String.format("Missing replacement for '%s' at [%s].", target, found));
+            Preconditions.checkState(found <= replacements.length, "Missing replacement for '%s' at [%s].", target, found);
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacements[found - 1].toString()));
         }
         matcher.appendTail(sb);
@@ -79,6 +79,6 @@ public final class HBaseHeterogeneousUtils {
      * @return is use shorthand projection
      */
     public static boolean isUseShorthandProjection(final SelectStatementContext statementContext) {
-        return statementContext.getProjectionsContext().getProjections().stream().anyMatch(each -> each instanceof ShorthandProjection);
+        return statementContext.getProjectionsContext().getProjections().stream().anyMatch(ShorthandProjection.class::isInstance);
     }
 }

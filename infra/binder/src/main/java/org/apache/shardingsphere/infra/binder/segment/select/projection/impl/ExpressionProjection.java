@@ -22,6 +22,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.apache.shardingsphere.infra.binder.segment.select.projection.Projection;
+import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 
 import java.util.Optional;
 
@@ -49,8 +50,8 @@ public final class ExpressionProjection implements Projection {
     }
     
     @Override
-    public Projection cloneWithOwner(final String ownerName) {
-        // TODO replace column owner when ExpressionProjection contains owner
-        return new ExpressionProjection(expression, alias);
+    public Projection transformSubqueryProjection(final IdentifierValue subqueryTableAlias, final IdentifierValue originalOwner, final IdentifierValue originalName) {
+        // TODO replace getAlias with aliasIdentifier
+        return getAlias().isPresent() ? new ColumnProjection(subqueryTableAlias, new IdentifierValue(getAlias().get()), null) : new ExpressionProjection(expression, alias);
     }
 }

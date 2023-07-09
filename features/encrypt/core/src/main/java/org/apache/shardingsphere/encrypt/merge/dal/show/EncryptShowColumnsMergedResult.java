@@ -26,6 +26,7 @@ import org.apache.shardingsphere.infra.merge.result.MergedResult;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 
 import java.io.InputStream;
+import java.io.Reader;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Calendar;
@@ -42,7 +43,7 @@ public abstract class EncryptShowColumnsMergedResult implements MergedResult {
     
     private final EncryptRule encryptRule;
     
-    protected EncryptShowColumnsMergedResult(final SQLStatementContext<?> sqlStatementContext, final EncryptRule encryptRule) {
+    protected EncryptShowColumnsMergedResult(final SQLStatementContext sqlStatementContext, final EncryptRule encryptRule) {
         ShardingSpherePreconditions.checkState(sqlStatementContext instanceof TableAvailable && 1 == ((TableAvailable) sqlStatementContext).getAllTables().size(),
                 () -> new UnsupportedEncryptSQLException("SHOW COLUMNS FOR MULTI TABLE"));
         tableName = ((TableAvailable) sqlStatementContext).getAllTables().iterator().next().getTableName().getIdentifier().getValue();
@@ -60,8 +61,7 @@ public abstract class EncryptShowColumnsMergedResult implements MergedResult {
             return false;
         }
         String columnName = getOriginalValue(COLUMN_FIELD_INDEX, String.class).toString();
-        while (encryptTable.get().getAssistedQueryColumns().contains(columnName) || encryptTable.get().getLikeQueryColumns().contains(columnName)
-                || encryptTable.get().getPlainColumns().contains(columnName)) {
+        while (isDerivedColumn(encryptTable.get(), columnName)) {
             hasNext = nextValue();
             if (!hasNext) {
                 return false;
@@ -69,6 +69,10 @@ public abstract class EncryptShowColumnsMergedResult implements MergedResult {
             columnName = getOriginalValue(COLUMN_FIELD_INDEX, String.class).toString();
         }
         return true;
+    }
+    
+    private boolean isDerivedColumn(final EncryptTable encryptTable, final String columnName) {
+        return encryptTable.isAssistedQueryColumn(columnName) || encryptTable.isLikeQueryColumn(columnName);
     }
     
     @Override
@@ -92,6 +96,11 @@ public abstract class EncryptShowColumnsMergedResult implements MergedResult {
     
     @Override
     public final InputStream getInputStream(final int columnIndex, final String type) throws SQLException {
+        throw new SQLFeatureNotSupportedException("");
+    }
+    
+    @Override
+    public Reader getCharacterStream(final int columnIndex) throws SQLException {
         throw new SQLFeatureNotSupportedException("");
     }
     

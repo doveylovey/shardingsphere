@@ -22,7 +22,7 @@ weight = 1
 ShardingSphere-Proxy 运行模式在 `server.yaml` 中配置，配置格式与 ShardingSphere-JDBC 一致，请参考[模式配置](/cn/user-manual/shardingsphere-jdbc/yaml-config/mode/)。
 
 其他配置项请参考：
-* [权限配置](/cn/user-manual/shardingsphere-proxy/yaml-config/authentication/)
+* [权限配置](/cn/user-manual/shardingsphere-proxy/yaml-config/authority/)
 * [属性配置](/cn/user-manual/shardingsphere-proxy/yaml-config/props/)
 
 3. 配置 `conf/config-*.yaml`
@@ -34,7 +34,7 @@ ShardingSphere-Proxy 支持配置多个逻辑数据源，每个以 `config-` 前
 
 如果后端连接 PostgreSQL 或 openGauss 数据库，不需要引入额外依赖。
 
-如果后端连接 MySQL 数据库，请下载 [mysql-connector-java-5.1.47.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar) 或者 [mysql-connector-java-8.0.11.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar)，并将其放入 `ext-lib` 目录。
+如果后端连接 MySQL 数据库，请下载 [mysql-connector-java-5.1.49.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar) 或者 [mysql-connector-java-8.0.11.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar)，并将其放入 `ext-lib` 目录。
 
 5. （可选）引入集群模式所需依赖
 

@@ -17,6 +17,8 @@
 
 package org.apache.shardingsphere.shadow.distsql.handler.checker;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.distsql.handler.exception.DistSQLException;
 import org.apache.shardingsphere.distsql.handler.exception.rule.InvalidRuleConfigurationException;
 import org.apache.shardingsphere.distsql.handler.exception.rule.MissingRequiredRuleException;
@@ -29,13 +31,14 @@ import org.apache.shardingsphere.shadow.api.config.ShadowRuleConfiguration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Shadow rule statement checker.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ShadowRuleStatementChecker {
     
     /**
@@ -96,7 +99,7 @@ public class ShadowRuleStatementChecker {
     
     private static Collection<String> getDuplicated(final Collection<String> names) {
         return names.stream().collect(Collectors.groupingBy(each -> each, Collectors.counting())).entrySet().stream()
-                .filter(each -> each.getValue() > 1).map(Map.Entry::getKey).collect(Collectors.toSet());
+                .filter(each -> each.getValue() > 1).map(Entry::getKey).collect(Collectors.toSet());
     }
     
     private static Collection<String> getDuplicated(final Collection<String> required, final Collection<String> current) {

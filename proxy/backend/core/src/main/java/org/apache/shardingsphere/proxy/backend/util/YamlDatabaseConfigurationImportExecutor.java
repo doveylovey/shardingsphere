@@ -17,14 +17,21 @@
 
 package org.apache.shardingsphere.proxy.backend.util;
 
-import com.google.common.base.Preconditions;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.shardingsphere.broadcast.api.config.BroadcastRuleConfiguration;
+import org.apache.shardingsphere.broadcast.rule.BroadcastRule;
+import org.apache.shardingsphere.broadcast.yaml.config.YamlBroadcastRuleConfiguration;
+import org.apache.shardingsphere.broadcast.yaml.swapper.YamlBroadcastRuleConfigurationSwapper;
 import org.apache.shardingsphere.distsql.handler.exception.DistSQLException;
+import org.apache.shardingsphere.distsql.handler.exception.datasource.MissingRequiredDataSourcesException;
 import org.apache.shardingsphere.distsql.handler.exception.storageunit.InvalidStorageUnitsException;
 import org.apache.shardingsphere.distsql.handler.validate.DataSourcePropertiesValidateHandler;
+import org.apache.shardingsphere.encrypt.api.config.CompatibleEncryptRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
+import org.apache.shardingsphere.encrypt.yaml.config.YamlCompatibleEncryptRuleConfiguration;
 import org.apache.shardingsphere.encrypt.yaml.config.YamlEncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.yaml.swapper.YamlCompatibleEncryptRuleConfigurationSwapper;
 import org.apache.shardingsphere.encrypt.yaml.swapper.YamlEncryptRuleConfigurationSwapper;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
@@ -35,6 +42,8 @@ import org.apache.shardingsphere.infra.datasource.props.DataSourcePropertiesCrea
 import org.apache.shardingsphere.infra.instance.InstanceContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
+import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.util.exception.external.sql.type.generic.UnsupportedSQLOperationException;
 import org.apache.shardingsphere.infra.yaml.config.pojo.rule.YamlRuleConfiguration;
 import org.apache.shardingsphere.mask.api.config.MaskRuleConfiguration;
 import org.apache.shardingsphere.mask.rule.MaskRule;
@@ -63,6 +72,10 @@ import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sharding.yaml.config.YamlShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.yaml.swapper.YamlShardingRuleConfigurationSwapper;
+import org.apache.shardingsphere.single.api.config.SingleRuleConfiguration;
+import org.apache.shardingsphere.single.rule.SingleRule;
+import org.apache.shardingsphere.single.yaml.config.pojo.YamlSingleRuleConfiguration;
+import org.apache.shardingsphere.single.yaml.config.swapper.YamlSingleRuleConfigurationSwapper;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -115,25 +128,26 @@ public final class YamlDatabaseConfigurationImportExecutor {
     }
     
     private void checkDatabase(final String databaseName) {
-        Preconditions.checkNotNull(databaseName, "Property `databaseName` in imported config is required");
+        ShardingSpherePreconditions.checkNotNull(databaseName, () -> new UnsupportedSQLOperationException("Property `databaseName` in imported config is required"));
         if (ProxyContext.getInstance().databaseExists(databaseName)) {
-            Preconditions.checkState(ProxyContext.getInstance().getDatabase(databaseName).getResourceMetaData().getDataSources().isEmpty(), "Database `%s` exists and is not empty", databaseName);
+            ShardingSpherePreconditions.checkState(ProxyContext.getInstance().getDatabase(databaseName).getResourceMetaData().getDataSources().isEmpty(),
+                    () -> new UnsupportedSQLOperationException(String.format("Database `%s` exists and is not empty，overwrite is not supported", databaseName)));
         }
     }
     
     private void checkDataSource(final Map<String, YamlProxyDataSourceConfiguration> dataSources) {
-        Preconditions.checkState(!dataSources.isEmpty(), "Data source configurations in imported config is required");
+        ShardingSpherePreconditions.checkState(!dataSources.isEmpty(), () -> new MissingRequiredDataSourcesException("Data source configurations in imported config is required"));
     }
     
     private void addDatabase(final String databaseName) {
         ContextManager contextManager = ProxyContext.getInstance().getContextManager();
         contextManager.getInstanceContext().getModeContextManager().createDatabase(databaseName);
         DatabaseType protocolType = DatabaseTypeEngine.getProtocolType(Collections.emptyMap(), contextManager.getMetaDataContexts().getMetaData().getProps());
-        contextManager.getMetaDataContexts().getMetaData().addDatabase(databaseName, protocolType);
+        contextManager.getMetaDataContexts().getMetaData().addDatabase(databaseName, protocolType, contextManager.getMetaDataContexts().getMetaData().getProps());
     }
     
     private void addResources(final String databaseName, final Map<String, YamlProxyDataSourceConfiguration> yamlDataSourceMap) {
-        Map<String, DataSourceProperties> dataSourcePropsMap = new LinkedHashMap<>(yamlDataSourceMap.size(), 1);
+        Map<String, DataSourceProperties> dataSourcePropsMap = new LinkedHashMap<>(yamlDataSourceMap.size(), 1F);
         for (Entry<String, YamlProxyDataSourceConfiguration> entry : yamlDataSourceMap.entrySet()) {
             dataSourcePropsMap.put(entry.getKey(), DataSourcePropertiesCreator.create(HikariDataSource.class.getName(), dataSourceConfigSwapper.swap(entry.getValue())));
         }
@@ -166,6 +180,11 @@ public final class YamlDatabaseConfigurationImportExecutor {
                 ReadwriteSplittingRuleConfiguration readwriteSplittingRuleConfig = swapper.swapToObject((YamlReadwriteSplittingRuleConfiguration) each);
                 ruleConfigsMap.computeIfAbsent(swapper.getOrder(), key -> new LinkedList<>());
                 ruleConfigsMap.get(swapper.getOrder()).add(readwriteSplittingRuleConfig);
+            } else if (each instanceof YamlCompatibleEncryptRuleConfiguration) {
+                YamlCompatibleEncryptRuleConfigurationSwapper swapper = new YamlCompatibleEncryptRuleConfigurationSwapper();
+                CompatibleEncryptRuleConfiguration encryptRuleConfig = swapper.swapToObject((YamlCompatibleEncryptRuleConfiguration) each);
+                ruleConfigsMap.computeIfAbsent(swapper.getOrder(), key -> new LinkedList<>());
+                ruleConfigsMap.get(swapper.getOrder()).add(encryptRuleConfig);
             } else if (each instanceof YamlEncryptRuleConfiguration) {
                 YamlEncryptRuleConfigurationSwapper swapper = new YamlEncryptRuleConfigurationSwapper();
                 EncryptRuleConfiguration encryptRuleConfig = swapper.swapToObject((YamlEncryptRuleConfiguration) each);
@@ -181,13 +200,21 @@ public final class YamlDatabaseConfigurationImportExecutor {
                 MaskRuleConfiguration maskRuleConfig = swapper.swapToObject((YamlMaskRuleConfiguration) each);
                 ruleConfigsMap.computeIfAbsent(swapper.getOrder(), key -> new LinkedList<>());
                 ruleConfigsMap.get(swapper.getOrder()).add(maskRuleConfig);
+            } else if (each instanceof YamlBroadcastRuleConfiguration) {
+                YamlBroadcastRuleConfigurationSwapper swapper = new YamlBroadcastRuleConfigurationSwapper();
+                BroadcastRuleConfiguration maskRuleConfig = swapper.swapToObject((YamlBroadcastRuleConfiguration) each);
+                ruleConfigsMap.computeIfAbsent(swapper.getOrder(), key -> new LinkedList<>());
+                ruleConfigsMap.get(swapper.getOrder()).add(maskRuleConfig);
+            } else if (each instanceof YamlSingleRuleConfiguration) {
+                YamlSingleRuleConfigurationSwapper swapper = new YamlSingleRuleConfigurationSwapper();
+                SingleRuleConfiguration maskRuleConfig = swapper.swapToObject((YamlSingleRuleConfiguration) each);
+                ruleConfigsMap.computeIfAbsent(swapper.getOrder(), key -> new LinkedList<>());
+                ruleConfigsMap.get(swapper.getOrder()).add(maskRuleConfig);
             }
         }
         ruleConfigsMap.keySet().stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList())
                 .forEach(each -> addRules(allRuleConfigs, ruleConfigsMap.get(each), database));
-        metaDataContexts.getPersistService().getDatabaseRulePersistService().persist(metaDataContexts.getMetaData().getActualDatabaseName(databaseName),
-                metaDataContexts.getMetaData().getDatabase(databaseName).getResourceMetaData().getDataSources(),
-                metaDataContexts.getMetaData().getDatabase(databaseName).getRuleMetaData().getRules(), allRuleConfigs);
+        metaDataContexts.getPersistService().getDatabaseRulePersistService().persist(metaDataContexts.getMetaData().getDatabase(databaseName).getName(), allRuleConfigs);
     }
     
     private void addRules(final Collection<RuleConfiguration> allRuleConfigs, final Collection<RuleConfiguration> ruleConfigs, final ShardingSphereDatabase database) {
@@ -201,10 +228,16 @@ public final class YamlDatabaseConfigurationImportExecutor {
             ruleConfigs.forEach(each -> addReadwriteSplittingRuleConfiguration((ReadwriteSplittingRuleConfiguration) each, allRuleConfigs, database));
         } else if (ruleConfig instanceof EncryptRuleConfiguration) {
             ruleConfigs.forEach(each -> addEncryptRuleConfiguration((EncryptRuleConfiguration) each, allRuleConfigs, database));
+        } else if (ruleConfig instanceof CompatibleEncryptRuleConfiguration) {
+            ruleConfigs.forEach(each -> addEncryptRuleConfiguration(((CompatibleEncryptRuleConfiguration) each).convertToEncryptRuleConfiguration(), allRuleConfigs, database));
         } else if (ruleConfig instanceof ShadowRuleConfiguration) {
             ruleConfigs.forEach(each -> addShadowRuleConfiguration((ShadowRuleConfiguration) each, allRuleConfigs, database));
         } else if (ruleConfig instanceof MaskRuleConfiguration) {
             ruleConfigs.forEach(each -> addMaskRuleConfiguration((MaskRuleConfiguration) each, allRuleConfigs, database));
+        } else if (ruleConfig instanceof BroadcastRuleConfiguration) {
+            ruleConfigs.forEach(each -> addBroadcastRuleConfiguration((BroadcastRuleConfiguration) each, allRuleConfigs, database));
+        } else if (ruleConfig instanceof SingleRuleConfiguration) {
+            ruleConfigs.forEach(each -> addSingleRuleConfiguration((SingleRuleConfiguration) each, allRuleConfigs, database));
         }
     }
     
@@ -221,7 +254,7 @@ public final class YamlDatabaseConfigurationImportExecutor {
         Collection<ShardingSphereRule> rules = database.getRuleMetaData().getRules();
         readwriteSplittingRuleConfigImportChecker.check(database, readwriteSplittingRuleConfig);
         allRuleConfigs.add(readwriteSplittingRuleConfig);
-        rules.add(new ReadwriteSplittingRule(database.getName(), readwriteSplittingRuleConfig, rules, instanceContext));
+        rules.add(new ReadwriteSplittingRule(database.getName(), readwriteSplittingRuleConfig, instanceContext));
     }
     
     private void addEncryptRuleConfiguration(final EncryptRuleConfiguration encryptRuleConfig, final Collection<RuleConfiguration> allRuleConfigs, final ShardingSphereDatabase database) {
@@ -240,6 +273,16 @@ public final class YamlDatabaseConfigurationImportExecutor {
         maskRuleConfigImportChecker.check(database, maskRuleConfig);
         allRuleConfigs.add(maskRuleConfig);
         database.getRuleMetaData().getRules().add(new MaskRule(maskRuleConfig));
+    }
+    
+    private void addBroadcastRuleConfiguration(final BroadcastRuleConfiguration broadcastRuleConfig, final Collection<RuleConfiguration> allRuleConfigs, final ShardingSphereDatabase database) {
+        allRuleConfigs.add(broadcastRuleConfig);
+        database.getRuleMetaData().getRules().add(new BroadcastRule(broadcastRuleConfig, database.getName(), database.getResourceMetaData().getDataSources()));
+    }
+    
+    private void addSingleRuleConfiguration(final SingleRuleConfiguration broadcastRuleConfig, final Collection<RuleConfiguration> allRuleConfigs, final ShardingSphereDatabase database) {
+        allRuleConfigs.add(broadcastRuleConfig);
+        database.getRuleMetaData().getRules().add(new SingleRule(broadcastRuleConfig, database.getName(), database.getResourceMetaData().getDataSources(), database.getRuleMetaData().getRules()));
     }
     
     private void dropDatabase(final String databaseName) {

@@ -36,7 +36,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.text.ParseException;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,7 +45,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
     @ArgumentsSource(E2ETestCaseArgumentsProvider.class)
-    void assertExecuteQuery(final AssertionTestParameter testParam) throws SQLException, ParseException, IOException, JAXBException {
+    void assertExecuteQuery(final AssertionTestParameter testParam) throws SQLException, IOException, JAXBException {
         // TODO make sure test case can not be null
         if (null == testParam.getTestCaseContext()) {
             return;
@@ -59,10 +58,9 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
                 assertExecuteQueryWithExpectedDataSource(containerComposer);
             }
         }
-        
     }
     
-    private void assertExecuteQueryWithXmlExpected(final AssertionTestParameter testParam, final SingleE2EContainerComposer containerComposer) throws SQLException, ParseException {
+    private void assertExecuteQueryWithXmlExpected(final AssertionTestParameter testParam, final SingleE2EContainerComposer containerComposer) throws SQLException {
         // TODO Fix jdbc adapter
         if ("jdbc".equals(testParam.getAdapter())) {
             return;
@@ -75,7 +73,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
         }
     }
     
-    private void assertExecuteQueryWithExpectedDataSource(final SingleE2EContainerComposer containerComposer) throws SQLException, ParseException {
+    private void assertExecuteQueryWithExpectedDataSource(final SingleE2EContainerComposer containerComposer) throws SQLException {
         try (
                 Connection actualConnection = containerComposer.getTargetDataSource().getConnection();
                 Connection expectedConnection = getExpectedDataSource().getConnection()) {
@@ -88,7 +86,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     }
     
     private void assertExecuteQueryForStatement(final SingleE2EContainerComposer containerComposer,
-                                                final Connection actualConnection, final Connection expectedConnection) throws SQLException, ParseException {
+                                                final Connection actualConnection, final Connection expectedConnection) throws SQLException {
         try (
                 Statement actualStatement = actualConnection.createStatement();
                 ResultSet actualResultSet = actualStatement.executeQuery(containerComposer.getSQL());
@@ -99,7 +97,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     }
     
     private void assertExecuteQueryForPreparedStatement(final SingleE2EContainerComposer containerComposer,
-                                                        final Connection actualConnection, final Connection expectedConnection) throws SQLException, ParseException {
+                                                        final Connection actualConnection, final Connection expectedConnection) throws SQLException {
         try (
                 PreparedStatement actualPreparedStatement = actualConnection.prepareStatement(containerComposer.getSQL());
                 PreparedStatement expectedPreparedStatement = expectedConnection.prepareStatement(containerComposer.getSQL())) {
@@ -118,7 +116,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
     @ArgumentsSource(E2ETestCaseArgumentsProvider.class)
-    void assertExecute(final AssertionTestParameter testParam) throws SQLException, ParseException, JAXBException, IOException {
+    void assertExecute(final AssertionTestParameter testParam) throws SQLException, JAXBException, IOException {
         // TODO make sure test case can not be null
         if (null == testParam.getTestCaseContext()) {
             return;
@@ -133,7 +131,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
         }
     }
     
-    private void assertExecuteWithXmlExpected(final AssertionTestParameter testParam, final SingleE2EContainerComposer containerComposer) throws SQLException, ParseException {
+    private void assertExecuteWithXmlExpected(final AssertionTestParameter testParam, final SingleE2EContainerComposer containerComposer) throws SQLException {
         // TODO Fix jdbc adapter
         if ("jdbc".equals(testParam.getAdapter())) {
             return;
@@ -147,7 +145,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
         }
     }
     
-    private void assertExecuteWithExpectedDataSource(final SingleE2EContainerComposer containerComposer) throws SQLException, ParseException {
+    private void assertExecuteWithExpectedDataSource(final SingleE2EContainerComposer containerComposer) throws SQLException {
         try (
                 Connection actualConnection = containerComposer.getTargetDataSource().getConnection();
                 Connection expectedConnection = getExpectedDataSource().getConnection()) {
@@ -160,7 +158,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     }
     
     private void assertExecuteForStatement(final SingleE2EContainerComposer containerComposer,
-                                           final Connection actualConnection, final Connection expectedConnection) throws SQLException, ParseException {
+                                           final Connection actualConnection, final Connection expectedConnection) throws SQLException {
         try (
                 Statement actualStatement = actualConnection.createStatement();
                 Statement expectedStatement = expectedConnection.createStatement()) {
@@ -174,7 +172,7 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     }
     
     private void assertExecuteForPreparedStatement(final SingleE2EContainerComposer containerComposer,
-                                                   final Connection actualConnection, final Connection expectedConnection) throws SQLException, ParseException {
+                                                   final Connection actualConnection, final Connection expectedConnection) throws SQLException {
         try (
                 PreparedStatement actualPreparedStatement = actualConnection.prepareStatement(containerComposer.getSQL());
                 PreparedStatement expectedPreparedStatement = expectedConnection.prepareStatement(containerComposer.getSQL())) {

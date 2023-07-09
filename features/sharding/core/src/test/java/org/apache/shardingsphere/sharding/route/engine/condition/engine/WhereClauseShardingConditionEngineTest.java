@@ -20,6 +20,7 @@ package org.apache.shardingsphere.sharding.route.engine.condition.engine;
 import org.apache.groovy.util.Maps;
 import org.apache.shardingsphere.infra.binder.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.statement.dml.SelectStatementContext;
+import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.database.type.DatabaseTypeEngine;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.sharding.route.engine.condition.ShardingCondition;
@@ -34,7 +35,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ListExpr
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.simple.LiteralExpressionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.predicate.WhereSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
-import org.apache.shardingsphere.timeservice.core.rule.TimeServiceRule;
+import org.apache.shardingsphere.timeservice.core.rule.TimestampServiceRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -73,7 +75,7 @@ class WhereClauseShardingConditionEngineTest {
     @BeforeEach
     void setUp() {
         shardingConditionEngine = new WhereClauseShardingConditionEngine(
-                ShardingSphereDatabase.create("test_db", DatabaseTypeEngine.getDatabaseType("MySQL")), shardingRule, mock(TimeServiceRule.class));
+                ShardingSphereDatabase.create("test_db", DatabaseTypeEngine.getDatabaseType("MySQL"), new ConfigurationProperties(new Properties())), shardingRule, mock(TimestampServiceRule.class));
         when(sqlStatementContext.getWhereSegments()).thenReturn(Collections.singleton(whereSegment));
         when(sqlStatementContext.getTablesContext()).thenReturn(tablesContext);
         when(tablesContext.findTableNamesByColumnSegment(anyCollection(), any())).thenReturn(Maps.of("foo_sharding_col", "table_1"));

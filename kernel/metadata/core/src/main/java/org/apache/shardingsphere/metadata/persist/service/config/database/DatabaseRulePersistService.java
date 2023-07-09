@@ -20,37 +20,26 @@ package org.apache.shardingsphere.metadata.persist.service.config.database;
 import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
-import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
+import org.apache.shardingsphere.infra.metadata.version.MetaDataVersion;
 import org.apache.shardingsphere.infra.util.yaml.YamlEngine;
 import org.apache.shardingsphere.infra.yaml.config.pojo.rule.YamlRuleConfiguration;
 import org.apache.shardingsphere.infra.yaml.config.swapper.rule.YamlRuleConfigurationSwapperEngine;
 import org.apache.shardingsphere.metadata.persist.node.DatabaseMetaDataNode;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 
-import javax.sql.DataSource;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
-import java.util.Map;
 
 /**
  * Database rule persist service.
  */
 @RequiredArgsConstructor
-public final class DatabaseRulePersistService implements DatabaseRuleBasedPersistService<Collection<RuleConfiguration>> {
+public final class DatabaseRulePersistService implements DatabaseBasedPersistService<Collection<RuleConfiguration>> {
     
     private static final String DEFAULT_VERSION = "0";
     
     private final PersistRepository repository;
-    
-    @Override
-    public void persist(final String databaseName, final Map<String, DataSource> dataSources,
-                        final Collection<ShardingSphereRule> rules, final Collection<RuleConfiguration> configs) {
-        if (Strings.isNullOrEmpty(getDatabaseActiveVersion(databaseName))) {
-            repository.persist(DatabaseMetaDataNode.getActiveVersionPath(databaseName), DEFAULT_VERSION);
-        }
-        repository.persist(DatabaseMetaDataNode.getRulePath(databaseName, getDatabaseActiveVersion(databaseName)),
-                YamlEngine.marshal(createYamlRuleConfigurations(dataSources, rules, configs)));
-    }
     
     @Override
     public void persist(final String databaseName, final Collection<RuleConfiguration> configs) {
@@ -62,18 +51,11 @@ public final class DatabaseRulePersistService implements DatabaseRuleBasedPersis
     }
     
     @Override
-    public void persist(final String databaseName, final String version, final Map<String, DataSource> dataSources,
-                        final Collection<ShardingSphereRule> rules, final Collection<RuleConfiguration> configs) {
-        repository.persist(DatabaseMetaDataNode.getRulePath(databaseName, version), YamlEngine.marshal(createYamlRuleConfigurations(dataSources, rules, configs)));
+    public Collection<MetaDataVersion> persistConfig(final String databaseName, final Collection<RuleConfiguration> configs) {
+        return Collections.emptyList();
     }
     
     private Collection<YamlRuleConfiguration> createYamlRuleConfigurations(final Collection<RuleConfiguration> ruleConfigs) {
-        return new YamlRuleConfigurationSwapperEngine().swapToYamlRuleConfigurations(ruleConfigs);
-    }
-    
-    // TODO Load single table refer to #22887
-    private Collection<YamlRuleConfiguration> createYamlRuleConfigurations(final Map<String, DataSource> dataSources, final Collection<ShardingSphereRule> rules,
-                                                                           final Collection<RuleConfiguration> ruleConfigs) {
         return new YamlRuleConfigurationSwapperEngine().swapToYamlRuleConfigurations(ruleConfigs);
     }
     
@@ -95,8 +77,7 @@ public final class DatabaseRulePersistService implements DatabaseRuleBasedPersis
                         .getRulePath(databaseName, getDatabaseActiveVersion(databaseName))), Collection.class, true));
     }
     
-    @Override
-    public boolean isExisted(final String databaseName) {
+    private boolean isExisted(final String databaseName) {
         return !Strings.isNullOrEmpty(getDatabaseActiveVersion(databaseName))
                 && !Strings.isNullOrEmpty(repository.getDirectly(DatabaseMetaDataNode.getRulePath(databaseName, getDatabaseActiveVersion(databaseName))));
     }

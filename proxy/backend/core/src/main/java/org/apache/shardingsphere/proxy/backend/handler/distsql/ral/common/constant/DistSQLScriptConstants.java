@@ -133,7 +133,9 @@ public final class DistSQLScriptConstants {
             + System.lineSeparator()
             + "WRITE_STORAGE_UNIT=%s,"
             + System.lineSeparator()
-            + "READ_STORAGE_UNITS(%s)%s"
+            + "READ_STORAGE_UNITS(%s),"
+            + System.lineSeparator()
+            + "TRANSACTIONAL_READ_QUERY_STRATEGY='%s'%s"
             + System.lineSeparator()
             + ")";
     
@@ -165,12 +167,9 @@ public final class DistSQLScriptConstants {
             + System.lineSeparator()
             + "%s"
             + System.lineSeparator()
-            + "),"
-            + "QUERY_WITH_CIPHER_COLUMN=%s)";
+            + "))";
     
     public static final String ENCRYPT_COLUMN = "(NAME=%s, %s, %s)";
-    
-    public static final String PLAIN = "PLAIN=%s";
     
     public static final String CIPHER = "CIPHER=%s";
     

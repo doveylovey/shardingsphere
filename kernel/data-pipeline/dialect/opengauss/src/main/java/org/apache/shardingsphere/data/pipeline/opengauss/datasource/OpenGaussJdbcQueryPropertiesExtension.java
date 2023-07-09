@@ -28,9 +28,14 @@ public final class OpenGaussJdbcQueryPropertiesExtension implements JdbcQueryPro
     
     private final Properties queryProps = new Properties();
     
+    public OpenGaussJdbcQueryPropertiesExtension() {
+        queryProps.setProperty("stringtype", "unspecified");
+        queryProps.setProperty("bitToString", "true");
+    }
+    
     @Override
-    public Properties extendQueryProperties() {
-        return queryProps;
+    public void extendQueryProperties(final Properties props) {
+        props.putAll(queryProps);
     }
     
     @Override

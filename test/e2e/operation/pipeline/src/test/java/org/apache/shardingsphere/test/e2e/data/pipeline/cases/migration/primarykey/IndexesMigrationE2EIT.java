@@ -17,10 +17,12 @@
 
 package org.apache.shardingsphere.test.e2e.data.pipeline.cases.migration.primarykey;
 
+import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobType;
 import org.apache.shardingsphere.infra.database.type.dialect.MySQLDatabaseType;
 import org.apache.shardingsphere.infra.database.type.dialect.PostgreSQLDatabaseType;
+import org.apache.shardingsphere.infra.util.exception.external.sql.type.wrapper.SQLWrapperException;
 import org.apache.shardingsphere.sharding.algorithm.keygen.SnowflakeKeyGenerateAlgorithm;
 import org.apache.shardingsphere.sharding.algorithm.keygen.UUIDKeyGenerateAlgorithm;
 import org.apache.shardingsphere.sharding.spi.KeyGenerateAlgorithm;
@@ -36,11 +38,12 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -86,22 +89,69 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
                 return;
             }
             KeyGenerateAlgorithm keyGenerateAlgorithm = new UUIDKeyGenerateAlgorithm();
-            Object uniqueKey = keyGenerateAlgorithm.generateKey();
-            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, () -> {
-                insertOneOrder(containerComposer, uniqueKey);
-                containerComposer.assertProxyOrderRecordExist("t_order", uniqueKey);
-                return null;
-            });
+            // TODO PostgreSQL update delete events not support if table without unique keys at increment task.
+            final Consumer<DataSource> incrementalTaskFn = dataSource -> {
+                if (containerComposer.getDatabaseType() instanceof MySQLDatabaseType) {
+                    doCreateUpdateDelete(containerComposer, keyGenerateAlgorithm.generateKey());
+                }
+                Object orderId = keyGenerateAlgorithm.generateKey();
+                insertOneOrder(containerComposer, orderId);
+                containerComposer.assertOrderRecordExist(dataSource, "t_order", orderId);
+            };
+            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, incrementalTaskFn);
         }
     }
     
-    private void insertOneOrder(final PipelineContainerComposer containerComposer, final Object uniqueKey) throws SQLException {
-        try (PreparedStatement preparedStatement = containerComposer.getSourceDataSource().getConnection().prepareStatement("INSERT INTO t_order (order_id,user_id,status) VALUES (?,?,?)")) {
+    @SneakyThrows
+    private void doCreateUpdateDelete(final PipelineContainerComposer containerComposer, final Object orderId) {
+        String updatedStatus = "updated" + System.currentTimeMillis();
+        insertOneOrder(containerComposer, orderId);
+        updateOneOrder(containerComposer, orderId, updatedStatus);
+        deleteOneOrder(containerComposer, orderId, updatedStatus);
+    }
+    
+    private void insertOneOrder(final PipelineContainerComposer containerComposer, final Object uniqueKey) {
+        try (
+                Connection connection = containerComposer.getSourceDataSource().getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO t_order (order_id,user_id,status) VALUES (?,?,?)")) {
             preparedStatement.setObject(1, uniqueKey);
             preparedStatement.setObject(2, 1);
             preparedStatement.setObject(3, "OK");
             int actualCount = preparedStatement.executeUpdate();
             assertThat(actualCount, is(1));
+        } catch (final SQLException ex) {
+            throw new SQLWrapperException(ex);
+        }
+    }
+    
+    private void updateOneOrder(final PipelineContainerComposer containerComposer, final Object uniqueKey, final String updatedStatus) {
+        try (
+                Connection connection = containerComposer.getSourceDataSource().getConnection();
+                PreparedStatement preparedStatement = connection
+                        .prepareStatement("UPDATE t_order SET status=? WHERE order_id = ? AND user_id = ? AND status = ?")) {
+            preparedStatement.setObject(1, updatedStatus);
+            preparedStatement.setObject(2, uniqueKey);
+            preparedStatement.setObject(3, 1);
+            preparedStatement.setObject(4, "OK");
+            int actualCount = preparedStatement.executeUpdate();
+            assertThat(actualCount, is(1));
+        } catch (final SQLException ex) {
+            throw new SQLWrapperException(ex);
+        }
+    }
+    
+    private void deleteOneOrder(final PipelineContainerComposer containerComposer, final Object uniqueKey, final String updatedStatus) {
+        try (
+                Connection connection = containerComposer.getSourceDataSource().getConnection();
+                PreparedStatement preparedStatement = connection
+                        .prepareStatement("DELETE FROM t_order WHERE order_id = ? AND user_id = ? AND status = ?")) {
+            preparedStatement.setObject(1, uniqueKey);
+            preparedStatement.setObject(2, 1);
+            preparedStatement.setObject(3, updatedStatus);
+            int actualCount = preparedStatement.executeUpdate();
+            assertThat(actualCount, is(1));
+        } catch (final SQLException ex) {
+            throw new SQLWrapperException(ex);
         }
     }
     
@@ -120,10 +170,10 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             }
             KeyGenerateAlgorithm keyGenerateAlgorithm = new UUIDKeyGenerateAlgorithm();
             Object uniqueKey = keyGenerateAlgorithm.generateKey();
-            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, () -> {
+            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
-                containerComposer.assertProxyOrderRecordExist("t_order", uniqueKey);
-                return null;
+                doCreateUpdateDelete(containerComposer, keyGenerateAlgorithm.generateKey());
+                containerComposer.assertOrderRecordExist(dataSource, "t_order", uniqueKey);
             });
         }
     }
@@ -143,10 +193,10 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             }
             KeyGenerateAlgorithm keyGenerateAlgorithm = new SnowflakeKeyGenerateAlgorithm();
             Object uniqueKey = keyGenerateAlgorithm.generateKey();
-            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, () -> {
+            assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
-                containerComposer.assertProxyOrderRecordExist("t_order", uniqueKey);
-                return null;
+                doCreateUpdateDelete(containerComposer, keyGenerateAlgorithm.generateKey());
+                containerComposer.assertOrderRecordExist(dataSource, "t_order", uniqueKey);
             });
         }
     }
@@ -168,17 +218,16 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             KeyGenerateAlgorithm keyGenerateAlgorithm = new UUIDKeyGenerateAlgorithm();
             // TODO Insert binary string in VARBINARY column. But KeyGenerateAlgorithm.generateKey() require returning Comparable, and byte[] is not Comparable
             byte[] uniqueKey = new byte[]{-1, 0, 1};
-            assertMigrationSuccess(containerComposer, sql, "order_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, () -> {
+            assertMigrationSuccess(containerComposer, sql, "order_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
                 // TODO Select by byte[] from proxy doesn't work, so unhex function is used for now
-                containerComposer.assertProxyOrderRecordExist(String.format("SELECT 1 FROM t_order WHERE order_id=UNHEX('%s')", Hex.encodeHexString(uniqueKey)));
-                return null;
+                containerComposer.assertOrderRecordExist(dataSource, String.format("SELECT 1 FROM t_order WHERE order_id=UNHEX('%s')", Hex.encodeHexString(uniqueKey)));
             });
         }
     }
     
     private void assertMigrationSuccess(final PipelineContainerComposer containerComposer, final String sqlPattern, final String shardingColumn, final KeyGenerateAlgorithm keyGenerateAlgorithm,
-                                        final String consistencyCheckAlgorithmType, final Callable<Void> incrementalTaskFn) throws Exception {
+                                        final String consistencyCheckAlgorithmType, final Consumer<DataSource> incrementalTaskFn) throws Exception {
         containerComposer.sourceExecuteWithLog(String.format(sqlPattern, SOURCE_TABLE_NAME));
         try (Connection connection = containerComposer.getSourceDataSource().getConnection()) {
             PipelineCaseHelper.batchInsertOrderRecordsWithGeneralColumns(connection, keyGenerateAlgorithm, SOURCE_TABLE_NAME, PipelineContainerComposer.TABLE_INIT_ROW_COUNT);
@@ -190,14 +239,14 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
         startMigration(containerComposer, SOURCE_TABLE_NAME, TARGET_TABLE_NAME);
         String jobId = listJobId(containerComposer).get(0);
         containerComposer.waitJobPrepareSuccess(String.format("SHOW MIGRATION STATUS '%s'", jobId));
-        incrementalTaskFn.call();
+        DataSource jdbcDataSource = containerComposer.generateShardingSphereDataSourceFromProxy();
+        incrementalTaskFn.accept(jdbcDataSource);
         containerComposer.waitIncrementTaskFinished(String.format("SHOW MIGRATION STATUS '%s'", jobId));
         if (null != consistencyCheckAlgorithmType) {
             assertCheckMigrationSuccess(containerComposer, jobId, consistencyCheckAlgorithmType);
         }
         commitMigrationByJobId(containerComposer, jobId);
-        containerComposer.proxyExecuteWithLog("REFRESH TABLE METADATA", 1);
-        assertThat(containerComposer.getTargetTableRecordsCount(SOURCE_TABLE_NAME), is(PipelineContainerComposer.TABLE_INIT_ROW_COUNT + 1));
+        assertThat(containerComposer.getTargetTableRecordsCount(jdbcDataSource, SOURCE_TABLE_NAME), is(PipelineContainerComposer.TABLE_INIT_ROW_COUNT + 1));
         List<String> lastJobIds = listJobId(containerComposer);
         assertTrue(lastJobIds.isEmpty());
     }

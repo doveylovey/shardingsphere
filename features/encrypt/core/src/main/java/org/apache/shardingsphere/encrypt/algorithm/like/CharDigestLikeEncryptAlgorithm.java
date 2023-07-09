@@ -19,9 +19,9 @@ package org.apache.shardingsphere.encrypt.algorithm.like;
 
 import com.google.common.base.Strings;
 import lombok.SneakyThrows;
-import org.apache.shardingsphere.encrypt.api.context.EncryptContext;
+import org.apache.shardingsphere.encrypt.api.encrypt.like.LikeEncryptAlgorithm;
 import org.apache.shardingsphere.encrypt.exception.algorithm.EncryptAlgorithmInitializationException;
-import org.apache.shardingsphere.encrypt.spi.LikeEncryptAlgorithm;
+import org.apache.shardingsphere.encrypt.api.context.EncryptContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,13 +37,13 @@ import java.util.stream.IntStream;
  */
 public final class CharDigestLikeEncryptAlgorithm implements LikeEncryptAlgorithm<Object, String> {
     
-    private static final String DELTA = "delta";
+    private static final String DELTA_KEY = "delta";
     
-    private static final String MASK = "mask";
+    private static final String MASK_KEY = "mask";
     
-    private static final String START = "start";
+    private static final String START_KEY = "start";
     
-    private static final String DICT = "dict";
+    private static final String DICT_KEY = "dict";
     
     private static final int DEFAULT_DELTA = 1;
     
@@ -70,60 +70,57 @@ public final class CharDigestLikeEncryptAlgorithm implements LikeEncryptAlgorith
     }
     
     private int createDelta(final Properties props) {
-        if (props.containsKey(DELTA)) {
-            String delta = props.getProperty(DELTA);
+        if (props.containsKey(DELTA_KEY)) {
             try {
-                return Integer.parseInt(delta);
-            } catch (final NumberFormatException ex) {
-                throw new EncryptAlgorithmInitializationException("CHAR_DIGEST_LIKE", "delta can only be a decimal number");
+                return Integer.parseInt(props.getProperty(DELTA_KEY));
+            } catch (final NumberFormatException ignored) {
+                throw new EncryptAlgorithmInitializationException(getType(), "delta can only be a decimal number");
             }
         }
         return DEFAULT_DELTA;
     }
     
     private int createMask(final Properties props) {
-        if (props.containsKey(MASK)) {
-            String mask = props.getProperty(MASK);
+        if (props.containsKey(MASK_KEY)) {
             try {
-                return Integer.parseInt(mask);
-            } catch (final NumberFormatException ex) {
-                throw new EncryptAlgorithmInitializationException("CHAR_DIGEST_LIKE", "mask can only be a decimal number");
+                return Integer.parseInt(props.getProperty(MASK_KEY));
+            } catch (final NumberFormatException ignored) {
+                throw new EncryptAlgorithmInitializationException(getType(), "mask can only be a decimal number");
             }
         }
         return DEFAULT_MASK;
     }
     
     private int createStart(final Properties props) {
-        if (props.containsKey(START)) {
-            String start = props.getProperty(START);
+        if (props.containsKey(START_KEY)) {
             try {
-                return Integer.parseInt(start);
-            } catch (final NumberFormatException ex) {
-                throw new EncryptAlgorithmInitializationException("CHAR_DIGEST_LIKE", "start can only be a decimal number");
+                return Integer.parseInt(props.getProperty(START_KEY));
+            } catch (final NumberFormatException ignored) {
+                throw new EncryptAlgorithmInitializationException(getType(), "start can only be a decimal number");
             }
         }
         return DEFAULT_START;
     }
     
     private Map<Character, Integer> createCharIndexes(final Properties props) {
-        String dictContent = props.containsKey(DICT) && !Strings.isNullOrEmpty(props.getProperty(DICT)) ? props.getProperty(DICT) : initDefaultDict();
+        String dictContent = props.containsKey(DICT_KEY) && !Strings.isNullOrEmpty(props.getProperty(DICT_KEY)) ? props.getProperty(DICT_KEY) : initDefaultDict();
         return IntStream.range(0, dictContent.length()).boxed().collect(Collectors.toMap(dictContent::charAt, index -> index, (a, b) -> b));
     }
     
     @SneakyThrows(IOException.class)
     private String initDefaultDict() {
-        StringBuilder builder = new StringBuilder();
+        StringBuilder result = new StringBuilder();
         try (
-                InputStream inputStream = Objects.requireNonNull(CharDigestLikeEncryptAlgorithm.class.getClassLoader().getResourceAsStream("algorithm/like/common_chinese_character.dict"));
+                InputStream inputStream = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResourceAsStream("algorithm/like/common_chinese_character.dict"));
                 Scanner scanner = new Scanner(inputStream)) {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 if (!line.isEmpty() && !line.startsWith("#")) {
-                    builder.append(line);
+                    result.append(line);
                 }
             }
         }
-        return builder.toString();
+        return result.toString();
     }
     
     @Override

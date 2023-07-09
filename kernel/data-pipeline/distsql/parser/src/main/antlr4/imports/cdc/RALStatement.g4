@@ -27,6 +27,10 @@ showStreamingStatus
     : SHOW STREAMING STATUS jobId
     ;
 
+dropStreaming
+    : DROP STREAMING jobId
+    ;
+
 jobId
     : INT_ | IDENTIFIER_ | STRING_
     ;

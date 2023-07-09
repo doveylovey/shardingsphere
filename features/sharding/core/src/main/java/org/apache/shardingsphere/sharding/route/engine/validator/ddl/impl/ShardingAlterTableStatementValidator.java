@@ -38,28 +38,24 @@ import java.util.stream.Collectors;
 /**
  * Sharding alter table statement validator.
  */
-public final class ShardingAlterTableStatementValidator extends ShardingDDLStatementValidator<AlterTableStatement> {
+public final class ShardingAlterTableStatementValidator extends ShardingDDLStatementValidator {
     
     @Override
-    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext<AlterTableStatement> sqlStatementContext,
+    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext,
                             final List<Object> params, final ShardingSphereDatabase database, final ConfigurationProperties props) {
         Collection<String> tableNames = sqlStatementContext instanceof TableAvailable
                 ? ((TableAvailable) sqlStatementContext).getAllTables().stream().map(each -> each.getTableName().getIdentifier().getValue()).collect(Collectors.toList())
                 : sqlStatementContext.getTablesContext().getTableNames();
-        Optional<SimpleTableSegment> renameTable = sqlStatementContext.getSqlStatement().getRenameTable();
-        if (renameTable.isPresent() && containsShardingBroadcastTable(shardingRule, tableNames)) {
+        Optional<SimpleTableSegment> renameTable = ((AlterTableStatement) sqlStatementContext.getSqlStatement()).getRenameTable();
+        if (renameTable.isPresent() && shardingRule.containsShardingTable(tableNames)) {
             throw new UnsupportedShardingOperationException("ALTER TABLE ... RENAME TO ...", renameTable.get().getTableName().getIdentifier().getValue());
         }
     }
     
-    private boolean containsShardingBroadcastTable(final ShardingRule shardingRule, final Collection<String> tableNames) {
-        return shardingRule.tableRuleExists(tableNames) || tableNames.stream().anyMatch(shardingRule::isBroadcastTable);
-    }
-    
     @Override
-    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext<AlterTableStatement> sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
+    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
                              final ShardingSphereDatabase database, final ConfigurationProperties props, final RouteContext routeContext) {
-        String primaryTable = sqlStatementContext.getSqlStatement().getTable().getTableName().getIdentifier().getValue();
+        String primaryTable = ((AlterTableStatement) sqlStatementContext.getSqlStatement()).getTable().getTableName().getIdentifier().getValue();
         if (isRouteUnitDataNodeDifferentSize(shardingRule, routeContext, primaryTable)) {
             throw new ShardingDDLRouteException("ALTER", "TABLE", sqlStatementContext.getTablesContext().getTableNames());
         }

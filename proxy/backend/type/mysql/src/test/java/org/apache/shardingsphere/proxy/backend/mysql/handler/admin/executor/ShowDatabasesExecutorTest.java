@@ -23,6 +23,7 @@ import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.database.type.dialect.MySQLDatabaseType;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
+import org.apache.shardingsphere.infra.metadata.database.resource.ShardingSphereResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.mode.manager.ContextManager;
@@ -91,7 +92,7 @@ class ShowDatabasesExecutorTest {
     }
     
     private Collection<String> getActual(final ShowDatabasesExecutor executor) throws SQLException {
-        Map<String, String> result = new ConcurrentHashMap<>(10, 1);
+        Map<String, String> result = new ConcurrentHashMap<>(10, 1F);
         while (executor.getMergedResult().next()) {
             String value = executor.getMergedResult().getValue(1, Object.class).toString();
             result.put(value, value);
@@ -100,7 +101,7 @@ class ShowDatabasesExecutorTest {
     }
     
     private Collection<String> getExpected() {
-        Map<String, String> result = new ConcurrentHashMap<>(10, 1);
+        Map<String, String> result = new ConcurrentHashMap<>(10, 1F);
         for (int i = 0; i < 10; i++) {
             String value = String.format(DATABASE_PATTERN, i);
             result.put(value, value);
@@ -174,8 +175,8 @@ class ShowDatabasesExecutorTest {
     private ContextManager mockContextManager() {
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         ShardingSphereRuleMetaData globalRuleMetaData = new ShardingSphereRuleMetaData(Collections.singleton(mockAuthorityRule()));
-        MetaDataContexts metaDataContexts = new MetaDataContexts(
-                mock(MetaDataPersistService.class), new ShardingSphereMetaData(getDatabases(), globalRuleMetaData, new ConfigurationProperties(new Properties())));
+        MetaDataContexts metaDataContexts = new MetaDataContexts(mock(MetaDataPersistService.class), new ShardingSphereMetaData(getDatabases(),
+                mock(ShardingSphereResourceMetaData.class), globalRuleMetaData, new ConfigurationProperties(new Properties())));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         return result;
     }
@@ -187,7 +188,7 @@ class ShowDatabasesExecutorTest {
     }
     
     private Map<String, ShardingSphereDatabase> getDatabases() {
-        Map<String, ShardingSphereDatabase> result = new LinkedHashMap<>(10, 1);
+        Map<String, ShardingSphereDatabase> result = new LinkedHashMap<>(10, 1F);
         for (int i = 0; i < 10; i++) {
             ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
             when(database.getProtocolType()).thenReturn(new MySQLDatabaseType());

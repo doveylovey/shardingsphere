@@ -11,25 +11,16 @@ Encryption algorithms are by the encryption features of Apache ShardingSphere. A
 
 ### Standard Encrypt Algorithm
 
-#### MD5 Encrypt Algorithm
-
-Type: MD5
-
-Attributes:
-
-| *Name* | *DataType* | *Description*        |
-|--------|------------|----------------------|
-| salt   | String     | Salt value(optional) |
-
 #### AES Encrypt Algorithm
 
 Type: AES
 
 Attributes:
 
-| *Name*        | *DataType* | *Description* |
-|---------------|------------|---------------|
-| aes-key-value | String     | AES KEY       |
+| *Name*                | *DataType* | *Description*                                       |
+|-----------------------|------------|-----------------------------------------------------|
+| aes-key-value         | String     | AES KEY                                             |
+| digest-algorithm-name | String     | AES KEY DIGEST ALGORITHM (optional, default: SHA-1) |
 
 #### RC4 Encrypt Algorithm
 
@@ -64,9 +55,9 @@ Attributes:
 | sm4-iv      | String     | SM4 IV (should be specified on CBC, 16 bytes long)                       |
 | sm4-padding | String     | SM4 PADDING (should be PKCS5Padding or PKCS7Padding, NoPadding excepted) |
 
-### Like Assist Query Algorithm
+### Like Encrypt Algorithm
 
-#### CharDigestLike Like Assist Query Algorithm
+#### CharDigestLike Encrypt Algorithm
 
 Type：CHAR_DIGEST_LIKE
 
@@ -78,6 +69,18 @@ Attributes：
 | mask   | int        | Character encryption mask（decimal number）       |
 | start  | int        | Ciphertext Unicode initial code（decimal number） |
 | dict   | String     | Common words                                    |
+
+### Assisted Encrypt Algorithm
+
+#### MD5 Assisted Encrypt Algorithm
+
+Type: MD5
+
+Attributes:
+
+| *Name* | *DataType* | *Description*        |
+|--------|------------|----------------------|
+| salt   | String     | Salt value(optional) |
 
 ## Operating Procedure
 
@@ -92,19 +95,19 @@ rules:
     t_user:
       columns:
         username:
-          plainColumn: username_plain
-          cipherColumn: username
-          encryptorName: name_encryptor
-          likeQueryColumn: name_like
-          likeQueryEncryptorName: like_encryptor
+          cipher:
+            name: username
+            encryptorName: name_encryptor
+          likeQuery:
+            name: name_like
+            encryptorName: like_encryptor
   encryptors:
+    like_encryptor:
+      type: CHAR_DIGEST_LIKE
     name_encryptor:
       type: AES
       props:
         aes-key-value: 123456abc
-  likeEncryptors:
-    like_encryptor:
-      type: CHAR_DIGEST_LIKE
 ```
 
 ## Related References

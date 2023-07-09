@@ -29,8 +29,8 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.binary.p
 import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.binary.reset.MySQLComStmtResetPacket;
 import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.text.fieldlist.MySQLComFieldListPacket;
 import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.text.query.MySQLComQueryPacket;
-import org.apache.shardingsphere.db.protocol.packet.CommandPacket;
-import org.apache.shardingsphere.proxy.backend.connector.BackendConnection;
+import org.apache.shardingsphere.db.protocol.packet.command.CommandPacket;
+import org.apache.shardingsphere.proxy.backend.connector.ProxyDatabaseConnectionManager;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.frontend.mysql.command.admin.MySQLComResetConnectionExecutor;
 import org.apache.shardingsphere.proxy.frontend.mysql.command.admin.MySQLComSetOptionExecutor;
@@ -69,12 +69,12 @@ class MySQLCommandExecutorFactoryTest {
     private ConnectionSession connectionSession;
     
     @Mock
-    private BackendConnection backendConnection;
+    private ProxyDatabaseConnectionManager databaseConnectionManager;
     
     @BeforeEach
     void setUp() {
         when(connectionSession.getAttributeMap().attr(MySQLConstants.MYSQL_CHARACTER_SET_ATTRIBUTE_KEY).get()).thenReturn(MySQLCharacterSet.UTF8MB4_GENERAL_CI);
-        when(connectionSession.getBackendConnection()).thenReturn(backendConnection);
+        when(connectionSession.getDatabaseConnectionManager()).thenReturn(databaseConnectionManager);
     }
     
     @Test
@@ -96,7 +96,7 @@ class MySQLCommandExecutorFactoryTest {
     @Test
     void assertNewInstanceWithComQuery() throws SQLException {
         MySQLComQueryPacket packet = mock(MySQLComQueryPacket.class);
-        when(packet.getSql()).thenReturn("");
+        when(packet.getSQL()).thenReturn("");
         assertThat(MySQLCommandExecutorFactory.newInstance(MySQLCommandPacketType.COM_QUERY, packet, connectionSession), instanceOf(MySQLComQueryPacketExecutor.class));
     }
     

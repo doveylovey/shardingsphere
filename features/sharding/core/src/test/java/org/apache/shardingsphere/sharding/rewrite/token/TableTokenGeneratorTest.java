@@ -21,6 +21,7 @@ import org.apache.shardingsphere.infra.binder.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.ddl.CreateDatabaseStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.ddl.CreateTableStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.dml.SelectStatementContext;
+import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
 import org.apache.shardingsphere.sharding.rewrite.token.generator.impl.TableTokenGenerator;
 import org.apache.shardingsphere.sharding.rewrite.token.pojo.TableToken;
@@ -28,8 +29,6 @@ import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sharding.rule.TableRule;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateDatabaseStatement;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +56,7 @@ class TableTokenGeneratorTest {
         when(shardingRule.getShardingLogicTableNames(logicTableNames)).thenReturn(logicTableNames);
         when(shardingRule.isAllBindingTables(logicTableNames)).thenReturn(true);
         generator.setShardingRule(shardingRule);
-        SQLStatementContext<SelectStatement> sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
+        SQLStatementContext sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
         when(sqlStatementContext.getTablesContext().getTableNames()).thenReturn(logicTableNames);
         assertTrue(generator.isGenerateSQLToken(sqlStatementContext));
     }
@@ -69,7 +68,7 @@ class TableTokenGeneratorTest {
         when(routeContext.containsTableSharding()).thenReturn(true);
         generator.setShardingRule(mock(ShardingRule.class));
         generator.setRouteContext(routeContext);
-        SQLStatementContext<SelectStatement> sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
+        SQLStatementContext sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
         assertTrue(generator.isGenerateSQLToken(sqlStatementContext));
     }
     
@@ -81,7 +80,7 @@ class TableTokenGeneratorTest {
         generator.setShardingRule(shardingRule);
         CreateTableStatementContext sqlStatementContext = mock(CreateTableStatementContext.class);
         when(sqlStatementContext.getAllTables()).thenReturn(Collections.singletonList(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order")))));
-        Collection<TableToken> actual = generator.generateSQLTokens(sqlStatementContext);
+        Collection<SQLToken> actual = generator.generateSQLTokens(sqlStatementContext);
         assertThat(actual.size(), is(1));
         assertThat(actual.iterator().next(), instanceOf(TableToken.class));
     }
@@ -89,7 +88,7 @@ class TableTokenGeneratorTest {
     @Test
     void assertGenerateSQLTokenWhenSQLStatementIsNotTableAvailable() {
         TableTokenGenerator generator = new TableTokenGenerator();
-        SQLStatementContext<CreateDatabaseStatement> sqlStatementContext = mock(CreateDatabaseStatementContext.class);
+        SQLStatementContext sqlStatementContext = mock(CreateDatabaseStatementContext.class);
         assertThat(generator.generateSQLTokens(sqlStatementContext), is(Collections.emptyList()));
     }
 }

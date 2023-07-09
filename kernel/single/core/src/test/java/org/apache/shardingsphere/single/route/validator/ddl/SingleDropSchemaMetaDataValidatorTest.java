@@ -17,15 +17,14 @@
 
 package org.apache.shardingsphere.single.route.validator.ddl;
 
-import org.apache.shardingsphere.infra.binder.statement.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.SQLStatementContext;
+import org.apache.shardingsphere.infra.binder.statement.UnknownSQLStatementContext;
 import org.apache.shardingsphere.infra.exception.SchemaNotFoundException;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 import org.apache.shardingsphere.single.exception.DropNotEmptySchemaException;
 import org.apache.shardingsphere.single.rule.SingleRule;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.DropSchemaStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.postgresql.ddl.PostgreSQLDropSchemaStatement;
 import org.junit.jupiter.api.Test;
@@ -66,10 +65,10 @@ class SingleDropSchemaMetaDataValidatorTest {
         return result;
     }
     
-    private SQLStatementContext<DropSchemaStatement> createSQLStatementContext(final String schemaName, final boolean isCascade) {
+    private SQLStatementContext createSQLStatementContext(final String schemaName, final boolean isCascade) {
         PostgreSQLDropSchemaStatement dropSchemaStatement = mock(PostgreSQLDropSchemaStatement.class, RETURNS_DEEP_STUBS);
         when(dropSchemaStatement.isContainsCascade()).thenReturn(isCascade);
         when(dropSchemaStatement.getSchemaNames()).thenReturn(Collections.singleton(new IdentifierValue(schemaName)));
-        return new CommonSQLStatementContext<>(dropSchemaStatement);
+        return new UnknownSQLStatementContext(dropSchemaStatement);
     }
 }

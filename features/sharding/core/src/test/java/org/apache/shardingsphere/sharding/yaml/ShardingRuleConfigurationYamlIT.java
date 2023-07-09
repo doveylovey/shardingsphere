@@ -20,6 +20,8 @@ package org.apache.shardingsphere.sharding.yaml;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
 import org.apache.shardingsphere.infra.yaml.config.pojo.YamlRootConfiguration;
 import org.apache.shardingsphere.sharding.yaml.config.YamlShardingRuleConfiguration;
+import org.apache.shardingsphere.sharding.yaml.config.cache.YamlShardingCacheConfiguration;
+import org.apache.shardingsphere.sharding.yaml.config.cache.YamlShardingCacheOptionsConfiguration;
 import org.apache.shardingsphere.test.it.yaml.YamlRuleConfigurationIT;
 
 import java.util.Optional;
@@ -46,7 +48,7 @@ class ShardingRuleConfigurationYamlIT extends YamlRuleConfigurationIT {
         assertTOrder(shardingRuleConfig.get());
         assertTOrderItem(shardingRuleConfig.get());
         assertBindingTable(shardingRuleConfig.get());
-        assertBroadcastTable(shardingRuleConfig.get());
+        assertShardingCache(shardingRuleConfig.get());
         assertProps(actual);
         assertThat(shardingRuleConfig.get().getDefaultShardingColumn(), is("order_id"));
     }
@@ -92,9 +94,13 @@ class ShardingRuleConfigurationYamlIT extends YamlRuleConfigurationIT {
         assertThat(actual.getBindingTables().iterator().next(), is("t_order, t_order_item"));
     }
     
-    private void assertBroadcastTable(final YamlShardingRuleConfiguration actual) {
-        assertThat(actual.getBroadcastTables().size(), is(1));
-        assertThat(actual.getBroadcastTables().iterator().next(), is("t_config"));
+    private void assertShardingCache(final YamlShardingRuleConfiguration actual) {
+        YamlShardingCacheConfiguration actualShardingCache = actual.getShardingCache();
+        assertThat(actualShardingCache.getAllowedMaxSqlLength(), is(512));
+        YamlShardingCacheOptionsConfiguration actualRouteCacheConfiguration = actualShardingCache.getRouteCache();
+        assertThat(actualRouteCacheConfiguration.getInitialCapacity(), is(65536));
+        assertThat(actualRouteCacheConfiguration.getMaximumSize(), is(262144));
+        assertTrue(actualRouteCacheConfiguration.isSoftValues());
     }
     
     private void assertProps(final YamlRootConfiguration actual) {

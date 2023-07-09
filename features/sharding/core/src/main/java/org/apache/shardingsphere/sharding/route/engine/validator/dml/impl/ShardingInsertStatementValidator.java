@@ -22,6 +22,7 @@ import org.apache.shardingsphere.infra.binder.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.dml.InsertStatementContext;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
+import org.apache.shardingsphere.infra.connection.validator.ShardingSphereMetaDataValidateUtils;
 import org.apache.shardingsphere.infra.hint.HintValueContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
@@ -51,24 +52,26 @@ import java.util.Optional;
  * Sharding insert statement validator.
  */
 @RequiredArgsConstructor
-public final class ShardingInsertStatementValidator extends ShardingDMLStatementValidator<InsertStatement> {
+public final class ShardingInsertStatementValidator extends ShardingDMLStatementValidator {
     
     private final ShardingConditions shardingConditions;
     
     @Override
-    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext<InsertStatement> sqlStatementContext,
+    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext,
                             final List<Object> params, final ShardingSphereDatabase database, final ConfigurationProperties props) {
+        ShardingSphereMetaDataValidateUtils.validateTableExist(sqlStatementContext, database);
         if (null == ((InsertStatementContext) sqlStatementContext).getInsertSelectContext()) {
             validateMultipleTable(shardingRule, sqlStatementContext);
         }
-        String tableName = sqlStatementContext.getSqlStatement().getTable().getTableName().getIdentifier().getValue();
-        Optional<SubquerySegment> insertSelectSegment = sqlStatementContext.getSqlStatement().getInsertSelect();
+        InsertStatement insertStatement = (InsertStatement) sqlStatementContext.getSqlStatement();
+        String tableName = insertStatement.getTable().getTableName().getIdentifier().getValue();
+        Optional<SubquerySegment> insertSelectSegment = insertStatement.getInsertSelect();
         if (insertSelectSegment.isPresent() && isContainsKeyGenerateStrategy(shardingRule, tableName)
-                && !isContainsKeyGenerateColumn(shardingRule, sqlStatementContext.getSqlStatement().getColumns(), tableName)) {
+                && !isContainsKeyGenerateColumn(shardingRule, insertStatement.getColumns(), tableName)) {
             throw new MissingGenerateKeyColumnWithInsertSelectException();
         }
         TablesContext tablesContext = sqlStatementContext.getTablesContext();
-        if (insertSelectSegment.isPresent() && shardingRule.tableRuleExists(tablesContext.getTableNames())
+        if (insertSelectSegment.isPresent() && shardingRule.containsShardingTable(tablesContext.getTableNames())
                 && !isAllSameTables(tablesContext.getTableNames()) && !shardingRule.isAllBindingTables(tablesContext.getTableNames())) {
             throw new InsertSelectTableViolationException();
         }
@@ -87,15 +90,16 @@ public final class ShardingInsertStatementValidator extends ShardingDMLStatement
     }
     
     @Override
-    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext<InsertStatement> sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
+    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
                              final ShardingSphereDatabase database, final ConfigurationProperties props, final RouteContext routeContext) {
-        Optional<SubquerySegment> insertSelect = sqlStatementContext.getSqlStatement().getInsertSelect();
-        String tableName = sqlStatementContext.getSqlStatement().getTable().getTableName().getIdentifier().getValue();
+        InsertStatement insertStatement = (InsertStatement) sqlStatementContext.getSqlStatement();
+        Optional<SubquerySegment> insertSelect = insertStatement.getInsertSelect();
+        String tableName = insertStatement.getTable().getTableName().getIdentifier().getValue();
         if (insertSelect.isPresent() && shardingConditions.isNeedMerge()) {
             boolean singleRoutingOrSameShardingCondition = routeContext.isSingleRouting() || shardingConditions.isSameShardingCondition();
             ShardingSpherePreconditions.checkState(singleRoutingOrSameShardingCondition, () -> new UnsupportedShardingOperationException("INSERT ... SELECT ...", tableName));
         }
-        Collection<AssignmentSegment> assignments = InsertStatementHandler.getOnDuplicateKeyColumnsSegment(sqlStatementContext.getSqlStatement())
+        Collection<AssignmentSegment> assignments = InsertStatementHandler.getOnDuplicateKeyColumnsSegment(insertStatement)
                 .map(OnDuplicateKeyColumnsSegment::getColumns).orElse(Collections.emptyList());
         Optional<ShardingConditions> onDuplicateKeyShardingConditions = createShardingConditions(sqlStatementContext, shardingRule, assignments, params);
         Optional<RouteContext> onDuplicateKeyRouteContext = onDuplicateKeyShardingConditions.map(optional -> new ShardingStandardRoutingEngine(tableName, optional,
@@ -103,7 +107,7 @@ public final class ShardingInsertStatementValidator extends ShardingDMLStatement
         if (onDuplicateKeyRouteContext.isPresent() && !isSameRouteContext(routeContext, onDuplicateKeyRouteContext.get())) {
             throw new UnsupportedUpdatingShardingValueException(tableName);
         }
-        if (!routeContext.isSingleRouting() && !shardingRule.isBroadcastTable(tableName)) {
+        if (!routeContext.isSingleRouting()) {
             boolean isSingleDataNode = routeContext.getOriginalDataNodes().stream().allMatch(dataNodes -> 1 == dataNodes.size());
             ShardingSpherePreconditions.checkState(isSingleDataNode, () -> new DuplicateInsertDataRecordException(shardingConditions, tableName));
         }

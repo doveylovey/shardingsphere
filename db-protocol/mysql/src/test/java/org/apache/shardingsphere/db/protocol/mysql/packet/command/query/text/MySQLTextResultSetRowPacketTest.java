@@ -51,7 +51,7 @@ class MySQLTextResultSetRowPacketTest {
     void assertWrite() {
         long now = System.currentTimeMillis();
         Timestamp timestamp = new Timestamp(now);
-        MySQLTextResultSetRowPacket actual = new MySQLTextResultSetRowPacket(Arrays.asList(null, "value", BigDecimal.ONE, new byte[]{}, timestamp));
+        MySQLTextResultSetRowPacket actual = new MySQLTextResultSetRowPacket(Arrays.asList(null, "value", BigDecimal.ONE, new byte[]{}, timestamp, Boolean.TRUE));
         actual.write(payload);
         verify(payload).writeInt1(0xfb);
         verify(payload).writeStringLenenc("value");
@@ -61,6 +61,7 @@ class MySQLTextResultSetRowPacketTest {
         } else {
             verify(payload).writeStringLenenc(timestamp.toString());
         }
+        verify(payload).writeBytesLenenc(new byte[]{1});
     }
     
     @Test
@@ -78,8 +79,8 @@ class MySQLTextResultSetRowPacketTest {
     @Test
     void assertLocalDateTime() {
         String localDateTimeStr = "2021-08-23T17:30:30";
-        LocalDateTime time = LocalDateTime.parse(localDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        MySQLTextResultSetRowPacket actual = new MySQLTextResultSetRowPacket(Collections.singletonList(time));
+        LocalDateTime dateTime = LocalDateTime.parse(localDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        MySQLTextResultSetRowPacket actual = new MySQLTextResultSetRowPacket(Collections.singletonList(dateTime));
         actual.write(payload);
         verify(payload).writeStringLenenc(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.parse(localDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))));
     }

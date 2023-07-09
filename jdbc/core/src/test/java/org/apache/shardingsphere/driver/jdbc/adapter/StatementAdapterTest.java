@@ -43,6 +43,7 @@ import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -142,13 +143,17 @@ class StatementAdapterTest {
     }
     
     @Test
-    void assertGetWarnings() {
-        assertNull(mockShardingSphereStatement().getWarnings());
+    void assertGetWarnings() throws SQLException {
+        try (ShardingSphereStatement actual = mockShardingSphereStatement()) {
+            assertNull(actual.getWarnings());
+        }
     }
     
     @Test
-    void assertClearWarnings() {
-        mockShardingSphereStatement().clearWarnings();
+    void assertClearWarnings() throws SQLException {
+        try (ShardingSphereStatement actual = mockShardingSphereStatement()) {
+            assertDoesNotThrow(actual::clearWarnings);
+        }
     }
     
     @Test
@@ -231,7 +236,7 @@ class StatementAdapterTest {
         ShardingSphereConnection connection = mock(ShardingSphereConnection.class, RETURNS_DEEP_STUBS);
         ShardingSphereRuleMetaData globalRuleMetaData = new ShardingSphereRuleMetaData(Arrays.asList(
                 new TrafficRule(new DefaultTrafficRuleConfigurationBuilder().build()),
-                new SQLFederationRule(new DefaultSQLFederationRuleConfigurationBuilder().build()),
+                new SQLFederationRule(new DefaultSQLFederationRuleConfigurationBuilder().build(), Collections.emptyMap(), mock(ConfigurationProperties.class)),
                 new SQLParserRule(new DefaultSQLParserRuleConfigurationBuilder().build())));
         when(connection.getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData()).thenReturn(globalRuleMetaData);
         when(connection.getContextManager().getMetaDataContexts().getMetaData().getProps()).thenReturn(new ConfigurationProperties(new Properties()));
@@ -249,7 +254,7 @@ class StatementAdapterTest {
         when(connection.getDatabaseName()).thenReturn("db");
         when(connection.getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData()).thenReturn(new ShardingSphereRuleMetaData(Arrays.asList(
                 new TrafficRule(new DefaultTrafficRuleConfigurationBuilder().build()),
-                new SQLFederationRule(new DefaultSQLFederationRuleConfigurationBuilder().build()),
+                new SQLFederationRule(new DefaultSQLFederationRuleConfigurationBuilder().build(), Collections.emptyMap(), mock(ConfigurationProperties.class)),
                 new SQLParserRule(new DefaultSQLParserRuleConfigurationBuilder().build()))));
         when(connection.getContextManager().getMetaDataContexts().getMetaData().getProps()).thenReturn(new ConfigurationProperties(new Properties()));
         ShardingSphereStatement result = new ShardingSphereStatement(connection);

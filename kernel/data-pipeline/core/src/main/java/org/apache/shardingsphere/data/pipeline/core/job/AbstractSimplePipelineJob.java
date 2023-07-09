@@ -18,8 +18,8 @@
 package org.apache.shardingsphere.data.pipeline.core.job;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.data.pipeline.api.context.PipelineJobItemContext;
-import org.apache.shardingsphere.data.pipeline.api.task.PipelineTasksRunner;
+import org.apache.shardingsphere.data.pipeline.common.context.PipelineJobItemContext;
+import org.apache.shardingsphere.data.pipeline.core.task.runner.PipelineTasksRunner;
 import org.apache.shardingsphere.elasticjob.api.ShardingContext;
 import org.apache.shardingsphere.elasticjob.simple.job.SimpleJob;
 
@@ -28,6 +28,10 @@ import org.apache.shardingsphere.elasticjob.simple.job.SimpleJob;
  */
 @Slf4j
 public abstract class AbstractSimplePipelineJob extends AbstractPipelineJob implements SimpleJob {
+    
+    protected AbstractSimplePipelineJob(final String jobId) {
+        super(jobId);
+    }
     
     /**
      * Build pipeline job item context.
@@ -48,7 +52,6 @@ public abstract class AbstractSimplePipelineJob extends AbstractPipelineJob impl
             log.info("stopping true, ignore");
             return;
         }
-        setJobId(jobId);
         PipelineJobItemContext jobItemContext = buildPipelineJobItemContext(shardingContext);
         PipelineTasksRunner tasksRunner = buildPipelineTasksRunner(jobItemContext);
         if (!addTasksRunner(shardingItem, tasksRunner)) {

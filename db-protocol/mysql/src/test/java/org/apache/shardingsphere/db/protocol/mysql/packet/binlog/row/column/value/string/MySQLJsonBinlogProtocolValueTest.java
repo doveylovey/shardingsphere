@@ -57,7 +57,7 @@ class MySQLJsonBinlogProtocolValueTest {
     
     @BeforeEach
     void setUp() {
-        columnDef = new MySQLBinlogColumnDef(MySQLBinaryColumnType.MySQL_TYPE_JSON);
+        columnDef = new MySQLBinlogColumnDef(MySQLBinaryColumnType.JSON);
         when(payload.getByteBuf()).thenReturn(byteBuf);
         mockJsonValue();
     }

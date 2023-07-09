@@ -17,7 +17,6 @@
 
 package org.apache.shardingsphere.sharding.distsql.query;
 
-import org.apache.shardingsphere.distsql.handler.query.RQLExecutor;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
@@ -29,7 +28,6 @@ import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sharding.rule.TableRule;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -46,9 +44,8 @@ class CountShardingRuleExecutorTest {
     
     @Test
     void assertGetRowData() {
-        RQLExecutor<CountShardingRuleStatement> executor = new CountShardingRuleExecutor();
-        Collection<LocalDataQueryResultRow> actual = executor.getRows(mockDatabase(), mock(CountShardingRuleStatement.class));
-        assertThat(actual.size(), is(3));
+        Collection<LocalDataQueryResultRow> actual = new CountShardingRuleExecutor().getRows(mockDatabase(), mock(CountShardingRuleStatement.class));
+        assertThat(actual.size(), is(2));
         Iterator<LocalDataQueryResultRow> iterator = actual.iterator();
         LocalDataQueryResultRow row = iterator.next();
         assertThat(row.getCell(1), is("sharding_table"));
@@ -58,16 +55,11 @@ class CountShardingRuleExecutorTest {
         assertThat(row.getCell(1), is("sharding_table_reference"));
         assertThat(row.getCell(2), is("db_1"));
         assertThat(row.getCell(3), is(1));
-        row = iterator.next();
-        assertThat(row.getCell(1), is("broadcast_table"));
-        assertThat(row.getCell(2), is("db_1"));
-        assertThat(row.getCell(3), is(2));
     }
     
     @Test
     void assertGetColumns() {
-        RQLExecutor<CountShardingRuleStatement> executor = new CountShardingRuleExecutor();
-        Collection<String> columns = executor.getColumnNames();
+        Collection<String> columns = new CountShardingRuleExecutor().getColumnNames();
         assertThat(columns.size(), is(3));
         Iterator<String> iterator = columns.iterator();
         assertThat(iterator.next(), is("rule_name"));
@@ -93,7 +85,6 @@ class CountShardingRuleExecutorTest {
         ShardingRule result = mock(ShardingRule.class);
         when(result.getTableRules()).thenReturn(tableRules);
         when(result.getConfiguration()).thenReturn(ruleConfiguration);
-        when(result.getBroadcastTables()).thenReturn(Arrays.asList("broadcast_table_1", "broadcast_table_2"));
         return result;
     }
 }

@@ -69,7 +69,7 @@ class MySQLClientTest {
     @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() throws InterruptedException {
-        mysqlClient = new MySQLClient(new ConnectInfo(1, "host", 3306, "username", "password"));
+        mysqlClient = new MySQLClient(new ConnectInfo(1, "host", 3306, "username", "password"), false);
         when(channel.pipeline()).thenReturn(pipeline);
         when(channel.isOpen()).thenReturn(true);
         when(channel.close()).thenReturn(channelFuture);
@@ -84,7 +84,7 @@ class MySQLClientTest {
     
     @Test
     void assertConnect() throws ReflectiveOperationException {
-        ServerInfo expected = new ServerInfo();
+        ServerInfo expected = new ServerInfo(new ServerVersion("5.5.0-log"));
         mockChannelResponse(expected);
         mysqlClient.connect();
         ServerInfo actual = (ServerInfo) Plugins.getMemberAccessor().get(MySQLClient.class.getDeclaredField("serverInfo"), mysqlClient);
@@ -123,8 +123,7 @@ class MySQLClientTest {
     
     @Test
     void assertSubscribeBelow56Version() throws ReflectiveOperationException {
-        ServerInfo serverInfo = new ServerInfo();
-        serverInfo.setServerVersion(new ServerVersion("5.5.0-log"));
+        ServerInfo serverInfo = new ServerInfo(new ServerVersion("5.5.0-log"));
         Plugins.getMemberAccessor().set(MySQLClient.class.getDeclaredField("serverInfo"), mysqlClient, serverInfo);
         Plugins.getMemberAccessor().set(MySQLClient.class.getDeclaredField("channel"), mysqlClient, channel);
         Plugins.getMemberAccessor().set(MySQLClient.class.getDeclaredField("eventLoopGroup"), mysqlClient, new NioEventLoopGroup(1));

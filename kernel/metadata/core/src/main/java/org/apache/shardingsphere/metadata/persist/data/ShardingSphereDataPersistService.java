@@ -19,9 +19,9 @@ package org.apache.shardingsphere.metadata.persist.data;
 
 import lombok.Getter;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
-import org.apache.shardingsphere.infra.metadata.data.ShardingSphereData;
-import org.apache.shardingsphere.infra.metadata.data.ShardingSphereDatabaseData;
-import org.apache.shardingsphere.infra.metadata.data.ShardingSphereSchemaData;
+import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereStatistics;
+import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereDatabaseData;
+import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereSchemaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.yaml.data.pojo.YamlShardingSphereRowData;
@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * ShardingSphere data persist service.
  */
 @Getter
-public final class ShardingSphereDataPersistService {
+public final class ShardingSphereDataPersistService implements ShardingSphereDataBasedPersistService {
     
     private final PersistRepository repository;
     
@@ -57,12 +57,13 @@ public final class ShardingSphereDataPersistService {
      * @param metaData meta data
      * @return ShardingSphere data
      */
-    public Optional<ShardingSphereData> load(final ShardingSphereMetaData metaData) {
+    @Override
+    public Optional<ShardingSphereStatistics> load(final ShardingSphereMetaData metaData) {
         Collection<String> databaseNames = repository.getChildrenKeys(ShardingSphereDataNode.getShardingSphereDataNodePath());
         if (databaseNames.isEmpty()) {
             return Optional.empty();
         }
-        ShardingSphereData result = new ShardingSphereData();
+        ShardingSphereStatistics result = new ShardingSphereStatistics();
         for (String each : databaseNames.stream().filter(metaData::containsDatabase).collect(Collectors.toList())) {
             result.getDatabaseData().put(each, load(each, metaData.getDatabase(each)));
         }
@@ -101,6 +102,7 @@ public final class ShardingSphereDataPersistService {
      * @param schemaData schema data
      * @param databases databases
      */
+    @Override
     public void persist(final String databaseName, final String schemaName, final ShardingSphereSchemaData schemaData, final Map<String, ShardingSphereDatabase> databases) {
         if (schemaData.getTableData().isEmpty()) {
             persistSchema(databaseName, schemaName);
@@ -115,7 +117,7 @@ public final class ShardingSphereDataPersistService {
     private void persistTableData(final String databaseName, final String schemaName, final ShardingSphereSchemaData schemaData, final Map<String, ShardingSphereDatabase> databases) {
         schemaData.getTableData().values().forEach(each -> {
             YamlShardingSphereRowDataSwapper swapper =
-                    new YamlShardingSphereRowDataSwapper(new ArrayList<>(databases.get(databaseName.toLowerCase()).getSchema(schemaName).getTable(each.getName()).getColumns().values()));
+                    new YamlShardingSphereRowDataSwapper(new ArrayList<>(databases.get(databaseName.toLowerCase()).getSchema(schemaName).getTable(each.getName()).getColumnValues()));
             persistTableData(databaseName, schemaName, each.getName(), each.getRows().stream().map(swapper::swapToYamlConfiguration).collect(Collectors.toList()));
         });
     }

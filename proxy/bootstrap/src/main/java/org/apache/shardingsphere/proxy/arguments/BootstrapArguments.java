@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public final class BootstrapArguments {
     
-    private static final String DEFAULT_CONFIG_PATH = "/conf/";
+    private static final String DEFAULT_CONFIG_PATH = System.getenv().getOrDefault("PROXY_DEFAULT_CONFIG_PATH", "/conf/");
     
     private static final String DEFAULT_BIND_ADDRESS = "0.0.0.0";
     
@@ -58,7 +58,7 @@ public final class BootstrapArguments {
                 return Optional.empty();
             }
             return Optional.of(port);
-        } catch (final NumberFormatException ex) {
+        } catch (final NumberFormatException ignored) {
             throw new IllegalArgumentException(String.format("Invalid port `%s`.", args[0]));
         }
     }
@@ -103,7 +103,7 @@ public final class BootstrapArguments {
      *
      * @return force parameter
      */
-    public boolean getForce() {
+    public boolean isForce() {
         return args.length >= 4 && parseForceParameter(args[3]);
     }
     
@@ -125,7 +125,7 @@ public final class BootstrapArguments {
     private boolean isValidPath(final String path) {
         try {
             Paths.get(path);
-        } catch (InvalidPathException ex) {
+        } catch (InvalidPathException ignored) {
             throw new IllegalArgumentException(String.format("Invalid path `%s`.", path));
         }
         return true;

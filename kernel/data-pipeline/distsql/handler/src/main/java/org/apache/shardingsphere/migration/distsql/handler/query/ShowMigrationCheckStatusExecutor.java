@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.migration.distsql.handler.query;
 
-import org.apache.shardingsphere.data.pipeline.api.pojo.ConsistencyCheckJobItemInfo;
+import org.apache.shardingsphere.data.pipeline.common.pojo.ConsistencyCheckJobItemInfo;
 import org.apache.shardingsphere.data.pipeline.scenario.consistencycheck.api.impl.ConsistencyCheckJobAPI;
 import org.apache.shardingsphere.distsql.handler.ral.query.QueryableRALExecutor;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
@@ -46,7 +46,7 @@ public final class ShowMigrationCheckStatusExecutor implements QueryableRALExecu
         return result;
     }
     
-    LocalDataQueryResultRow convert(final ConsistencyCheckJobItemInfo info) {
+    private LocalDataQueryResultRow convert(final ConsistencyCheckJobItemInfo info) {
         String checkResult = null == info.getCheckSuccess() ? "" : info.getCheckSuccess().toString();
         return new LocalDataQueryResultRow(Optional.ofNullable(info.getTableNames()).orElse(""), checkResult, Optional.ofNullable(info.getCheckFailedTableNames()).orElse(""),
                 String.valueOf(info.getFinishedPercentage()), info.getRemainingSeconds(),

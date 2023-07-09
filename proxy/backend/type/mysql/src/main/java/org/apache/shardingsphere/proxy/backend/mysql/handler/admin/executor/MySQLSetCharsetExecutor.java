@@ -18,10 +18,11 @@
 package org.apache.shardingsphere.proxy.backend.mysql.handler.admin.executor;
 
 import org.apache.shardingsphere.db.protocol.constant.CommonConstants;
-import org.apache.shardingsphere.db.protocol.mysql.constant.MySQLServerInfo;
+import org.apache.shardingsphere.db.protocol.mysql.constant.MySQLConstants;
 import org.apache.shardingsphere.dialect.mysql.exception.UnknownCharsetException;
 import org.apache.shardingsphere.proxy.backend.mysql.handler.admin.MySQLSessionVariableHandler;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
+import org.apache.shardingsphere.sql.parser.sql.common.enums.QuoteCharacter;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -48,21 +49,19 @@ public final class MySQLSetCharsetExecutor implements MySQLSessionVariableHandle
     }
     
     private String formatValue(final String value) {
-        return value.startsWith("'") && value.endsWith("'") || value.startsWith("\"") && value.endsWith("\"") ? value.substring(1, value.length() - 1) : value.trim();
+        return QuoteCharacter.SINGLE_QUOTE.isWrapped(value) || QuoteCharacter.QUOTE.isWrapped(value) ? value.substring(1, value.length() - 1) : value.trim();
     }
     
     private Charset parseCharset(final String value) {
         switch (value.toLowerCase(Locale.ROOT)) {
             case "default":
-                return MySQLServerInfo.DEFAULT_CHARSET.getCharset();
+                return MySQLConstants.DEFAULT_CHARSET.getCharset();
             case "utf8mb4":
                 return StandardCharsets.UTF_8;
             default:
                 try {
                     return Charset.forName(value);
-                    // CHECKSTYLE:OFF
-                } catch (final Exception ex) {
-                    // CHECKSTYLE:ON
+                } catch (final IllegalArgumentException ex) {
                     throw new UnknownCharsetException(value.toLowerCase());
                 }
         }

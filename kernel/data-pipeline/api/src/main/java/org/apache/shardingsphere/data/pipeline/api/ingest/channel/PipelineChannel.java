@@ -19,35 +19,53 @@ package org.apache.shardingsphere.data.pipeline.api.ingest.channel;
 
 import org.apache.shardingsphere.data.pipeline.api.ingest.record.Record;
 
+import java.io.Closeable;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Pipeline channel.
  */
-public interface PipelineChannel {
+public interface PipelineChannel extends Closeable {
     
     /**
      * Push {@code DataRecord} into channel.
      *
-     * @param dataRecord data
+     * @param dataRecords data records
      */
-    void pushRecord(Record dataRecord);
+    void pushRecords(List<Record> dataRecords);
     
     /**
      * Fetch {@code Record} list from channel.
      * It might be blocked at most timeout seconds if available records count doesn't reach batch size.
      *
      * @param batchSize record batch size
-     * @param timeoutSeconds timeout(seconds)
-     * @return record
+     * @param timeout timeout
+     * @param timeUnit time unit
+     * @return records of transactions
      */
-    List<Record> fetchRecords(int batchSize, int timeoutSeconds);
+    List<Record> fetchRecords(int batchSize, long timeout, TimeUnit timeUnit);
+    
+    /**
+     * Peek {@code Record} list from channel.
+     *
+     * @return records of a transaction
+     */
+    List<Record> peekRecords();
+    
+    /**
+     * Poll {@code Record} list from channel.
+     *
+     * @return records of a transaction
+     */
+    List<Record> pollRecords();
     
     /**
      * Ack the last batch.
      *
      * @param records record list
      */
+    // TODO Refactor ack param
     void ack(List<Record> records);
     
     /**

@@ -25,6 +25,7 @@ import org.apache.shardingsphere.infra.exception.OverallConnectionNotEnoughExcep
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.ConnectionMode;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
+import org.apache.shardingsphere.infra.metadata.database.resource.ShardingSphereResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
@@ -85,14 +86,14 @@ class JDBCBackendDataSourceTest {
     private ContextManager mockContextManager() {
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         MetaDataContexts metaDataContexts = new MetaDataContexts(mock(MetaDataPersistService.class),
-                new ShardingSphereMetaData(createDatabases(), mockGlobalRuleMetaData(), new ConfigurationProperties(new Properties())));
+                new ShardingSphereMetaData(createDatabases(), mock(ShardingSphereResourceMetaData.class), mockGlobalRuleMetaData(), new ConfigurationProperties(new Properties())));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         return result;
     }
     
     private Map<String, ShardingSphereDatabase> createDatabases() {
         ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        Map<String, DatabaseType> storageTypes = new LinkedHashMap<>(2, 1);
+        Map<String, DatabaseType> storageTypes = new LinkedHashMap<>(2, 1F);
         storageTypes.put("ds_0", new H2DatabaseType());
         storageTypes.put("ds_1", new H2DatabaseType());
         when(database.getResourceMetaData().getStorageTypes()).thenReturn(storageTypes);
@@ -107,7 +108,7 @@ class JDBCBackendDataSourceTest {
     }
     
     private Map<String, DataSource> mockDataSources(final int size) {
-        Map<String, DataSource> result = new HashMap<>(size, 1);
+        Map<String, DataSource> result = new HashMap<>(size, 1F);
         for (int i = 0; i < size; i++) {
             result.put(String.format(DATA_SOURCE_PATTERN, i), new CallTimeRecordDataSource());
         }

@@ -20,6 +20,7 @@ package org.apache.shardingsphere.encrypt.rewrite.token.generator.fixture;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnItemRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.rule.EncryptTableRuleConfiguration;
 import org.apache.shardingsphere.encrypt.rewrite.token.pojo.EncryptInsertValuesToken;
@@ -31,6 +32,7 @@ import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.database.DefaultDatabase;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
+import org.apache.shardingsphere.infra.metadata.database.resource.ShardingSphereResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
@@ -55,6 +57,7 @@ import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQ
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -75,12 +78,16 @@ public final class EncryptGeneratorFixtureBuilder {
      * @return created encrypt rule
      */
     public static EncryptRule createEncryptRule() {
+        Map<String, AlgorithmConfiguration> encryptors = new LinkedHashMap<>(2, 1F);
+        encryptors.put("standard_encryptor", new AlgorithmConfiguration("CORE.FIXTURE", new Properties()));
+        encryptors.put("assisted_encryptor", new AlgorithmConfiguration("CORE.QUERY_ASSISTED.FIXTURE", new Properties()));
+        encryptors.put("like_encryptor", new AlgorithmConfiguration("CORE.QUERY_LIKE.FIXTURE", new Properties()));
         EncryptColumnRuleConfiguration pwdColumnConfig =
-                new EncryptColumnRuleConfiguration("pwd", "pwd_cipher", "pwd_assist", "pwd_like", "pwd_plain", "test_encryptor", "test_encryptor", "like_encryptor", false);
-        Map<String, AlgorithmConfiguration> encryptors = Collections.singletonMap("test_encryptor", new AlgorithmConfiguration("CORE.QUERY_ASSISTED.FIXTURE", new Properties()));
-        Map<String, AlgorithmConfiguration> likeEncryptors = Collections.singletonMap("like_encryptor", new AlgorithmConfiguration("CORE.QUERY_LIKE.FIXTURE", new Properties()));
+                new EncryptColumnRuleConfiguration("pwd", new EncryptColumnItemRuleConfiguration("pwd_cipher", "standard_encryptor"));
+        pwdColumnConfig.setAssistedQuery(new EncryptColumnItemRuleConfiguration("pwd_assist", "assisted_encryptor"));
+        pwdColumnConfig.setLikeQuery(new EncryptColumnItemRuleConfiguration("pwd_like", "like_encryptor"));
         return new EncryptRule(
-                new EncryptRuleConfiguration(Collections.singleton(new EncryptTableRuleConfiguration("t_user", Collections.singletonList(pwdColumnConfig), null)), encryptors, likeEncryptors));
+                new EncryptRuleConfiguration(Collections.singleton(new EncryptTableRuleConfiguration("t_user", Collections.singletonList(pwdColumnConfig))), encryptors));
     }
     
     /**
@@ -96,7 +103,8 @@ public final class EncryptGeneratorFixtureBuilder {
         when(database.getSchema(DefaultDatabase.LOGIC_NAME)).thenReturn(schema);
         when(schema.getAllColumnNames("tbl")).thenReturn(Arrays.asList("id", "name", "status", "pwd"));
         ShardingSphereMetaData metaData = new ShardingSphereMetaData(
-                Collections.singletonMap(DefaultDatabase.LOGIC_NAME, database), mock(ShardingSphereRuleMetaData.class), mock(ConfigurationProperties.class));
+                Collections.singletonMap(DefaultDatabase.LOGIC_NAME, database), mock(ShardingSphereResourceMetaData.class),
+                mock(ShardingSphereRuleMetaData.class), mock(ConfigurationProperties.class));
         return new InsertStatementContext(metaData, params, insertStatement, DefaultDatabase.LOGIC_NAME);
     }
     

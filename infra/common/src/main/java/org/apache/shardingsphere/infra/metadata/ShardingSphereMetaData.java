@@ -19,9 +19,10 @@ package org.apache.shardingsphere.infra.metadata;
 
 import lombok.Getter;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
-import org.apache.shardingsphere.infra.config.props.internal.InternalConfigurationProperties;
+import org.apache.shardingsphere.infra.config.props.temporary.TemporaryConfigurationProperties;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
+import org.apache.shardingsphere.infra.metadata.database.resource.ShardingSphereResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
 import org.apache.shardingsphere.infra.rule.identifier.type.ResourceHeldRule;
 import org.apache.shardingsphere.infra.rule.identifier.type.StaticDataSourceContainedRule;
@@ -41,32 +42,38 @@ public final class ShardingSphereMetaData {
     
     private final Map<String, ShardingSphereDatabase> databases;
     
+    private final ShardingSphereResourceMetaData globalResourceMetaData;
+    
     private final ShardingSphereRuleMetaData globalRuleMetaData;
     
     private final ConfigurationProperties props;
     
-    private final InternalConfigurationProperties internalProps;
+    private final TemporaryConfigurationProperties temporaryProps;
     
     public ShardingSphereMetaData() {
-        this(new LinkedHashMap<>(), new ShardingSphereRuleMetaData(Collections.emptyList()), new ConfigurationProperties(new Properties()));
+        this(new LinkedHashMap<>(), new ShardingSphereResourceMetaData(Collections.emptyMap()), new ShardingSphereRuleMetaData(Collections.emptyList()),
+                new ConfigurationProperties(new Properties()));
     }
     
-    public ShardingSphereMetaData(final Map<String, ShardingSphereDatabase> databases, final ShardingSphereRuleMetaData globalRuleMetaData, final ConfigurationProperties props) {
-        this.databases = new ConcurrentHashMap<>(databases.size(), 1);
+    public ShardingSphereMetaData(final Map<String, ShardingSphereDatabase> databases, final ShardingSphereResourceMetaData globalResourceMetaData,
+                                  final ShardingSphereRuleMetaData globalRuleMetaData, final ConfigurationProperties props) {
+        this.databases = new ConcurrentHashMap<>(databases.size(), 1F);
         databases.forEach((key, value) -> this.databases.put(key.toLowerCase(), value));
+        this.globalResourceMetaData = globalResourceMetaData;
         this.globalRuleMetaData = globalRuleMetaData;
         this.props = props;
-        internalProps = new InternalConfigurationProperties(props.getProps());
+        temporaryProps = new TemporaryConfigurationProperties(props.getProps());
     }
     
     /**
      * Add database.
-     * 
+     *
      * @param databaseName database name
      * @param protocolType protocol database type
+     * @param props configuration properties
      */
-    public void addDatabase(final String databaseName, final DatabaseType protocolType) {
-        ShardingSphereDatabase database = ShardingSphereDatabase.create(databaseName, protocolType);
+    public void addDatabase(final String databaseName, final DatabaseType protocolType, final ConfigurationProperties props) {
+        ShardingSphereDatabase database = ShardingSphereDatabase.create(databaseName, protocolType, props);
         putDatabase(database);
         globalRuleMetaData.findRules(ResourceHeldRule.class).forEach(each -> each.addResource(database));
     }
@@ -78,7 +85,7 @@ public final class ShardingSphereMetaData {
      * @return contains database from meta data or not
      */
     public boolean containsDatabase(final String databaseName) {
-        return null != databaseName && databases.containsKey(databaseName.toLowerCase());
+        return databases.containsKey(databaseName.toLowerCase());
     }
     
     /**
@@ -88,7 +95,7 @@ public final class ShardingSphereMetaData {
      * @return meta data database
      */
     public ShardingSphereDatabase getDatabase(final String databaseName) {
-        return null != databaseName ? databases.get(databaseName.toLowerCase()) : null;
+        return databases.get(databaseName.toLowerCase());
     }
     
     /**
@@ -98,16 +105,6 @@ public final class ShardingSphereMetaData {
      */
     public void putDatabase(final ShardingSphereDatabase database) {
         databases.put(database.getName().toLowerCase(), database);
-    }
-    
-    /**
-     * Get actual database name.
-     *
-     * @param databaseName database name
-     * @return actual database name
-     */
-    public String getActualDatabaseName(final String databaseName) {
-        return getDatabase(databaseName).getName();
     }
     
     /**

@@ -38,28 +38,26 @@ import java.util.stream.Collectors;
 /**
  * Sharding rename table statement validator.
  */
-public final class ShardingRenameTableStatementValidator extends ShardingDDLStatementValidator<RenameTableStatement> {
+public final class ShardingRenameTableStatementValidator extends ShardingDDLStatementValidator {
     
     @Override
-    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext<RenameTableStatement> sqlStatementContext, final List<Object> params, final ShardingSphereDatabase database,
+    public void preValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext, final List<Object> params, final ShardingSphereDatabase database,
                             final ConfigurationProperties props) {
         Collection<String> tableNames = sqlStatementContext instanceof TableAvailable
                 ? ((TableAvailable) sqlStatementContext).getAllTables().stream().map(each -> each.getTableName().getIdentifier().getValue()).collect(Collectors.toList())
                 : sqlStatementContext.getTablesContext().getTableNames();
-        List<SimpleTableSegment> renameTables = sqlStatementContext.getSqlStatement().getRenameTables().stream().map(RenameTableDefinitionSegment::getRenameTable).collect(Collectors.toList());
-        if (!renameTables.isEmpty() && containsShardingBroadcastTable(shardingRule, tableNames)) {
+        RenameTableStatement renameTableStatement = (RenameTableStatement) sqlStatementContext.getSqlStatement();
+        List<SimpleTableSegment> renameTables = renameTableStatement.getRenameTables().stream().map(RenameTableDefinitionSegment::getRenameTable).collect(Collectors.toList());
+        if (!renameTables.isEmpty() && shardingRule.containsShardingTable(tableNames)) {
             throw new UnsupportedShardingOperationException("RENAME TABLE", renameTables.get(0).getTableName().getIdentifier().getValue());
         }
     }
     
-    private boolean containsShardingBroadcastTable(final ShardingRule shardingRule, final Collection<String> tableNames) {
-        return shardingRule.tableRuleExists(tableNames) || tableNames.stream().anyMatch(shardingRule::isBroadcastTable);
-    }
-    
     @Override
-    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext<RenameTableStatement> sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
+    public void postValidate(final ShardingRule shardingRule, final SQLStatementContext sqlStatementContext, final HintValueContext hintValueContext, final List<Object> params,
                              final ShardingSphereDatabase database, final ConfigurationProperties props, final RouteContext routeContext) {
-        for (RenameTableDefinitionSegment each : sqlStatementContext.getSqlStatement().getRenameTables()) {
+        RenameTableStatement renameTableStatement = (RenameTableStatement) sqlStatementContext.getSqlStatement();
+        for (RenameTableDefinitionSegment each : renameTableStatement.getRenameTables()) {
             String primaryTable = each.getTable().getTableName().getIdentifier().getValue();
             if (isRouteUnitDataNodeDifferentSize(shardingRule, routeContext, primaryTable)) {
                 throw new ShardingDDLRouteException("RENAME", "TABLE", sqlStatementContext.getTablesContext().getTableNames());

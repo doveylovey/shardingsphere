@@ -24,6 +24,7 @@ import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSp
 import org.apache.shardingsphere.infra.util.yaml.YamlEngine;
 import org.apache.shardingsphere.infra.yaml.schema.pojo.YamlShardingSphereTable;
 import org.apache.shardingsphere.infra.yaml.schema.swapper.YamlTableSwapper;
+import org.apache.shardingsphere.metadata.persist.service.database.DatabaseMetaDataPersistService;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -126,9 +127,11 @@ class DatabaseMetaDataPersistServiceTest {
         assertThat(schema.size(), is(1));
         assertTrue(databaseMetaDataPersistService.loadSchemas("test").isEmpty());
         assertThat(schema.get("foo_schema").getAllTableNames(), is(Collections.singleton("t_order")));
-        assertThat(schema.get("foo_schema").getTable("t_order").getIndexes().keySet(), is(Collections.singleton("primary")));
+        assertThat(schema.get("foo_schema").getTable("t_order").getIndexValues().size(), is(1));
+        assertThat(schema.get("foo_schema").getTable("t_order").getIndexValues().iterator().next().getName(), is("PRIMARY"));
         assertThat(schema.get("foo_schema").getAllColumnNames("t_order").size(), is(1));
-        assertThat(schema.get("foo_schema").getTable("t_order").getColumns().keySet(), is(Collections.singleton("id")));
+        assertThat(schema.get("foo_schema").getTable("t_order").getColumnValues().size(), is(1));
+        assertThat(schema.get("foo_schema").getTable("t_order").getColumnValues().iterator().next().getName(), is("id"));
     }
     
     @SneakyThrows({IOException.class, URISyntaxException.class})

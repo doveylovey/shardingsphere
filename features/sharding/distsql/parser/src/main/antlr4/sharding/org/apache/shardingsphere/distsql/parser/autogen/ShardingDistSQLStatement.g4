@@ -23,19 +23,16 @@ execute
     : (createShardingTableRule
     | createDefaultShardingStrategy
     | createShardingTableReferenceRule
-    | createBroadcastTableRule
     | alterShardingTableRule
     | alterShardingTableReferenceRule
     | dropShardingTableRule
     | dropShardingTableReferenceRule
-    | dropBroadcastTableRule
     | dropShardingAlgorithm
     | showShardingTableRulesUsedAlgorithm
     | showShardingTableRulesUsedKeyGenerator
     | showShardingTableRulesUsedAuditor
     | showShardingTableRules
     | showShardingTableReferenceRules
-    | showBroadcastTableRules
     | showShardingAlgorithms
     | showShardingTableNodes
     | showShardingKeyGenerators
@@ -49,5 +46,5 @@ execute
     | showUnusedShardingKeyGenerators
     | showUnusedShardingAuditors
     | countShardingRule
-    ) SEMI?
+    ) SEMI_? EOF
     ;

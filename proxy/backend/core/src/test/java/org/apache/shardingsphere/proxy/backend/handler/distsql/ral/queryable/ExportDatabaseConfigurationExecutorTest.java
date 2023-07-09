@@ -38,7 +38,6 @@ import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -64,7 +63,7 @@ class ExportDatabaseConfigurationExecutorTest {
     }
     
     @Test
-    void assertExecute() throws SQLException {
+    void assertExecute() {
         when(database.getName()).thenReturn("normal_db");
         when(database.getResourceMetaData().getDataSources()).thenReturn(createDataSourceMap());
         when(database.getRuleMetaData().getConfigurations()).thenReturn(Collections.singleton(createShardingRuleConfiguration()));
@@ -87,7 +86,7 @@ class ExportDatabaseConfigurationExecutorTest {
     }
     
     private Map<String, DataSource> createDataSourceMap() {
-        Map<String, DataSource> result = new LinkedHashMap<>(2, 1);
+        Map<String, DataSource> result = new LinkedHashMap<>(2, 1F);
         result.put("ds_0", createDataSource("demo_ds_0"));
         result.put("ds_1", createDataSource("demo_ds_1"));
         return result;

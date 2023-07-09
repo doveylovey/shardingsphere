@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.apache.shardingsphere.infra.binder.segment.select.projection.Projection;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.SQLSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ public final class DerivedProjection implements Projection {
     
     private final String alias;
     
-    private final SQLSegment derivedProjection;
+    private final SQLSegment derivedProjectionSegment;
     
     @Override
     public Optional<String> getAlias() {
@@ -52,7 +53,8 @@ public final class DerivedProjection implements Projection {
     }
     
     @Override
-    public Projection cloneWithOwner(final String ownerName) {
-        return new DerivedProjection(expression, alias, derivedProjection);
+    public Projection transformSubqueryProjection(final IdentifierValue subqueryTableAlias, final IdentifierValue originalOwner, final IdentifierValue originalName) {
+        // TODO replace getAlias with aliasIdentifier
+        return getAlias().isPresent() ? new ColumnProjection(subqueryTableAlias, new IdentifierValue(getAlias().get()), null) : new DerivedProjection(expression, alias, derivedProjectionSegment);
     }
 }

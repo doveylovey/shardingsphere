@@ -59,12 +59,12 @@ public final class CreateShardingTableRuleStatementAssert {
             if (expected instanceof CreateShardingAutoTableRuleStatementTestCase) {
                 CreateShardingAutoTableRuleStatementTestCase autoTableRuleStatementTestCase = (CreateShardingAutoTableRuleStatementTestCase) expected;
                 assertThat(assertContext.getText("if not exists segment assertion error: "), actual.isIfNotExists(), is(autoTableRuleStatementTestCase.isIfNotExists()));
-                Collection<AutoTableRuleSegment> actualAutoTableRules = actual.getRules().stream().map(each -> (AutoTableRuleSegment) each).collect(Collectors.toList());
+                Collection<AutoTableRuleSegment> actualAutoTableRules = actual.getRules().stream().map(AutoTableRuleSegment.class::cast).collect(Collectors.toList());
                 assertShardingAutoTableRules(assertContext, actualAutoTableRules, autoTableRuleStatementTestCase.getRules());
             } else {
                 CreateShardingTableRuleStatementTestCase tableRuleStatementTestCase = (CreateShardingTableRuleStatementTestCase) expected;
                 assertThat(assertContext.getText("if not exists segment assertion error: "), actual.isIfNotExists(), is(tableRuleStatementTestCase.isIfNotExists()));
-                Collection<TableRuleSegment> actualTableRules = actual.getRules().stream().map(each -> (TableRuleSegment) each).collect(Collectors.toList());
+                Collection<TableRuleSegment> actualTableRules = actual.getRules().stream().map(TableRuleSegment.class::cast).collect(Collectors.toList());
                 assertShardingTableRules(assertContext, actualTableRules, tableRuleStatementTestCase.getRules());
             }
         }
@@ -76,9 +76,8 @@ public final class CreateShardingTableRuleStatementAssert {
         } else {
             assertNotNull(actual, assertContext.getText("Actual sharding auto table rule should exist."));
             int count = 0;
-            for (AutoTableRuleSegment tableRuleSegment : actual) {
-                ExpectedAutoTableRule expectedTableRule = expected.get(count);
-                AutoTableRuleAssert.assertIs(assertContext, tableRuleSegment, expectedTableRule);
+            for (AutoTableRuleSegment each : actual) {
+                AutoTableRuleAssert.assertIs(assertContext, each, expected.get(count));
                 count++;
             }
         }
@@ -90,9 +89,8 @@ public final class CreateShardingTableRuleStatementAssert {
         } else {
             assertNotNull(actual, assertContext.getText("Actual sharding table rule should exist."));
             int count = 0;
-            for (TableRuleSegment tableRuleSegment : actual) {
-                ExpectedTableRule expectedTableRule = expected.get(count);
-                TableRuleAssert.assertIs(assertContext, tableRuleSegment, expectedTableRule);
+            for (TableRuleSegment each : actual) {
+                TableRuleAssert.assertIs(assertContext, each, expected.get(count));
                 count++;
             }
         }

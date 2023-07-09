@@ -21,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.data.pipeline.mysql.ingest.client.ServerVersion;
 import org.apache.shardingsphere.data.pipeline.spi.datasource.JdbcQueryPropertiesExtension;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -30,6 +32,8 @@ import java.util.Properties;
 public final class MySQLJdbcQueryPropertiesExtension implements JdbcQueryPropertiesExtension {
     
     private static final String MYSQL_CONNECTOR_VERSION = initMysqlConnectorVersion();
+    
+    private static final List<String> NOT_OVERRIDE_PROPERTIES = Collections.singletonList("netTimeoutForStreamingResults");
     
     private final Properties queryProps = new Properties();
     
@@ -55,7 +59,7 @@ public final class MySQLJdbcQueryPropertiesExtension implements JdbcQueryPropert
     
     private static String initMysqlConnectorVersion() {
         try {
-            Class<?> mysqlDriverClass = MySQLJdbcQueryPropertiesExtension.class.getClassLoader().loadClass("com.mysql.jdbc.Driver");
+            Class<?> mysqlDriverClass = Thread.currentThread().getContextClassLoader().loadClass("com.mysql.jdbc.Driver");
             return mysqlDriverClass.getPackage().getImplementationVersion();
         } catch (final ClassNotFoundException ex) {
             log.warn("not find com.mysql.jdbc.Driver class");
@@ -64,8 +68,13 @@ public final class MySQLJdbcQueryPropertiesExtension implements JdbcQueryPropert
     }
     
     @Override
-    public Properties extendQueryProperties() {
-        return queryProps;
+    public void extendQueryProperties(final Properties props) {
+        for (String each : queryProps.stringPropertyNames()) {
+            if (NOT_OVERRIDE_PROPERTIES.contains(each) && props.containsKey(each)) {
+                continue;
+            }
+            props.setProperty(each, queryProps.getProperty(each));
+        }
     }
     
     @Override

@@ -33,6 +33,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -85,9 +86,23 @@ public final class DatabaseTypeEngine {
      * @return storage types
      */
     public static Map<String, DatabaseType> getStorageTypes(final String databaseName, final DatabaseConfiguration databaseConfig) {
-        Map<String, DatabaseType> result = new LinkedHashMap<>(databaseConfig.getDataSources().size(), 1);
+        Map<String, DatabaseType> result = new LinkedHashMap<>(databaseConfig.getDataSources().size(), 1F);
         Map<String, DataSource> enabledDataSources = DataSourceStateManager.getInstance().getEnabledDataSourceMap(databaseName, databaseConfig.getDataSources());
         for (Entry<String, DataSource> entry : enabledDataSources.entrySet()) {
+            result.put(entry.getKey(), getStorageType(entry.getValue()));
+        }
+        return result;
+    }
+    
+    /**
+     * Get storage types.
+     *
+     * @param dataSources data sources
+     * @return storage types
+     */
+    public static Map<String, DatabaseType> getStorageTypes(final Map<String, DataSource> dataSources) {
+        Map<String, DatabaseType> result = new LinkedHashMap<>(dataSources.size(), 1F);
+        for (Entry<String, DataSource> entry : dataSources.entrySet()) {
             result.put(entry.getKey(), getStorageType(entry.getValue()));
         }
         return result;
@@ -175,5 +190,21 @@ public final class DatabaseTypeEngine {
      */
     public static Optional<String> getDefaultSchemaName(final DatabaseType protocolType) {
         return protocolType instanceof SchemaSupportedDatabaseType ? Optional.of(((SchemaSupportedDatabaseType) protocolType).getDefaultSchema()) : Optional.empty();
+    }
+    
+    /**
+     * Get trunk and branch database types.
+     *
+     * @param trunkDatabaseTypes trunk database types
+     * @return database types
+     */
+    public static Collection<DatabaseType> getTrunkAndBranchDatabaseTypes(final Collection<String> trunkDatabaseTypes) {
+        Collection<DatabaseType> result = new LinkedList<>();
+        for (DatabaseType each : ShardingSphereServiceLoader.getServiceInstances(DatabaseType.class)) {
+            if (trunkDatabaseTypes.contains(each.getType()) || each instanceof BranchDatabaseType && trunkDatabaseTypes.contains(((BranchDatabaseType) each).getTrunkDatabaseType().getType())) {
+                result.add(each);
+            }
+        }
+        return result;
     }
 }

@@ -17,12 +17,12 @@
 
 package org.apache.shardingsphere.encrypt.distsql.handler.query;
 
-import org.apache.shardingsphere.distsql.handler.query.RQLExecutor;
 import org.apache.shardingsphere.encrypt.distsql.parser.statement.CountEncryptRuleStatement;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.ShardingSphereRuleMetaData;
+import org.apache.shardingsphere.infra.rule.identifier.type.TableNamesMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -39,8 +39,7 @@ class CountEncryptRuleExecutorTest {
     
     @Test
     void assertGetRowData() {
-        RQLExecutor<CountEncryptRuleStatement> executor = new CountEncryptRuleExecutor();
-        Collection<LocalDataQueryResultRow> actual = executor.getRows(mockDatabase(), mock(CountEncryptRuleStatement.class));
+        Collection<LocalDataQueryResultRow> actual = new CountEncryptRuleExecutor().getRows(mockDatabase(), mock(CountEncryptRuleStatement.class));
         assertThat(actual.size(), is(1));
         Iterator<LocalDataQueryResultRow> iterator = actual.iterator();
         LocalDataQueryResultRow row = iterator.next();
@@ -51,8 +50,7 @@ class CountEncryptRuleExecutorTest {
     
     @Test
     void assertGetColumnNames() {
-        RQLExecutor<CountEncryptRuleStatement> executor = new CountEncryptRuleExecutor();
-        Collection<String> columns = executor.getColumnNames();
+        Collection<String> columns = new CountEncryptRuleExecutor().getColumnNames();
         assertThat(columns.size(), is(3));
         Iterator<String> iterator = columns.iterator();
         assertThat(iterator.next(), is("rule_name"));
@@ -70,7 +68,9 @@ class CountEncryptRuleExecutorTest {
     
     private EncryptRule mockEncryptRule() {
         EncryptRule result = mock(EncryptRule.class);
-        when(result.getTables()).thenReturn(Collections.singleton("encrypt_table"));
+        TableNamesMapper tableNamesMapper = new TableNamesMapper();
+        tableNamesMapper.put("encrypt_table");
+        when(result.getLogicTableMapper()).thenReturn(tableNamesMapper);
         return result;
     }
 }

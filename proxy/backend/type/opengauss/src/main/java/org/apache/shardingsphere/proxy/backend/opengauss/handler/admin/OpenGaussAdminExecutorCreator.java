@@ -26,6 +26,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.item.Projecti
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -37,31 +38,34 @@ public final class OpenGaussAdminExecutorCreator implements DatabaseAdminExecuto
     
     private static final Set<String> SYSTEM_CATALOG_QUERY_EXPRESSIONS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
     
+    private static final Set<String> SYSTEM_CATALOG_TABLES = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    
     static {
         SYSTEM_CATALOG_QUERY_EXPRESSIONS.add("VERSION()");
         SYSTEM_CATALOG_QUERY_EXPRESSIONS.add("intervaltonum(gs_password_deadline())");
         SYSTEM_CATALOG_QUERY_EXPRESSIONS.add("gs_password_notifytime()");
+        SYSTEM_CATALOG_TABLES.add("pg_database");
+        SYSTEM_CATALOG_TABLES.add("pg_tables");
+        SYSTEM_CATALOG_TABLES.add("pg_roles");
     }
-    
-    private static final String OG_DATABASE = "pg_database";
     
     private final PostgreSQLAdminExecutorCreator delegated = new PostgreSQLAdminExecutorCreator();
     
     @Override
-    public Optional<DatabaseAdminExecutor> create(final SQLStatementContext<?> sqlStatementContext) {
+    public Optional<DatabaseAdminExecutor> create(final SQLStatementContext sqlStatementContext) {
         return delegated.create(sqlStatementContext);
     }
     
     @Override
-    public Optional<DatabaseAdminExecutor> create(final SQLStatementContext<?> sqlStatementContext, final String sql, final String databaseName) {
+    public Optional<DatabaseAdminExecutor> create(final SQLStatementContext sqlStatementContext, final String sql, final String databaseName, final List<Object> parameters) {
         if (isSystemCatalogQuery(sqlStatementContext)) {
-            return Optional.of(new OpenGaussSystemCatalogAdminQueryExecutor(sql));
+            return Optional.of(new OpenGaussSystemCatalogAdminQueryExecutor(sqlStatementContext, sql, databaseName, parameters));
         }
-        return delegated.create(sqlStatementContext, sql, databaseName);
+        return delegated.create(sqlStatementContext, sql, databaseName, parameters);
     }
     
-    private boolean isSystemCatalogQuery(final SQLStatementContext<?> sqlStatementContext) {
-        if (sqlStatementContext.getTablesContext().getTableNames().contains(OG_DATABASE)) {
+    private boolean isSystemCatalogQuery(final SQLStatementContext sqlStatementContext) {
+        if (sqlStatementContext.getTablesContext().getTableNames().stream().anyMatch(SYSTEM_CATALOG_TABLES::contains)) {
             return true;
         }
         if (!(sqlStatementContext.getSqlStatement() instanceof SelectStatement)) {

@@ -33,9 +33,13 @@ import java.util.List;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(of = {"tableName", "uniqueKeyValue"}, callSuper = false)
+@EqualsAndHashCode(of = "tableName", callSuper = false)
 @ToString
 public final class DataRecord extends Record {
+    
+    private final String type;
+    
+    private final String tableName;
     
     private final List<Column> columns;
     
@@ -43,14 +47,12 @@ public final class DataRecord extends Record {
     
     private final List<Object> oldUniqueKeyValues = new ArrayList<>();
     
-    private String type;
-    
-    private String tableName;
-    
     private Long csn;
     
-    public DataRecord(final IngestPosition<?> position, final int columnCount) {
+    public DataRecord(final String type, final String tableName, final IngestPosition position, final int columnCount) {
         super(position);
+        this.type = type;
+        this.tableName = tableName;
         columns = new ArrayList<>(columnCount);
     }
     

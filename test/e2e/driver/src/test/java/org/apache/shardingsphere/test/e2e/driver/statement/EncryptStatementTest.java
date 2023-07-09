@@ -49,11 +49,9 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
     
     private static final String SELECT_SQL_WITH_STAR = "SELECT * FROM t_encrypt WHERE pwd = 'a'";
     
-    private static final String SELECT_SQL_WITH_PLAIN = "SELECT id, pwd FROM t_encrypt WHERE pwd = 'plainValue'";
-    
     private static final String SELECT_SQL_WITH_CIPHER = "SELECT id, pwd FROM t_encrypt WHERE pwd = 'plainValue'";
     
-    private static final String SELECT_SQL_TO_ASSERT = "SELECT id, cipher_pwd, plain_pwd FROM t_encrypt";
+    private static final String SELECT_SQL_TO_ASSERT = "SELECT id, cipher_pwd FROM t_encrypt";
     
     private static final String SHOW_COLUMNS_SQL = "SHOW columns FROM t_encrypt";
     
@@ -67,7 +65,7 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
         try (Statement statement = getEncryptConnection().createStatement()) {
             statement.execute(INSERT_SQL);
         }
-        assertResultSet(3, 2, "encryptValue", "b");
+        assertResultSet(3, 2, "encryptValue");
     }
     
     @Test
@@ -79,7 +77,7 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
             assertThat(resultSet.getInt(1), is(6));
             assertFalse(resultSet.next());
         }
-        assertResultSet(3, 6, "encryptValue", "b");
+        assertResultSet(3, 6, "encryptValue");
     }
     
     @Test
@@ -87,7 +85,7 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
         try (Statement statement = getEncryptConnection().createStatement()) {
             statement.execute(DELETE_SQL);
         }
-        assertResultSet(1, 5, "encryptValue", "b");
+        assertResultSet(1, 5, "encryptValue");
     }
     
     @Test
@@ -97,7 +95,7 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
             result = statement.executeUpdate(UPDATE_SQL);
         }
         assertThat(result, is(2));
-        assertResultSet(2, 1, "encryptValue", "f");
+        assertResultSet(2, 1, "encryptValue");
     }
     
     @Test
@@ -152,22 +150,7 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
         }
     }
     
-    @Test
-    void assertSelectWithPlainColumn() throws SQLException {
-        try (Statement statement = getEncryptConnectionWithProps().createStatement()) {
-            ResultSet resultSet = statement.executeQuery(SELECT_SQL_WITH_PLAIN);
-            int count = 1;
-            List<Object> ids = Arrays.asList(1, 5);
-            while (resultSet.next()) {
-                assertThat(resultSet.getObject("id"), is(ids.get(count - 1)));
-                assertThat(resultSet.getObject("pwd"), is("plainValue"));
-                count += 1;
-            }
-            assertThat(count - 1, is(ids.size()));
-        }
-    }
-    
-    private void assertResultSet(final int resultSetCount, final int id, final Object pwd, final Object plain) throws SQLException {
+    private void assertResultSet(final int resultSetCount, final int id, final Object pwd) throws SQLException {
         try (
                 Connection connection = getActualDataSources().get("encrypt").getConnection();
                 Statement statement = connection.createStatement()) {
@@ -176,7 +159,6 @@ class EncryptStatementTest extends AbstractEncryptDriverTest {
             while (resultSet.next()) {
                 if (id == count) {
                     assertThat(resultSet.getObject("cipher_pwd"), is(pwd));
-                    assertThat(resultSet.getObject("plain_pwd"), is(plain));
                 }
                 count += 1;
             }

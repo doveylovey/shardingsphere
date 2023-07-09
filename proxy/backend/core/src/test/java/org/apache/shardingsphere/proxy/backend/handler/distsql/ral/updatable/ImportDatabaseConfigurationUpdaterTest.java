@@ -18,6 +18,7 @@
 package org.apache.shardingsphere.proxy.backend.handler.distsql.ral.updatable;
 
 import lombok.SneakyThrows;
+import org.apache.shardingsphere.distsql.handler.exception.datasource.MissingRequiredDataSourcesException;
 import org.apache.shardingsphere.distsql.handler.exception.rule.DuplicateRuleException;
 import org.apache.shardingsphere.distsql.handler.validate.DataSourcePropertiesValidateHandler;
 import org.apache.shardingsphere.distsql.parser.statement.ral.updatable.ImportDatabaseConfigurationStatement;
@@ -28,10 +29,10 @@ import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.ShardingSphereResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rule.identifier.type.DataSourceContainedRule;
+import org.apache.shardingsphere.infra.util.exception.external.sql.type.generic.UnsupportedSQLOperationException;
 import org.apache.shardingsphere.infra.util.spi.exception.ServiceProviderNotFoundServerException;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
-import org.apache.shardingsphere.proxy.backend.handler.distsql.fixture.FixtureDataSourceContainedRule;
 import org.apache.shardingsphere.proxy.backend.util.YamlDatabaseConfigurationImportExecutor;
 import org.apache.shardingsphere.test.mock.AutoMockExtension;
 import org.apache.shardingsphere.test.mock.StaticMockSettings;
@@ -83,17 +84,17 @@ class ImportDatabaseConfigurationUpdaterTest {
     void assertImportExistedDatabase() {
         String databaseName = "sharding_db";
         when(ProxyContext.getInstance().databaseExists(databaseName)).thenReturn(true);
-        assertThrows(IllegalStateException.class, () -> assertExecute(databaseName, "/conf/import/config-sharding.yaml"));
+        assertThrows(UnsupportedSQLOperationException.class, () -> assertExecute(databaseName, "/conf/import/config-sharding.yaml"));
     }
     
     @Test
     void assertImportEmptyDatabaseName() {
-        assertThrows(NullPointerException.class, () -> assertExecute("sharding_db", "/conf/import/config-empty-database-name.yaml"));
+        assertThrows(UnsupportedSQLOperationException.class, () -> assertExecute("sharding_db", "/conf/import/config-empty-database-name.yaml"));
     }
     
     @Test
     void assertImportEmptyDataSource() {
-        assertThrows(IllegalStateException.class, () -> assertExecute("sharding_db", "/conf/import/config-empty-data-source.yaml"));
+        assertThrows(MissingRequiredDataSourcesException.class, () -> assertExecute("sharding_db", "/conf/import/config-empty-data-source.yaml"));
     }
     
     @Test
@@ -128,7 +129,8 @@ class ImportDatabaseConfigurationUpdaterTest {
         when(database.getResourceMetaData()).thenReturn(resourceMetaData);
         ShardingSphereSchema schema = mock(ShardingSphereSchema.class);
         when(database.getSchema(DefaultDatabase.LOGIC_NAME)).thenReturn(schema);
-        when(database.getRuleMetaData().findRules(DataSourceContainedRule.class)).thenReturn(Collections.singleton(new FixtureDataSourceContainedRule()));
+        DataSourceContainedRule dataSourceContainedRule = mock(DataSourceContainedRule.class);
+        when(database.getRuleMetaData().findRules(DataSourceContainedRule.class)).thenReturn(Collections.singleton(dataSourceContainedRule));
         when(result.getMetaDataContexts().getMetaData().getDatabases()).thenReturn(Collections.singletonMap(databaseName, database));
         when(result.getMetaDataContexts().getMetaData().getDatabase(databaseName)).thenReturn(database);
         when(result.getMetaDataContexts().getMetaData().getProps()).thenReturn(new ConfigurationProperties(createProperties()));

@@ -317,13 +317,12 @@ dataSources:
 rules:
 - !ENCRYPT
   encryptors:
+    like_encryptor:
+      type: CHAR_DIGEST_LIKE
     aes_encryptor:
       type: AES
       props:
         aes-key-value: 123456abc
-  likeEncryptors:
-    like_encryptor:
-      type: CHAR_DIGEST_LIKE
   tables:
     user:
       columns:
@@ -339,8 +338,6 @@ rules:
           encryptorName: aes_encryptor
           likeQueryColumn: phone_like
           likeQueryEncryptorName: like_encryptor
-  queryWithCipherColumn: true
-
 
 props:
   sql-show: true

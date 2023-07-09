@@ -43,9 +43,8 @@ class EncryptParameterRewriterBuilderTest {
     void assertGetParameterRewritersWhenPredicateIsNeedRewrite() {
         EncryptRule encryptRule = mock(EncryptRule.class, RETURNS_DEEP_STUBS);
         when(encryptRule.findEncryptTable("t_order").isPresent()).thenReturn(true);
-        SQLStatementContext<?> sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
+        SQLStatementContext sqlStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
         when(sqlStatementContext.getTablesContext().getTableNames()).thenReturn(Collections.singletonList("t_order"));
-        @SuppressWarnings("rawtypes")
         Collection<ParameterRewriter> actual = new EncryptParameterRewriterBuilder(
                 encryptRule, DefaultDatabase.LOGIC_NAME, Collections.singletonMap("test", mock(ShardingSphereSchema.class)), sqlStatementContext, Collections.emptyList()).getParameterRewriters();
         assertThat(actual.size(), is(1));

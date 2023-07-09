@@ -22,7 +22,7 @@ Obtain the binary release package of ShardingSphere-Proxy on the [download page]
 ShardingSphere-Proxy's operational mode is configured on `server.yaml`, and its configuration mode is the same with that of ShardingSphere-JDBC. Refer to [mode of configuration](/en/user-manual/shardingsphere-jdbc/yaml-config/mode/).
 
 Please refer to the following links for other configuration items:
-* [Permission configuration](/en/user-manual/shardingsphere-proxy/yaml-config/authentication/)
+* [Permission configuration](/en/user-manual/shardingsphere-proxy/yaml-config/authority/)
 * [Property configuration](/en/user-manual/shardingsphere-proxy/yaml-config/props/)
 
 3. Configure `conf/config-*.yaml`
@@ -35,7 +35,7 @@ ShardingSphere-Proxy supports multiple logical data sources. Each YAML configura
 
 If the backend is connected to a PostgreSQL or openGauss database, no additional dependencies need to be introduced.
 
-If the backend is connected to a MySQL database, please download [mysql-connector-java-5.1.47.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar) or [mysql-connector-java-8.0.11.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar), and put it into the `ext-lib` directory.
+If the backend is connected to a MySQL database, please download [mysql-connector-java-5.1.49.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar) or [mysql-connector-java-8.0.11.jar](https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar), and put it into the `ext-lib` directory.
 
 5. Introduce dependencies required by the cluster mode (Optional)
 

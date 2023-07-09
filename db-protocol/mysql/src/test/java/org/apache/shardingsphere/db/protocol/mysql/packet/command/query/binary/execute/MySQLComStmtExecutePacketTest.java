@@ -55,7 +55,7 @@ class MySQLComStmtExecutePacketTest {
         assertThat(actual.getNewParametersBoundFlag(), is(MySQLNewParametersBoundFlag.PARAMETER_TYPE_EXIST));
         List<MySQLPreparedStatementParameterType> parameterTypes = actual.getNewParameterTypes();
         assertThat(parameterTypes.size(), is(1));
-        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.MYSQL_TYPE_LONG));
+        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.LONG));
         assertThat(parameterTypes.get(0).getUnsignedFlag(), is(0));
         assertThat(actual.readParameters(parameterTypes, Collections.emptySet(), Collections.singletonList(0)), is(Collections.<Object>singletonList(1)));
     }
@@ -69,7 +69,7 @@ class MySQLComStmtExecutePacketTest {
         assertThat(actual.getNewParametersBoundFlag(), is(MySQLNewParametersBoundFlag.PARAMETER_TYPE_EXIST));
         List<MySQLPreparedStatementParameterType> parameterTypes = actual.getNewParameterTypes();
         assertThat(parameterTypes.size(), is(1));
-        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.MYSQL_TYPE_LONG));
+        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.LONG));
         assertThat(parameterTypes.get(0).getUnsignedFlag(), is(0));
         assertThat(actual.readParameters(parameterTypes, Collections.emptySet(), Collections.emptyList()), is(Collections.singletonList(null)));
     }
@@ -83,9 +83,8 @@ class MySQLComStmtExecutePacketTest {
         assertThat(actual.getNewParametersBoundFlag(), is(MySQLNewParametersBoundFlag.PARAMETER_TYPE_EXIST));
         List<MySQLPreparedStatementParameterType> parameterTypes = actual.getNewParameterTypes();
         assertThat(parameterTypes.size(), is(1));
-        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.MYSQL_TYPE_BLOB));
+        assertThat(parameterTypes.get(0).getColumnType(), is(MySQLBinaryColumnType.BLOB));
         assertThat(parameterTypes.get(0).getUnsignedFlag(), is(0));
         assertThat(actual.readParameters(parameterTypes, Collections.singleton(0), Collections.emptyList()), is(Collections.singletonList(null)));
-        assertThat(actual.toString(), is("MySQLComStmtExecutePacket(statementId=2)"));
     }
 }

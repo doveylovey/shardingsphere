@@ -22,7 +22,7 @@ import org.apache.shardingsphere.infra.binder.segment.select.orderby.OrderByItem
 import org.apache.shardingsphere.infra.binder.segment.select.pagination.PaginationContext;
 import org.apache.shardingsphere.infra.binder.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.context.ConnectionContext;
+import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.type.DatabaseTypeEngine;
 import org.apache.shardingsphere.infra.executor.sql.execute.result.query.QueryResult;
@@ -60,7 +60,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
     private final DatabaseType protocolType;
     
     @Override
-    public MergedResult merge(final List<QueryResult> queryResults, final SQLStatementContext<?> sqlStatementContext,
+    public MergedResult merge(final List<QueryResult> queryResults, final SQLStatementContext sqlStatementContext,
                               final ShardingSphereDatabase database, final ConnectionContext connectionContext) throws SQLException {
         if (1 == queryResults.size() && !isNeedAggregateRewrite(sqlStatementContext)) {
             return new IteratorStreamMergedResult(queryResults);
@@ -72,7 +72,7 @@ public final class ShardingDQLResultMerger implements ResultMerger {
         return decorate(queryResults, selectStatementContext, mergedResult);
     }
     
-    private boolean isNeedAggregateRewrite(final SQLStatementContext<?> sqlStatementContext) {
+    private boolean isNeedAggregateRewrite(final SQLStatementContext sqlStatementContext) {
         return sqlStatementContext instanceof SelectStatementContext && ((SelectStatementContext) sqlStatementContext).isNeedAggregateRewrite();
     }
     

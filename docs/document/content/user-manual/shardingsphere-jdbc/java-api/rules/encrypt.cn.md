@@ -19,7 +19,6 @@ weight = 4
 |---------------------------|---------------------------------------------|-----------------------------------|-------|
 | tables (+)                | Collection\<EncryptTableRuleConfiguration\> | 加密表规则配置                           |       |
 | encryptors (+)            | Map\<String, AlgorithmConfiguration\>       | 加解密算法名称和配置                        |       |
-| queryWithCipherColumn (?) | boolean                                     | 是否使用加密列进行查询。在有原文列的情况下，可以使用原文列进行查询 | true  |
 
 ### 加密表规则配置
 
@@ -31,7 +30,6 @@ weight = 4
 |---------------------------|----------------------------------------------|---------------|
 | name                      | String                                       | 表名称           |
 | columns (+)               | Collection\<EncryptColumnRuleConfiguration\> | 加密列规则配置列表     |
-| queryWithCipherColumn (?) | boolean                                      | 该表是否使用加密列进行查询 |
 
 ### 加密列规则配置
 
@@ -39,17 +37,23 @@ weight = 4
 
 可配置属性：
 
-| *名称*                       | *数据类型*  | *说明*          |
-|----------------------------|---------|---------------|
-| logicColumn                | String  | 逻辑列名称         |
-| cipherColumn               | String  | 密文列名称         |
-| assistedQueryColumn (?)    | String  | 查询辅助列名称       |
-| likeQueryColumn (?)        | String  | 模糊查询列名称       |
-| plainColumn (?)            | String  | 原文列名称         |
-| encryptorName              | String  | 密文列加密算法名称     |
-| assistedQueryEncryptorName | String  | 查询辅助列加密算法名称   |
-| likeQueryEncryptorName     | String  | 模糊查询列加密算法名称   |
-| queryWithCipherColumn (?)  | boolean | 该列是否使用加密列进行查询 |
+| *名称*              | *数据类型*  | *说明*        |
+|-------------------|---------|-------------|
+| name              | String  | 逻辑列名称       |
+| cipher            | EncryptColumnItemRuleConfiguration  | 密文列配置       |
+| assistedQuery (?) | EncryptColumnItemRuleConfiguration  | 查询辅助列配置     |
+| likeQuery (?)     | EncryptColumnItemRuleConfiguration  | 模糊查询列配置     |
+
+### 加密列属性规则配置
+
+类名称：org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnItemRuleConfiguration
+
+可配置属性：
+
+| *名称*            | *数据类型*                             | *说明*    |
+|-----------------|------------------------------------|---------|
+| name            | String                             | 加密列属性名称 |
+| encryptorName   | String                             | 加密列算法名称 |
 
 ### 加解密算法配置
 
@@ -79,15 +83,16 @@ public final class EncryptDatabasesConfiguration {
     public DataSource getDataSource() throws SQLException {
         Properties props = new Properties();
         props.setProperty("aes-key-value", "123456");
-        EncryptColumnRuleConfiguration columnConfigAes = new EncryptColumnRuleConfiguration("username", "username", "", "", "username_plain", "name_encryptor", null);
-        EncryptColumnRuleConfiguration columnConfigTest = new EncryptColumnRuleConfiguration("pwd", "pwd", "assisted_query_pwd", "like_pwd", "", "pwd_encryptor", null);
-        EncryptTableRuleConfiguration encryptTableRuleConfig = new EncryptTableRuleConfiguration("t_user", Arrays.asList(columnConfigAes, columnConfigTest), null);
+        EncryptColumnRuleConfiguration columnConfigAes = new EncryptColumnRuleConfiguration("username", new EncryptColumnItemRuleConfiguration("username", "name_encryptor"));
+        EncryptColumnRuleConfiguration columnConfigTest = new EncryptColumnRuleConfiguration("pwd", new EncryptColumnItemRuleConfiguration("pwd", "pwd_encryptor"));
+        columnConfigTest.setAssistedQuery(new EncryptColumnItemRuleConfiguration("assisted_query_pwd", "pwd_encryptor"));
+        columnConfigTest.setLikeQuery(new EncryptColumnItemRuleConfiguration("like_pwd", "like_encryptor"));
+        EncryptTableRuleConfiguration encryptTableRuleConfig = new EncryptTableRuleConfiguration("t_user", Arrays.asList(columnConfigAes, columnConfigTest));
         Map<String, AlgorithmConfiguration> encryptAlgorithmConfigs = new HashMap<>();
         encryptAlgorithmConfigs.put("name_encryptor", new AlgorithmConfiguration("AES", props));
         encryptAlgorithmConfigs.put("pwd_encryptor", new AlgorithmConfiguration("assistedTest", props));
-        Map<String, AlgorithmConfiguration> likeEncryptAlgorithmConfigs = new HashMap<>();
-        likeEncryptAlgorithmConfigs.put("like_encryptor", new AlgorithmConfiguration("CHAR_DIGEST_LIKE", new Properties()));
-        EncryptRuleConfiguration encryptRuleConfig = new EncryptRuleConfiguration(Collections.singleton(encryptTableRuleConfig), encryptAlgorithmConfigs, likeEncryptAlgorithmConfigs);
+        encryptAlgorithmConfigs.put("like_encryptor", new AlgorithmConfiguration("CHAR_DIGEST_LIKE", new Properties()));
+        EncryptRuleConfiguration encryptRuleConfig = new EncryptRuleConfiguration(Collections.singleton(encryptTableRuleConfig), encryptAlgorithmConfigs);
         return ShardingSphereDataSourceFactory.createDataSource(DataSourceUtil.createDataSource("demo_ds"), Collections.singleton(encryptRuleConfig), props);
     }
 }
@@ -96,4 +101,4 @@ public final class EncryptDatabasesConfiguration {
 ## 相关参考
 
 - [数据加密的核心特性](/cn/features/sharding/ )
-- [数据加密的开发者指南](/cn/dev-manual/encryption/)
+- [数据加密的开发者指南](/cn/dev-manual/encrypt/)

@@ -17,12 +17,12 @@
 
 package org.apache.shardingsphere.proxy.backend.connector;
 
+import lombok.Getter;
 import org.apache.shardingsphere.dialect.exception.transaction.TableModifyInTransactionException;
 import org.apache.shardingsphere.infra.binder.type.TableAvailable;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.context.ConnectionContext;
-import org.apache.shardingsphere.infra.context.transaction.TransactionConnectionContext;
 import org.apache.shardingsphere.infra.database.type.DatabaseType;
+import org.apache.shardingsphere.infra.database.type.DatabaseTypeEngine;
 import org.apache.shardingsphere.infra.executor.kernel.ExecutorEngine;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupContext;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupReportContext;
@@ -39,9 +39,13 @@ import org.apache.shardingsphere.infra.executor.sql.prepare.driver.jdbc.Statemen
 import org.apache.shardingsphere.infra.executor.sql.prepare.raw.RawExecutionPrepareEngine;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.identifier.type.RawExecutionRule;
+import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
+import org.apache.shardingsphere.infra.session.connection.transaction.TransactionConnectionContext;
+import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.util.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.util.spi.ShardingSphereServiceLoader;
 import org.apache.shardingsphere.infra.util.spi.type.typed.TypedSPILoader;
+import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
 import org.apache.shardingsphere.proxy.backend.connector.jdbc.executor.ProxyJDBCExecutor;
 import org.apache.shardingsphere.proxy.backend.connector.jdbc.statement.JDBCBackendStatement;
 import org.apache.shardingsphere.proxy.backend.connector.sane.SaneQueryResultEngine;
@@ -59,6 +63,7 @@ import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQ
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.OpenGaussStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussCursorStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sqlfederation.engine.SQLFederationEngine;
 import org.apache.shardingsphere.transaction.api.TransactionType;
 import org.apache.shardingsphere.transaction.spi.TransactionHook;
 
@@ -76,21 +81,30 @@ public final class ProxySQLExecutor {
     
     private final String type;
     
-    private final BackendConnection backendConnection;
+    private final ProxyDatabaseConnectionManager databaseConnectionManager;
     
-    private final ProxyJDBCExecutor jdbcExecutor;
+    private final ProxyJDBCExecutor regularExecutor;
     
     private final RawExecutor rawExecutor;
     
+    @Getter
+    private final SQLFederationEngine sqlFederationEngine;
+    
     private final Collection<TransactionHook> transactionHooks = ShardingSphereServiceLoader.getServiceInstances(TransactionHook.class);
     
-    public ProxySQLExecutor(final String type, final BackendConnection backendConnection, final DatabaseConnector databaseConnector) {
+    public ProxySQLExecutor(final String type, final ProxyDatabaseConnectionManager databaseConnectionManager, final DatabaseConnector databaseConnector, final QueryContext queryContext) {
         this.type = type;
-        this.backendConnection = backendConnection;
+        this.databaseConnectionManager = databaseConnectionManager;
         ExecutorEngine executorEngine = BackendExecutorContext.getInstance().getExecutorEngine();
-        ConnectionContext connectionContext = backendConnection.getConnectionSession().getConnectionContext();
-        jdbcExecutor = new ProxyJDBCExecutor(type, backendConnection.getConnectionSession(), databaseConnector, new JDBCExecutor(executorEngine, connectionContext));
+        ConnectionContext connectionContext = databaseConnectionManager.getConnectionSession().getConnectionContext();
+        JDBCExecutor jdbcExecutor = new JDBCExecutor(executorEngine, connectionContext);
+        regularExecutor = new ProxyJDBCExecutor(type, databaseConnectionManager.getConnectionSession(), databaseConnector, jdbcExecutor);
         rawExecutor = new RawExecutor(executorEngine, connectionContext);
+        MetaDataContexts metaDataContexts = ProxyContext.getInstance().getContextManager().getMetaDataContexts();
+        String databaseName = databaseConnectionManager.getConnectionSession().getDatabaseName();
+        String schemaName = queryContext.getSqlStatementContext().getTablesContext().getSchemaName()
+                .orElseGet(() -> DatabaseTypeEngine.getDefaultSchemaName(queryContext.getSqlStatementContext().getDatabaseType(), databaseName));
+        sqlFederationEngine = new SQLFederationEngine(databaseName, schemaName, metaDataContexts.getMetaData(), metaDataContexts.getStatistics(), jdbcExecutor);
     }
     
     /**
@@ -108,7 +122,7 @@ public final class ProxySQLExecutor {
     }
     
     private boolean isExecuteDDLInXATransaction(final SQLStatement sqlStatement) {
-        TransactionStatus transactionStatus = backendConnection.getConnectionSession().getTransactionStatus();
+        TransactionStatus transactionStatus = databaseConnectionManager.getConnectionSession().getTransactionStatus();
         return TransactionType.XA == transactionStatus.getTransactionType() && transactionStatus.isInTransaction() && isUnsupportedDDLStatement(sqlStatement);
     }
     
@@ -116,7 +130,8 @@ public final class ProxySQLExecutor {
         // TODO implement DDL statement commit/rollback in PostgreSQL/openGauss transaction
         boolean isPostgreSQLOpenGaussStatement = isPostgreSQLOrOpenGaussStatement(sqlStatement);
         boolean isSupportedStatement = isSupportedSQLStatement(sqlStatement);
-        return sqlStatement instanceof DDLStatement && !isSupportedStatement && isPostgreSQLOpenGaussStatement && backendConnection.getConnectionSession().getTransactionStatus().isInTransaction();
+        return sqlStatement instanceof DDLStatement
+                && !isSupportedStatement && isPostgreSQLOpenGaussStatement && databaseConnectionManager.getConnectionSession().getTransactionStatus().isInTransaction();
     }
     
     private boolean isSupportedSQLStatement(final SQLStatement sqlStatement) {
@@ -139,7 +154,7 @@ public final class ProxySQLExecutor {
         return sqlStatement instanceof PostgreSQLStatement || sqlStatement instanceof OpenGaussStatement;
     }
     
-    private static String getTableName(final ExecutionContext executionContext) {
+    private String getTableName(final ExecutionContext executionContext) {
         return executionContext.getSqlStatementContext() instanceof TableAvailable && !((TableAvailable) executionContext.getSqlStatementContext()).getAllTables().isEmpty()
                 ? ((TableAvailable) executionContext.getSqlStatementContext()).getAllTables().iterator().next().getTableName().getIdentifier().getValue()
                 : "unknown_table";
@@ -153,7 +168,7 @@ public final class ProxySQLExecutor {
      * @throws SQLException SQL exception
      */
     public List<ExecuteResult> execute(final ExecutionContext executionContext) throws SQLException {
-        String databaseName = backendConnection.getConnectionSession().getDatabaseName();
+        String databaseName = databaseConnectionManager.getConnectionSession().getDatabaseName();
         Collection<ShardingSphereRule> rules = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getDatabase(databaseName).getRuleMetaData().getRules();
         int maxConnectionsSizePerQuery = ProxyContext.getInstance()
                 .getContextManager().getMetaDataContexts().getMetaData().getProps().<Integer>getValue(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY);
@@ -175,8 +190,9 @@ public final class ProxySQLExecutor {
         RawExecutionPrepareEngine prepareEngine = new RawExecutionPrepareEngine(maxConnectionsSizePerQuery, rules);
         ExecutionGroupContext<RawSQLExecutionUnit> executionGroupContext;
         try {
-            executionGroupContext = prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits(), new ExecutionGroupReportContext(
-                    backendConnection.getConnectionSession().getDatabaseName(), backendConnection.getConnectionSession().getGrantee(), backendConnection.getConnectionSession().getExecutionId()));
+            executionGroupContext = prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits(),
+                    new ExecutionGroupReportContext(databaseConnectionManager.getConnectionSession().getProcessId(),
+                            databaseConnectionManager.getConnectionSession().getDatabaseName(), databaseConnectionManager.getConnectionSession().getGrantee()));
         } catch (final SQLException ex) {
             return getSaneExecuteResults(executionContext, ex);
         }
@@ -186,19 +202,20 @@ public final class ProxySQLExecutor {
     
     private List<ExecuteResult> useDriverToExecute(final ExecutionContext executionContext, final Collection<ShardingSphereRule> rules,
                                                    final int maxConnectionsSizePerQuery, final boolean isReturnGeneratedKeys, final boolean isExceptionThrown) throws SQLException {
-        JDBCBackendStatement statementManager = (JDBCBackendStatement) backendConnection.getConnectionSession().getStatementManager();
+        JDBCBackendStatement statementManager = (JDBCBackendStatement) databaseConnectionManager.getConnectionSession().getStatementManager();
         DriverExecutionPrepareEngine<JDBCExecutionUnit, Connection> prepareEngine = new DriverExecutionPrepareEngine<>(
-                type, maxConnectionsSizePerQuery, backendConnection, statementManager, new StatementOption(isReturnGeneratedKeys), rules,
-                ProxyContext.getInstance().getDatabase(backendConnection.getConnectionSession().getDatabaseName()).getResourceMetaData().getStorageTypes());
+                type, maxConnectionsSizePerQuery, databaseConnectionManager, statementManager, new StatementOption(isReturnGeneratedKeys), rules,
+                ProxyContext.getInstance().getDatabase(databaseConnectionManager.getConnectionSession().getDatabaseName()).getResourceMetaData().getStorageTypes());
         ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext;
         try {
-            executionGroupContext = prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits(), new ExecutionGroupReportContext(
-                    backendConnection.getConnectionSession().getDatabaseName(), backendConnection.getConnectionSession().getGrantee(), backendConnection.getConnectionSession().getExecutionId()));
+            executionGroupContext = prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits(),
+                    new ExecutionGroupReportContext(databaseConnectionManager.getConnectionSession().getProcessId(),
+                            databaseConnectionManager.getConnectionSession().getDatabaseName(), databaseConnectionManager.getConnectionSession().getGrantee()));
         } catch (final SQLException ex) {
             return getSaneExecuteResults(executionContext, ex);
         }
-        executeTransactionHooksBeforeExecuteSQL(backendConnection.getConnectionSession());
-        return jdbcExecutor.execute(executionContext.getQueryContext(), executionGroupContext, isReturnGeneratedKeys, isExceptionThrown);
+        executeTransactionHooksBeforeExecuteSQL(databaseConnectionManager.getConnectionSession());
+        return regularExecutor.execute(executionContext.getQueryContext(), executionGroupContext, isReturnGeneratedKeys, isExceptionThrown);
     }
     
     private void executeTransactionHooksBeforeExecuteSQL(final ConnectionSession connectionSession) throws SQLException {
@@ -206,16 +223,16 @@ public final class ProxySQLExecutor {
             return;
         }
         for (TransactionHook each : transactionHooks) {
-            each.beforeExecuteSQL(connectionSession.getBackendConnection().getCachedConnections().values(), getTransactionContext(connectionSession), connectionSession.getIsolationLevel());
+            each.beforeExecuteSQL(connectionSession.getDatabaseConnectionManager().getCachedConnections().values(), getTransactionContext(connectionSession), connectionSession.getIsolationLevel());
         }
     }
     
     private TransactionConnectionContext getTransactionContext(final ConnectionSession connectionSession) {
-        return connectionSession.getBackendConnection().getConnectionSession().getConnectionContext().getTransactionContext();
+        return connectionSession.getDatabaseConnectionManager().getConnectionSession().getConnectionContext().getTransactionContext();
     }
     
     private List<ExecuteResult> getSaneExecuteResults(final ExecutionContext executionContext, final SQLException originalException) throws SQLException {
-        DatabaseType databaseType = ProxyContext.getInstance().getDatabase(backendConnection.getConnectionSession().getDatabaseName()).getProtocolType();
+        DatabaseType databaseType = ProxyContext.getInstance().getDatabase(databaseConnectionManager.getConnectionSession().getDatabaseName()).getProtocolType();
         Optional<ExecuteResult> executeResult = TypedSPILoader.getService(SaneQueryResultEngine.class, databaseType.getType())
                 .getSaneQueryResult(executionContext.getSqlStatementContext().getSqlStatement(), originalException);
         if (executeResult.isPresent()) {
