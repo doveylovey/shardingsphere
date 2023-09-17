@@ -17,13 +17,14 @@
 
 grammar OracleStatement;
 
-import DMLStatement, TCLStatement, DCLStatement, DALStatement, StoreProcedure;
+import DMLStatement, DDLStatement, TCLStatement, DCLStatement, DALStatement, PLSQL;
 
 execute
     : (select
     | insert
     | update
     | delete
+    | createView
     | createTable
     | alterTable
     | dropTable
@@ -82,6 +83,7 @@ execute
     | dropSynonym
     | dropPackage
     | dropEdition
+    | dropTableSpace
     | dropOutline
     | alterOutline
     | alterAnalyticView
@@ -108,12 +110,15 @@ execute
     | createRestorePoint
     | dropRestorePoint
     | dropOperator
+    | dropType
     | alterLibrary
     | alterMaterializedZonemap
     | alterJava
     | alterAuditPolicy
     | alterCluster
     | alterOperator
+    | alterProfile
+    | alterRollbackSegment
     | alterDiskgroup
     | alterIndexType
     | alterMaterializedView
@@ -122,6 +127,7 @@ execute
     | alterHierarchy
     | alterLockdownProfile
     | alterPluggableDatabase
+    | explain
     | createProcedure
     | dropProcedure
     | alterProcedure
@@ -136,9 +142,14 @@ execute
     | alterResourceCost
     | alterRole
     | createTablespace
+    | alterTablespace
     | dropSequence
     | dropProfile
     | dropFunction
     | dropCluster
+    | systemAction
+    | alterType
+    | createType
+    | createCluster
     ) SEMI_?
     ;

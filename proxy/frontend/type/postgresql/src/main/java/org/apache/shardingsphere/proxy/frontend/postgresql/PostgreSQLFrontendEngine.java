@@ -20,7 +20,7 @@ package org.apache.shardingsphere.proxy.frontend.postgresql;
 import lombok.Getter;
 import org.apache.shardingsphere.db.protocol.codec.DatabasePacketCodecEngine;
 import org.apache.shardingsphere.db.protocol.postgresql.codec.PostgreSQLPacketCodecEngine;
-import org.apache.shardingsphere.dialect.exception.transaction.InTransactionException;
+import org.apache.shardingsphere.infra.exception.dialect.exception.transaction.InTransactionException;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.frontend.authentication.AuthenticationEngine;
 import org.apache.shardingsphere.proxy.frontend.postgresql.authentication.PostgreSQLAuthenticationEngine;
@@ -47,8 +47,8 @@ public final class PostgreSQLFrontendEngine implements DatabaseProtocolFrontendE
     
     @Override
     public void handleException(final ConnectionSession connectionSession, final Exception exception) {
-        if (connectionSession.getTransactionStatus().isInTransaction() && !connectionSession.getTransactionStatus().isRollbackOnly() && !(exception instanceof InTransactionException)) {
-            connectionSession.getTransactionStatus().setRollbackOnly(true);
+        if (connectionSession.getTransactionStatus().isInTransaction() && !connectionSession.getTransactionStatus().isExceptionOccur() && !(exception instanceof InTransactionException)) {
+            connectionSession.getTransactionStatus().setExceptionOccur(true);
         }
     }
     

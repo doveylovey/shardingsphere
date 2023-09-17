@@ -19,10 +19,12 @@ package org.apache.shardingsphere.test.e2e.env;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.apache.shardingsphere.infra.database.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.type.DatabaseTypeEngine;
-import org.apache.shardingsphere.infra.database.type.dialect.OpenGaussDatabaseType;
-import org.apache.shardingsphere.infra.database.type.dialect.PostgreSQLDatabaseType;
+import org.apache.shardingsphere.infra.database.core.metadata.database.DialectDatabaseMetaData;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeFactory;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
+import org.apache.shardingsphere.infra.database.opengauss.type.OpenGaussDatabaseType;
+import org.apache.shardingsphere.infra.database.postgresql.type.PostgreSQLDatabaseType;
 import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.executor.kernel.ExecutorEngine;
 import org.apache.shardingsphere.infra.executor.kernel.thread.ExecutorServiceManager;
@@ -58,7 +60,7 @@ import java.util.concurrent.Future;
 public final class DataSetEnvironmentManager {
     
     // TODO ExecutorEngine.execute and callback
-    private static final ExecutorServiceManager EXECUTOR_SERVICE_MANAGER = ExecutorEngine.createExecutorEngineWithCPU().getExecutorServiceManager();
+    private static final ExecutorServiceManager EXECUTOR_SERVICE_MANAGER = ExecutorEngine.createExecutorEngineWithSize(Runtime.getRuntime().availableProcessors() * 2 - 1).getExecutorServiceManager();
     
     private static final String DATA_COLUMN_DELIMITER = ", ";
     
@@ -90,13 +92,13 @@ public final class DataSetEnvironmentManager {
             }
             String insertSQL;
             try (Connection connection = dataSourceMap.get(dataNode.getDataSourceName()).getConnection()) {
-                DatabaseType databaseType = DatabaseTypeEngine.getDatabaseType(connection.getMetaData().getURL());
+                DatabaseType databaseType = DatabaseTypeFactory.get(connection.getMetaData().getURL());
                 insertSQL = generateInsertSQL(dataNode.getTableName(), dataSetMetaData.getColumns(), databaseType);
             }
             fillDataTasks.add(new InsertTask(dataSourceMap.get(dataNode.getDataSourceName()), insertSQL, sqlValueGroups));
         }
         final List<Future<Void>> futures = EXECUTOR_SERVICE_MANAGER.getExecutorService().invokeAll(fillDataTasks);
-        for (final Future<Void> future : futures) {
+        for (Future<Void> future : futures) {
             future.get();
         }
     }
@@ -144,8 +146,8 @@ public final class DataSetEnvironmentManager {
         for (Entry<String, Collection<String>> entry : getDataNodeMap().entrySet()) {
             deleteTasks.add(new DeleteTask(dataSourceMap.get(entry.getKey()), entry.getValue()));
         }
-        final List<Future<Void>> futures = EXECUTOR_SERVICE_MANAGER.getExecutorService().invokeAll(deleteTasks);
-        for (final Future<Void> future : futures) {
+        List<Future<Void>> futures = EXECUTOR_SERVICE_MANAGER.getExecutorService().invokeAll(deleteTasks);
+        for (Future<Void> future : futures) {
             future.get();
         }
     }
@@ -216,8 +218,9 @@ public final class DataSetEnvironmentManager {
         public Void call() throws SQLException {
             try (Connection connection = dataSource.getConnection()) {
                 for (String each : tableNames) {
-                    DatabaseType databaseType = DatabaseTypeEngine.getDatabaseType(connection.getMetaData().getURL());
-                    try (PreparedStatement preparedStatement = connection.prepareStatement(String.format("DELETE FROM %s", databaseType.getQuoteCharacter().wrap(each)))) {
+                    DatabaseType databaseType = DatabaseTypeFactory.get(connection.getMetaData().getURL());
+                    DialectDatabaseMetaData dialectDatabaseMetaData = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData();
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(String.format("TRUNCATE TABLE %s", dialectDatabaseMetaData.getQuoteCharacter().wrap(each)))) {
                         preparedStatement.execute();
                     }
                 }

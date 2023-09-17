@@ -21,10 +21,17 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.shardingsphere.infra.config.database.DatabaseConfiguration;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
+import org.apache.shardingsphere.infra.datasource.pool.props.domain.DataSourcePoolProperties;
+import org.apache.shardingsphere.infra.datasource.pool.props.creator.DataSourcePoolPropertiesCreator;
+import org.apache.shardingsphere.infra.metadata.database.resource.storage.StorageResource;
+import org.apache.shardingsphere.infra.metadata.database.resource.storage.StorageResourceUtils;
 
 import javax.sql.DataSource;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Data source provided database configuration.
@@ -33,7 +40,25 @@ import java.util.Map;
 @Getter
 public final class DataSourceProvidedDatabaseConfiguration implements DatabaseConfiguration {
     
-    private final Map<String, DataSource> dataSources;
+    private final StorageResource storageResource;
     
     private final Collection<RuleConfiguration> ruleConfigurations;
+    
+    private final Map<String, DataSourcePoolProperties> dataSourcePoolPropertiesMap;
+    
+    public DataSourceProvidedDatabaseConfiguration(final Map<String, DataSource> dataSources, final Collection<RuleConfiguration> ruleConfigs) {
+        this.ruleConfigurations = ruleConfigs;
+        this.storageResource = new StorageResource(StorageResourceUtils.getStorageNodeDataSources(dataSources), StorageResourceUtils.getStorageUnitNodeMappers(dataSources));
+        dataSourcePoolPropertiesMap = createDataSourcePoolPropertiesMap(dataSources);
+    }
+    
+    private Map<String, DataSourcePoolProperties> createDataSourcePoolPropertiesMap(final Map<String, DataSource> dataSources) {
+        return dataSources.entrySet().stream().collect(Collectors
+                .toMap(Entry::getKey, entry -> DataSourcePoolPropertiesCreator.create(entry.getValue()), (oldValue, currentValue) -> oldValue, LinkedHashMap::new));
+    }
+    
+    @Override
+    public Map<String, DataSource> getDataSources() {
+        return storageResource.getWrappedDataSources();
+    }
 }

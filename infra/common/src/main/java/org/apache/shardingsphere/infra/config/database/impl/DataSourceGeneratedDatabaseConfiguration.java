@@ -20,14 +20,18 @@ package org.apache.shardingsphere.infra.config.database.impl;
 import lombok.Getter;
 import org.apache.shardingsphere.infra.config.database.DatabaseConfiguration;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
-import org.apache.shardingsphere.infra.datasource.config.DataSourceConfiguration;
-import org.apache.shardingsphere.infra.datasource.pool.creator.DataSourcePoolCreator;
-import org.apache.shardingsphere.infra.datasource.props.DataSourceProperties;
-import org.apache.shardingsphere.infra.datasource.props.DataSourcePropertiesCreator;
+import org.apache.shardingsphere.infra.datasource.pool.config.DataSourceConfiguration;
+import org.apache.shardingsphere.infra.datasource.pool.props.creator.DataSourcePoolPropertiesCreator;
+import org.apache.shardingsphere.infra.datasource.pool.props.domain.DataSourcePoolProperties;
+import org.apache.shardingsphere.infra.metadata.database.resource.storage.StorageResource;
+import org.apache.shardingsphere.infra.metadata.database.resource.storage.StorageResourceCreator;
 
 import javax.sql.DataSource;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Data source generated database configuration.
@@ -35,15 +39,21 @@ import java.util.Map;
 @Getter
 public final class DataSourceGeneratedDatabaseConfiguration implements DatabaseConfiguration {
     
-    private final Map<String, DataSource> dataSources;
+    private final StorageResource storageResource;
     
     private final Collection<RuleConfiguration> ruleConfigurations;
     
-    private final Map<String, DataSourceProperties> dataSourceProperties;
+    private final Map<String, DataSourcePoolProperties> dataSourcePoolPropertiesMap;
     
     public DataSourceGeneratedDatabaseConfiguration(final Map<String, DataSourceConfiguration> dataSourceConfigs, final Collection<RuleConfiguration> ruleConfigs) {
-        dataSourceProperties = DataSourcePropertiesCreator.create(dataSourceConfigs);
-        this.dataSources = DataSourcePoolCreator.create(dataSourceProperties);
         ruleConfigurations = ruleConfigs;
+        dataSourcePoolPropertiesMap = dataSourceConfigs.entrySet().stream()
+                .collect(Collectors.toMap(Entry::getKey, entry -> DataSourcePoolPropertiesCreator.create(entry.getValue()), (oldValue, currentValue) -> oldValue, LinkedHashMap::new));
+        storageResource = StorageResourceCreator.createStorageResource(dataSourcePoolPropertiesMap);
+    }
+    
+    @Override
+    public Map<String, DataSource> getDataSources() {
+        return storageResource.getWrappedDataSources();
     }
 }

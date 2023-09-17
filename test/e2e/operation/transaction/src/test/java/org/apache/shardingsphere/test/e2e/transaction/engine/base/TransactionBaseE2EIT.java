@@ -20,10 +20,8 @@ package org.apache.shardingsphere.test.e2e.transaction.engine.base;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.infra.database.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.type.dialect.MySQLDatabaseType;
-import org.apache.shardingsphere.infra.database.type.dialect.OpenGaussDatabaseType;
-import org.apache.shardingsphere.infra.database.type.dialect.PostgreSQLDatabaseType;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.enums.AdapterType;
 import org.apache.shardingsphere.test.e2e.env.container.atomic.storage.DockerStorageContainer;
 import org.apache.shardingsphere.test.e2e.env.runtime.DataSourceEnvironment;
@@ -74,7 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Slf4j
 public abstract class TransactionBaseE2EIT {
     
-    private static final List<String> ALL_XA_PROVIDERS = Arrays.asList(TransactionTestConstants.ATOMIKOS, TransactionTestConstants.BITRONIX, TransactionTestConstants.NARAYANA);
+    private static final List<String> ALL_XA_PROVIDERS = Arrays.asList(TransactionTestConstants.ATOMIKOS, TransactionTestConstants.NARAYANA);
     
     private static final List<Class<? extends BaseTransactionTestCase>> TEST_CASES = TestCaseClassScanner.scan();
     
@@ -439,11 +437,11 @@ public abstract class TransactionBaseE2EIT {
         private DatabaseType getDatabaseType(final String databaseType) {
             switch (databaseType) {
                 case TransactionTestConstants.MYSQL:
-                    return new MySQLDatabaseType();
+                    return TypedSPILoader.getService(DatabaseType.class, "MySQL");
                 case TransactionTestConstants.POSTGRESQL:
-                    return new PostgreSQLDatabaseType();
+                    return TypedSPILoader.getService(DatabaseType.class, "PostgreSQL");
                 case TransactionTestConstants.OPENGAUSS:
-                    return new OpenGaussDatabaseType();
+                    return TypedSPILoader.getService(DatabaseType.class, "openGauss");
                 default:
                     throw new UnsupportedOperationException(String.format("Unsupported database type `%s`.", databaseType));
             }

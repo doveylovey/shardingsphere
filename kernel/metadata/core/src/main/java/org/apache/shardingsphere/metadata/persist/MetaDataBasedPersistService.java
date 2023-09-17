@@ -19,7 +19,8 @@ package org.apache.shardingsphere.metadata.persist;
 
 import org.apache.shardingsphere.infra.config.database.DatabaseConfiguration;
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
-import org.apache.shardingsphere.infra.datasource.props.DataSourceProperties;
+import org.apache.shardingsphere.infra.datasource.pool.config.DataSourceConfiguration;
+import org.apache.shardingsphere.infra.datasource.pool.props.domain.DataSourcePoolProperties;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.metadata.persist.data.ShardingSphereDataBasedPersistService;
 import org.apache.shardingsphere.metadata.persist.service.config.database.DatabaseBasedPersistService;
@@ -51,14 +52,7 @@ public interface MetaDataBasedPersistService {
      * 
      * @return persist service
      */
-    DatabaseBasedPersistService<Map<String, DataSourceProperties>> getDataSourceUnitService();
-    
-    /**
-     * Get data source node service.
-     *
-     * @return persist service
-     */
-    DatabaseBasedPersistService<Map<String, DataSourceProperties>> getDataSourceNodeService();
+    DatabaseBasedPersistService<Map<String, DataSourcePoolProperties>> getDataSourceUnitService();
     
     /**
      * Get database meta data service.
@@ -127,5 +121,5 @@ public interface MetaDataBasedPersistService {
      * @param databaseConfigs database configurations
      * @return effective data sources
      */
-    Map<String, DataSource> getEffectiveDataSources(String databaseName, Map<String, ? extends DatabaseConfiguration> databaseConfigs);
+    Map<String, DataSourceConfiguration> getEffectiveDataSources(String databaseName, Map<String, ? extends DatabaseConfiguration> databaseConfigs);
 }
