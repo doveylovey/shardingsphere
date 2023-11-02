@@ -41,6 +41,7 @@ import org.apache.shardingsphere.data.pipeline.cdc.client.util.RequestIdUtils;
 import org.apache.shardingsphere.data.pipeline.cdc.client.util.ResponseFuture;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.CDCRequest;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.CDCRequest.Type;
+import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.DropStreamingRequestBody;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequestBody;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequestBody.BasicBody;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.request.LoginRequestBody.LoginType;
@@ -81,7 +82,7 @@ public final class CDCClient implements AutoCloseable {
     @SneakyThrows(InterruptedException.class)
     public void connect() {
         Bootstrap bootstrap = new Bootstrap();
-        group = new NioEventLoopGroup();
+        group = new NioEventLoopGroup(1);
         bootstrap.channel(NioSocketChannel.class)
                 .group(group)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -204,6 +205,24 @@ public final class CDCClient implements AutoCloseable {
         responseFuture.waitResponseResult(config.getTimeoutMills(), connectionContext);
         connectionContext.getStreamingIds().remove(streamingId);
         log.info("Stop streaming success, streaming id: {}", streamingId);
+    }
+    
+    /**
+     * Drop streaming.
+     *
+     * @param streamingId streaming id
+     */
+    public void dropStreaming(final String streamingId) {
+        String requestId = RequestIdUtils.generateRequestId();
+        DropStreamingRequestBody body = DropStreamingRequestBody.newBuilder().setStreamingId(streamingId).build();
+        CDCRequest request = CDCRequest.newBuilder().setRequestId(requestId).setType(Type.DROP_STREAMING).setDropStreamingRequestBody(body).build();
+        ResponseFuture responseFuture = new ResponseFuture(requestId, Type.DROP_STREAMING);
+        ClientConnectionContext connectionContext = channel.attr(ClientConnectionContext.CONTEXT_KEY).get();
+        connectionContext.getResponseFutureMap().put(requestId, responseFuture);
+        channel.writeAndFlush(request);
+        responseFuture.waitResponseResult(config.getTimeoutMills(), connectionContext);
+        connectionContext.getStreamingIds().remove(streamingId);
+        log.info("Drop streaming success, streaming id: {}", streamingId);
     }
     
     @Override

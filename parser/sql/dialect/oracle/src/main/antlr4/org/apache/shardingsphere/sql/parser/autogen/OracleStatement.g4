@@ -121,6 +121,8 @@ execute
     | alterRollbackSegment
     | alterDiskgroup
     | alterIndexType
+    | createMaterializedView
+    | createMaterializedViewLog
     | alterMaterializedView
     | alterMaterializedViewLog
     | alterFunction
@@ -151,5 +153,7 @@ execute
     | alterType
     | createType
     | createCluster
+    | createJava
+    | plsqlBlock
     ) SEMI_?
     ;

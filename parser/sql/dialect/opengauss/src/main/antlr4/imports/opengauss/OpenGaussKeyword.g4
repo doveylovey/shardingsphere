@@ -1440,3 +1440,11 @@ SET_MASKLEN
 TRUNC
     : T R U N C
     ;
+
+CLIENT_MASTER_KEY
+    : C L I E N T UL_ M A S T E R UL_ K E Y
+    ;
+
+COLUMN_ENCRYPTION_KEY
+    : C O L U M N UL_ E N C R Y P T I O N UL_ K E Y
+    ;

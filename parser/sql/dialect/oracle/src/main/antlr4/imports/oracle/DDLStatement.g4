@@ -324,7 +324,7 @@ identityOption
     ;
 
 encryptionSpecification
-    : (USING STRING_)? (IDENTIFIED BY STRING_)? (integrityAlgorithm? (NO? SALT)? | (NO? SALT)? integrityAlgorithm?)
+    : (USING STRING_)? (IDENTIFIED BY (STRING_ | IDENTIFIER_))? (integrityAlgorithm? (NO? SALT)? | (NO? SALT)? integrityAlgorithm?)
     ;
 
 inlineConstraint
@@ -468,7 +468,7 @@ dropSynonym
     ;
 
 columnClauses
-    : operateColumnClause+ | renameColumnClause | modifyCollectionRetrieval
+    : operateColumnClause+ | renameColumnClause | modifyCollectionRetrieval | modifylobStorageClause
     ;
 
 operateColumnClause
@@ -476,7 +476,7 @@ operateColumnClause
     ;
 
 addColumnSpecification
-    : ADD LP_ columnOrVirtualDefinitions RP_ columnProperties?
+    : ADD (LP_ columnOrVirtualDefinitions RP_ | columnOrVirtualDefinitions) columnProperties?
     ;
 
 columnOrVirtualDefinitions
@@ -2268,7 +2268,7 @@ auditingByClause
 
 auditOperationClause
     : (sqlStatementShortcut | ALL | ALL STATEMENTS) (COMMA_ sqlStatementShortcut | ALL | ALL STATEMENTS)*
-    | (systemPrivilege | ALL PRIVILEGES) (COMMA_ systemPrivilege | ALL PRIVILEGES) 
+    | (systemPrivilege | ALL PRIVILEGES) (COMMA_ systemPrivilege | ALL PRIVILEGES)*
     ;
 
 sqlStatementShortcut
@@ -3397,6 +3397,56 @@ arryDMLSubClause
     : LP_ typeName (COMMA_ varrayType)? RP_
     ;
 
+createMaterializedView
+    : CREATE MATERIALIZED VIEW materializedViewName (OF typeName )? materializedViewColumnClause? materializedViewPrebuiltClause materializedViewUsingClause? createMvRefresh? (FOR UPDATE)? ( (DISABLE | ENABLE) QUERY REWRITE )? AS selectSubquery
+    ;
+
+materializedViewColumnClause
+    : ( LP_ (scopedTableRefConstraint | mvColumnAlias) (COMMA_ (scopedTableRefConstraint | mvColumnAlias))* RP_ )
+    ;
+
+materializedViewPrebuiltClause
+    : ( ON PREBUILT TABLE ( (WITH | WITHOUT) REDUCED PRECISION)? | physicalProperties?  (CACHE | NOCACHE)? parallelClause? buildClause?)
+    ;
+
+materializedViewUsingClause
+    : ( USING INDEX ( (physicalAttributesClause | TABLESPACE tablespaceName)+ )* | USING NO INDEX)
+    ;
+
+mvColumnAlias
+    : (identifier | quotedString) (ENCRYPT encryptionSpecification)?
+    ;
+
+createMvRefresh
+    : ( NEVER REFRESH | REFRESH createMvRefreshOptions+)
+    ;
+
+createMvRefreshOptions
+    : ( (FAST | COMPLETE | FORCE) | ON (DEMAND | COMMIT) | (START WITH | NEXT) | WITH (PRIMARY KEY | ROWID) | USING ( DEFAULT (MASTER LOCAL)? ROLLBACK SEGMENT | (MASTER | LOCAL)? ROLLBACK SEGMENT rb_segment=REGULAR_ID ) | USING (ENFORCED | TRUSTED) CONSTRAINTS)
+    ;
+
+quotedString
+    : variableName
+    | CHAR_STRING
+    | NATIONAL_CHAR_STRING_LIT
+    ;
+
+buildClause
+    : BUILD (IMMEDIATE | DEFERRED)
+    ;
+
+createMaterializedViewLog
+    : CREATE MATERIALIZED VIEW LOG ON tableName materializedViewLogAttribute? parallelClause? ( WITH ( COMMA_? ( OBJECT ID | PRIMARY KEY | ROWID | SEQUENCE | COMMIT SCN ) )* (LP_ ( COMMA_? identifier )+ RP_ newViewValuesClause? )? mvLogPurgeClause? )*
+    ;
+
+materializedViewLogAttribute
+    : ( ( physicalAttributesClause | TABLESPACE tablespaceName | loggingClause | (CACHE | NOCACHE))+ )
+    ;
+
+newViewValuesClause
+    : (INCLUDING | EXCLUDING ) NEW VALUES
+    ;
+
 alterMaterializedView
     : ALTER MATERIALIZED VIEW materializedViewName materializedViewAttribute? alterIotClauses? (USING INDEX physicalAttributesClause)?
     ((MODIFY scopedTableRefConstraint) | alterMvRefresh)? evaluationEditionClause?
@@ -3872,7 +3922,7 @@ segmentManagementClause
     ;
 
 tablespaceGroupClause
-    : TABLESPACE GROUP tablespaceGroupName
+    : TABLESPACE GROUP (tablespaceGroupName | SQ_ SQ_)
     ;
 
 temporaryTablespaceClause
@@ -3908,12 +3958,13 @@ permanentTablespaceClause
 
 alterTablespace
     : ALTER TABLESPACE tablespaceName
-    ( MINIMUM EXTENT sizeClause
+    ( defaultTablespaceParams
+    | MINIMUM EXTENT sizeClause
     | RESIZE sizeClause
     | COALESCE
     | SHRINK SPACE (KEEP sizeClause)?
     | RENAME TO newTablespaceName
-    | (BEGIN|END) BACKUP
+    | (BEGIN | END) BACKUP
     | datafileTempfileClauses
     | tablespaceLoggingClauses
     | tablespaceGroupClause
@@ -3926,50 +3977,42 @@ alterTablespace
     )
     ;
 
-newTablespaceName
-    : identifier
+defaultTablespaceParams
+    : DEFAULT defaultTableCompression? defaultIndexCompression? inmemoryClause? ilmClause? storageClause?
+    ;
+
+defaultTableCompression
+    : TABLE (COMPRESS FOR OLTP | COMPRESS FOR QUERY (LOW | HIGH) | COMPRESS FOR ARCHIVE (LOW | HIGH) | NOCOMPRESS)
+    ;
+
+defaultIndexCompression
+    : INDEX (COMPRESS ADVANCED (LOW | HIGH) | NOCOMPRESS)
     ;
 
 datafileTempfileClauses
-    : ADD (datafileSpecification | tempfileSpecification)
-    | DROP (DATAFILE | TEMPFILE) (fileSpecification | UNSIGNED_INTEGER) (KEEP sizeClause)?
-    | SHRINK TEMPFILE (fileSpecification | UNSIGNED_INTEGER) (KEEP sizeClause)?
-    | RENAME DATAFILE fileSpecification (COMMA_ fileSpecification)* TO fileSpecification (COMMA_ fileSpecification)*
-    | (DATAFILE | TEMPFILE) (ONLINE|OFFLINE)
-    ;
-
-datafileSpecification
-    : DATAFILE
-      (COMMA_? datafileTempfileSpec)
-    ;
-
-tempfileSpecification
-    : TEMPFILE
-      (COMMA_? datafileTempfileSpec)
+    : ADD (DATAFILE | TEMPFILE) (fileSpecification (COMMA_ fileSpecification)*)?
+    | DROP (DATAFILE | TEMPFILE) (fileName | fileNumber)
+    | SHRINK TEMPFILE (fileName | fileNumber) (KEEP sizeClause)?
+    | RENAME DATAFILE fileName (COMMA_ fileName)* TO fileName (COMMA_ fileName)*
+    | (DATAFILE | TEMPFILE) (ONLINE | OFFLINE)
     ;
 
 tablespaceLoggingClauses
-    : loggingClause
-    | NO? FORCE LOGGING
+    : loggingClause | NO? FORCE LOGGING
     ;
 
 tablespaceStateClauses
-    : ONLINE
-    | OFFLINE (NORMAL | TEMPORARY | IMMEDIATE)?
-    | READ (ONLY | WRITE)
-    | PERMANENT
-    | TEMPORARY
+    : ONLINE | OFFLINE (NORMAL | TEMPORARY | IMMEDIATE)? | READ (ONLY | WRITE) | (PERMANENT | TEMPORARY)
     ;
 
 tablespaceFileNameConvert
-    : FILE_NAME_CONVERT EQ_ LP_ CHAR_STRING COMMA_ CHAR_STRING (COMMA_ CHAR_STRING COMMA_ CHAR_STRING)* RP_ KEEP?
+    : FILE_NAME_CONVERT EQ_ LP_ filenamePattern COMMA_ replacementFilenamePattern (COMMA_ filenamePattern COMMA_ replacementFilenamePattern)* RP_ KEEP?
     ;
 
 alterTablespaceEncryption
-    : ENCRYPTION ( OFFLINE (tablespaceEncryptionSpec? ENCRYPT | DECRYPT)
-                 | ONLINE (tablespaceEncryptionSpec? (ENCRYPT | REKEY) | DECRYPT) tablespaceFileNameConvert?
-                 | FINISH (ENCRYPT | REKEY | DECRYPT) tablespaceFileNameConvert?
-                 )
+    : ENCRYPTION(OFFLINE (tablespaceEncryptionSpec? ENCRYPT | DECRYPT) 
+    | ONLINE (tablespaceEncryptionSpec? (ENCRYPT | REKEY) | DECRYPT) tablespaceFileNameConvert?
+    | FINISH (ENCRYPT | REKEY | DECRYPT) tablespaceFileNameConvert?)
     ;
 
 dropFunction
@@ -4053,4 +4096,21 @@ createCluster
     (physicalAttributesClause | SET sizeClause | TABLESPACE tablespaceName | INDEX |
     (SINGLE TABLE)? HASHKEYS INTEGER_ (HASH IS functionName LP_ (argument (COMMA_ argument)*) RP_)?)?
     parallelClause? (NOROWDEPENDENCIES | ROWDEPENDENCIES)? (CACHE | NOCACHE)?
+    ;
+
+createJava
+    : CREATE (OR REPLACE)? (AND (RESOLVE | COMPILE))? NOFORCE? JAVA
+    ((SOURCE | RESOURCE) NAMED (schemaName DOT_)? primaryName
+    | CLASS (SCHEMA schemaName)?) invokerRightsClause? resolveClauses?
+    (usingClause | AS sourceText)
+    ;
+
+usingClause
+    : USING (fileType (LP_ directoryName COMMA_ serverFileName RP_ | subquery) | BQ_ keyForBlob BQ_)
+    ;
+
+fileType
+    : BFILE
+    | CLOB
+    | BLOB
     ;

@@ -115,7 +115,7 @@ unreservedWord1
     | DO | DEFINER | CURRENT_USER | CASCADED | CLOSE | OPEN | NEXT | NAME | NAMES
     | COLLATION | REAL | TYPE | FIRST | RANK | SAMPLE | SYSTIMESTAMP | MINUTE | ANY 
     | LENGTH | SINGLE_C | TIME_UNIT | TARGET | PUBLIC | ID | STATE | PRIORITY
-    | CONSTRAINT | PRIMARY | FOREIGN | KEY | POSITION | PRECISION | FUNCTION | PROCEDURE | SPECIFICATION | CASE
+    | PRIMARY | FOREIGN | KEY | POSITION | PRECISION | FUNCTION | PROCEDURE | SPECIFICATION | CASE
     | WHEN | CAST | TRIM | SUBSTRING | FULL | INNER | OUTER | LEFT | RIGHT | CROSS
     | USING | FALSE | SAVEPOINT | BODY | CHARACTER | ARRAY | TIME | TIMEOUT | TIMESTAMP | LOCALTIME
     | DAY | ENABLE | DISABLE | CALL | INSTANCE | CLOSE | NEXT | NAME | NUMERIC
@@ -180,7 +180,7 @@ unreservedWord1
     | HOST | PORT | EVERY | MINUTES | HOURS | NORELOCATE | SAVE | DISCARD | APPLICATION | INSTALL
     | MINIMUM | VERSION | UNINSTALL | COMPATIBILITY | MATERIALIZE | SUBTYPE | RECORD | CONSTANT | CURSOR
     | OTHERS | EXCEPTION | CPU_PER_SESSION | CONNECT_TIME | LOGICAL_READS_PER_SESSION | PRIVATE_SGA | PERCENT_RANK | ROWID
-    | LPAD | ZONE | SESSIONTIMEZONE | TO_CHAR | XMLELEMENT | COLUMN_VALUE | EVALNAME | LEVEL | CONTENT | ON
+    | LPAD | ZONE | SESSIONTIMEZONE | TO_CHAR | XMLELEMENT | COLUMN_VALUE | EVALNAME | LEVEL | CONTENT | ON | LOOP | EXIT | ELSIF
     ;
     
 unreservedWord2
@@ -439,6 +439,10 @@ tablespaceName
     : identifier
     ;
 
+newTablespaceName
+    : identifier
+    ;
+
 subprogramName
     : identifier
     ;
@@ -468,6 +472,10 @@ connectionQualifier
     ;
 
 functionName
+    : identifier
+    ;
+
+cursorName
     : identifier
     ;
 
@@ -775,7 +783,11 @@ leadLagInfo
 
 specialFunction
     : castFunction | charFunction | extractFunction | formatFunction | firstOrLastValueFunction | trimFunction | featureFunction
-    | setFunction | translateFunction | cursorFunction | toDateFunction
+    | setFunction | translateFunction | cursorFunction | toDateFunction | approxRank
+    ;
+
+approxRank
+    : APPROX_RANK LP_ queryPartitionClause? orderByClause RP_
     ;
 
 toDateFunction
@@ -1719,6 +1731,10 @@ filenamePattern
     : STRING_
     ;
 
+replacementFilenamePattern
+    : STRING_
+    ;
+
 connectString
     : STRING_
     ;
@@ -2060,5 +2076,25 @@ multisetOperator
     ;
 
 superview
+    : identifier
+    ;
+
+primaryName
+    : identifier
+    ;
+
+directoryObjectName
+    : identifier
+    ;
+
+serverFileName
+    : identifier
+    ;
+
+keyForBlob
+    : identifier
+    ;
+
+sourceText
     : identifier
     ;

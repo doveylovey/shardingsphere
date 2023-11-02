@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.distsql.handler.query;
 
-import org.apache.shardingsphere.distsql.parser.statement.rql.RQLStatement;
+import org.apache.shardingsphere.distsql.statement.rql.RQLStatement;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.spi.annotation.SingletonSPI;
@@ -43,11 +43,11 @@ public interface RQLExecutor<T extends RQLStatement> extends TypedSPI {
     /**
      * Get query result rows.
      * 
-     * @param shardingSphereDatabase ShardingSphere database
+     * @param database database
      * @param sqlStatement SQL statement
      * @return query result rows
      */
-    Collection<LocalDataQueryResultRow> getRows(ShardingSphereDatabase shardingSphereDatabase, T sqlStatement);
+    Collection<LocalDataQueryResultRow> getRows(ShardingSphereDatabase database, T sqlStatement);
     
     @Override
     Class<T> getType();

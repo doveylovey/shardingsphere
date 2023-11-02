@@ -21,14 +21,13 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-distribution</artifactId>
-        <version>5.4.1-SNAPSHOT</version>
+        <version>5.4.2-SNAPSHOT</version>
     </parent>
     
     <artifactId>shardingsphere-proxy-native-distribution</artifactId>
     
     <properties>
         <imageName>apache-shardingsphere-proxy-native</imageName>
-        <mainClass>org.apache.shardingsphere.proxy.Bootstrap</mainClass>
         <native.image.repository>apache/shardingsphere-proxy-native</native.image.repository>
     </properties>
     
@@ -89,7 +88,6 @@
                 <finalName>apache-shardingsphere-${project.version}</finalName>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <version>${maven-compiler-plugin.version}</version>
                         <configuration>
@@ -103,8 +101,7 @@
                         <version>${native-maven-plugin.version}</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <fallback>false</fallback>
-                            <verbose>true</verbose>
+                            <mainClass>org.apache.shardingsphere.proxy.Bootstrap</mainClass>
                             <buildArgs>
                                 <arg>--report-unsupported-elements-at-runtime</arg>
                                 <arg>-J-Xmx7g</arg>
