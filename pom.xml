@@ -87,7 +87,8 @@
         <freemarker.version>2.3.31</freemarker.version>
         <bytebuddy.version>1.14.8</bytebuddy.version>
         
-        <jaxb.version>2.3.0</jaxb.version>
+        <jaxb-api.version>2.3.1</jaxb-api.version>
+        <jaxb-runtime.version>2.3.1</jaxb-runtime.version>
         <annotation-api.version>1.3.2</annotation-api.version>
         <activation-api.version>1.2.0</activation-api.version>
         
@@ -117,8 +118,8 @@
         
         <elasticjob.version>3.0.4</elasticjob.version>
         
-        <slf4j.version>2.0.9</slf4j.version>
-        <logback.version>1.3.11</logback.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <logback.version>1.2.12</logback.version>
         <commons-logging.version>1.2</commons-logging.version>
         
         <lombok.version>1.18.30</lombok.version>
@@ -154,7 +155,7 @@
         <dockerfile-maven.version>1.4.13</dockerfile-maven.version>
         <docker-compose-maven-plugin.version>4.0.0</docker-compose-maven-plugin.version>
         <os-maven-plugin.version>1.6.2</os-maven-plugin.version>
-        <native-maven-plugin.version>0.9.27</native-maven-plugin.version>
+        <native-maven-plugin.version>0.9.28</native-maven-plugin.version>
         
         <!-- Compile plugin versions -->
         <templating-maven-plugin.version>1.0.0</templating-maven-plugin.version>
@@ -298,17 +299,12 @@
             <dependency>
                 <groupId>javax.xml.bind</groupId>
                 <artifactId>jaxb-api</artifactId>
-                <version>${jaxb.version}</version>
+                <version>${jaxb-api.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.sun.xml.bind</groupId>
-                <artifactId>jaxb-core</artifactId>
-                <version>${jaxb.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.xml.bind</groupId>
-                <artifactId>jaxb-impl</artifactId>
-                <version>${jaxb.version}</version>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>${jaxb-runtime.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.annotation</groupId>
@@ -441,10 +437,18 @@
             
             <dependency>
                 <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-bom</artifactId>
+                <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             
             <dependency>
@@ -598,6 +602,12 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -998,8 +1008,9 @@
             </build>
         </profile>
         <profile>
-            <id>generateStandardMetadata</id>
+            <id>generateMetadata</id>
             <properties>
+                <java.version>17</java.version>
                 <jacoco.skip>true</jacoco.skip>
                 <maven.javadoc.skip>true</maven.javadoc.skip>
                 <checkstyle.skip>true</checkstyle.skip>
@@ -1007,64 +1018,106 @@
                 <spotless.apply.skip>true</spotless.apply.skip>
             </properties>
             <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <version>${maven-compiler-plugin.version}</version>
-                        <configuration>
-                            <source>17</source>
-                            <target>17</target>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven-surefire-plugin.version}</version>
-                        <configuration>
-                            <excludes>
-                                <exclude>org.apache.shardingsphere.agent.core.**</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.graalvm.buildtools</groupId>
-                        <artifactId>native-maven-plugin</artifactId>
-                        <version>${native-maven-plugin.version}</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <agent>
-                                <enabled>true</enabled>
-                                <defaultMode>Direct</defaultMode>
-                                <modes>
-                                    <direct>config-output-dir=${project.basedir}/src/main/resources/META-INF/native-image/${project.groupId}/${project.artifactId}</direct>
-                                </modes>
-                                <options>
-                                    <callerFilterFiles>
-                                        <filterFile>${user.dir}/distribution/proxy-native/caller-filter.json</filterFile>
-                                    </callerFilterFiles>
-                                    <accessFilterFiles>
-                                        <filterFile>${user.dir}/distribution/proxy-native/access-filter.json</filterFile>
-                                    </accessFilterFiles>
-                                </options>
-                            </agent>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>test-native</id>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <phase>test</phase>
-                            </execution>
-                            <execution>
-                                <id>build-native</id>
-                                <goals>
-                                    <goal>compile-no-fork</goal>
-                                </goals>
-                                <phase>package</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <version>${maven-surefire-plugin.version}</version>
+                            <configuration>
+                                <includes>
+                                    <include>org.apache.shardingsphere.test.natived.**</include>
+                                </includes>
+                            </configuration>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.graalvm.buildtools</groupId>
+                            <artifactId>native-maven-plugin</artifactId>
+                            <version>${native-maven-plugin.version}</version>
+                            <extensions>true</extensions>
+                            <configuration>
+                                <agent>
+                                    <enabled>true</enabled>
+                                    <defaultMode>Conditional</defaultMode>
+                                    <modes>
+                                        <conditional>
+                                            <userCodeFilterPath>${user.dir}/test/natived/native-image-filter/user-code-filter.json</userCodeFilterPath>
+                                            <extraFilterPath>${user.dir}/test/natived/native-image-filter/extra-filter.json</extraFilterPath>
+                                            <parallel>true</parallel>
+                                        </conditional>
+                                    </modes>
+                                    <metadataCopy>
+                                        <disabledStages>
+                                            <stage>main</stage>
+                                        </disabledStages>
+                                        <merge>false</merge>
+                                        <outputDirectory>${user.dir}/infra/reachability-metadata/src/main/resources/META-INF/native-image/org.apache.shardingsphere/shardingsphere-infra-reachability-metadata/</outputDirectory>
+                                    </metadataCopy>
+                                </agent>
+                            </configuration>
+                            <executions>
+                                <execution>
+                                    <id>build-native</id>
+                                    <goals>
+                                        <goal>compile-no-fork</goal>
+                                    </goals>
+                                    <phase>package</phase>
+                                </execution>
+                                <execution>
+                                    <id>test-native</id>
+                                    <goals>
+                                        <goal>test</goal>
+                                    </goals>
+                                    <phase>test</phase>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+        <profile>
+            <id>nativeTestInShardingSphere</id>
+            <properties>
+                <java.version>17</java.version>
+            </properties>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <configuration>
+                                <includes>
+                                    <include>org.apache.shardingsphere.test.natived.**</include>
+                                </includes>
+                            </configuration>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.graalvm.buildtools</groupId>
+                            <artifactId>native-maven-plugin</artifactId>
+                            <version>${native-maven-plugin.version}</version>
+                            <extensions>true</extensions>
+                            <configuration>
+                                <buildArgs>
+                                    <arg>--report-unsupported-elements-at-runtime</arg>
+                                </buildArgs>
+                                <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                                <metadataRepository>
+                                    <enabled>true</enabled>
+                                </metadataRepository>
+                            </configuration>
+                            <executions>
+                                <execution>
+                                    <id>test-native</id>
+                                    <goals>
+                                        <goal>test</goal>
+                                    </goals>
+                                    <phase>test</phase>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
             </build>
         </profile>
         <profile>

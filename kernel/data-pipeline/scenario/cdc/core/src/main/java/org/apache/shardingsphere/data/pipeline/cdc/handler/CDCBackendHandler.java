@@ -47,6 +47,7 @@ import org.apache.shardingsphere.data.pipeline.common.context.PipelineContextMan
 import org.apache.shardingsphere.data.pipeline.core.exception.job.PipelineJobNotFoundException;
 import org.apache.shardingsphere.data.pipeline.core.exception.param.PipelineInvalidParameterException;
 import org.apache.shardingsphere.data.pipeline.core.job.PipelineJobCenter;
+import org.apache.shardingsphere.data.pipeline.core.job.service.PipelineJobManager;
 import org.apache.shardingsphere.infra.database.core.metadata.database.DialectDatabaseMetaData;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.database.opengauss.type.OpenGaussDatabaseType;
@@ -71,6 +72,8 @@ public final class CDCBackendHandler {
     
     private final CDCJobAPI jobAPI = new CDCJobAPI();
     
+    private final PipelineJobManager jobManager = new PipelineJobManager(jobAPI);
+    
     /**
      * Get database name by job ID.
      *
@@ -78,7 +81,7 @@ public final class CDCBackendHandler {
      * @return database
      */
     public String getDatabaseNameByJobId(final String jobId) {
-        return jobAPI.getJobConfiguration(jobId).getDatabaseName();
+        return jobManager.<CDCJobConfiguration>getJobConfiguration(jobId).getDatabaseName();
     }
     
     /**
@@ -126,7 +129,7 @@ public final class CDCBackendHandler {
      * @param connectionContext connection context
      */
     public void startStreaming(final String jobId, final CDCConnectionContext connectionContext, final Channel channel) {
-        CDCJobConfiguration cdcJobConfig = jobAPI.getJobConfiguration(jobId);
+        CDCJobConfiguration cdcJobConfig = jobManager.getJobConfiguration(jobId);
         ShardingSpherePreconditions.checkNotNull(cdcJobConfig, () -> new PipelineJobNotFoundException(jobId));
         if (PipelineJobCenter.isJobExisting(jobId)) {
             PipelineJobCenter.stop(jobId);
@@ -164,7 +167,7 @@ public final class CDCBackendHandler {
      * @param jobId job ID
      */
     public void dropStreaming(final String jobId) {
-        jobAPI.stopAndDrop(jobId);
+        jobAPI.dropStreaming(jobId);
     }
     
     /**

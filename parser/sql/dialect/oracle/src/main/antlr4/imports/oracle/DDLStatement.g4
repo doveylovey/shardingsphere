@@ -17,13 +17,13 @@
 
 grammar DDLStatement;
 
-import BaseRule, DCLStatement, DMLStatement;
+import DMLStatement, DCLStatement;
 
 createView
     : CREATE (OR REPLACE)? (NO? FORCE)? (EDITIONING | EDITIONABLE EDITIONING? | NONEDITIONABLE)? VIEW viewName
     ( SHARING EQ_ (METADATA | DATA | EXTENDED DATA | NONE))?
-    ( LP_ (alias (VISIBLE | INVISIBLE)? inlineConstraint* (COMMA_ alias (VISIBLE | INVISIBLE)? inlineConstraint*)*
-    | outOfLineConstraint) RP_ | objectViewClause | xmlTypeViewClause)?
+    ( LP_ ((alias (VISIBLE | INVISIBLE)? inlineConstraint* | outOfLineConstraint) (COMMA_ (alias (VISIBLE | INVISIBLE)? inlineConstraint* | outOfLineConstraint))*) RP_
+    | objectViewClause | xmlTypeViewClause)?
     ( DEFAULT COLLATION collationName)? (BEQUEATH (CURRENT_USER | DEFINER))? AS select subqueryRestrictionClause?
     ( CONTAINER_MAP | CONTAINERS_DEFAULT)?
     ;
@@ -2752,7 +2752,8 @@ dropFlashbackArchive
     ;
 
 createDiskgroup
-    : CREATE DISKGROUP diskgroupName ((HIGH | NORMAL | FLEX | EXTENDED (SITE siteName)? | EXTERNAL) REDUNDANCY)? diskClause+ attribute?
+    : CREATE DISKGROUP diskgroupName ((HIGH | NORMAL | FLEX | EXTENDED (SITE siteName)? | EXTERNAL) REDUNDANCY)? diskClause+
+    ( ATTRIBUTE attributeName EQ_ attributeValue (COMMA_ attributeName EQ_ attributeValue)*)?
     ;
 
 diskClause
@@ -2761,14 +2762,6 @@ diskClause
 
 qualifieDiskClause
     : searchString (NAME diskName)? (SIZE sizeClause)? (FORCE | NOFORCE)?
-    ;
-
-attribute
-    : ATTRIBUTE attributeNameAndValue (COMMA_ attributeNameAndValue)*
-    ;
-
-attributeNameAndValue
-    : attributeName EQ_ attributeValue
     ;
 
 dropDiskgroup
@@ -3260,7 +3253,7 @@ modifyVolumeClause
     ;
 
 diskgroupAttributes
-    : SET ATTRIBUTE attributeNameAndValue
+    : SET ATTRIBUTE attributeName EQ_ attributeValue
     ;
 
 modifyDiskgroupFile
@@ -4010,7 +4003,7 @@ tablespaceFileNameConvert
     ;
 
 alterTablespaceEncryption
-    : ENCRYPTION(OFFLINE (tablespaceEncryptionSpec? ENCRYPT | DECRYPT) 
+    : ENCRYPTION(OFFLINE (tablespaceEncryptionSpec? ENCRYPT | DECRYPT)
     | ONLINE (tablespaceEncryptionSpec? (ENCRYPT | REKEY) | DECRYPT) tablespaceFileNameConvert?
     | FINISH (ENCRYPT | REKEY | DECRYPT) tablespaceFileNameConvert?)
     ;
@@ -4114,3 +4107,34 @@ fileType
     | CLOB
     | BLOB
     ;
+
+createLibrary
+    : CREATE (OR REPLACE)? (EDITIONABLE | NONEDITIONABLE)? LIBRARY plsqlLibrarySource
+    ;
+
+plsqlLibrarySource
+    : libraryName sharingClause? (IS | AS) (fullPathName | (fileName IN directoryObject)) agentClause
+    ;
+
+agentClause
+    : (AGENT agentDblink)? (CREDENTIAL credentialName)?
+    ;
+
+switch
+    : SWITCH switchClause TO COPY
+    ;
+
+switchClause
+    : DATABASE
+    | DATAFILE datafileSpecClause (COMMA_ datafileSpecClause)*
+    | TABLESPACE SQ_? tablespaceName SQ_? (COMMA_ SQ_? tablespaceName SQ_?)*
+    ;
+
+datafileSpecClause
+    : SQ_ fileName SQ_ | INTEGER_
+    ;
+
+createProfile
+    : CREATE MANDATORY? PROFILE profileName LIMIT (resourceParameters | passwordParameters)+ (CONTAINER EQ_ (CURRENT | ALL))?
+    ;
+

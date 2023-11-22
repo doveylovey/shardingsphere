@@ -17,8 +17,10 @@
 
 package org.apache.shardingsphere.data.pipeline.common.registrycenter.repository;
 
-import org.apache.shardingsphere.data.pipeline.common.job.type.JobType;
+import org.apache.shardingsphere.data.pipeline.common.job.PipelineJob;
+import org.apache.shardingsphere.data.pipeline.common.job.progress.JobOffsetInfo;
 import org.apache.shardingsphere.data.pipeline.core.consistencycheck.result.TableDataConsistencyCheckResult;
+import org.apache.shardingsphere.elasticjob.infra.pojo.JobConfigurationPOJO;
 import org.apache.shardingsphere.mode.repository.cluster.listener.DataChangedEventListener;
 
 import java.util.Collection;
@@ -32,12 +34,19 @@ import java.util.Optional;
 public interface GovernanceRepositoryAPI {
     
     /**
-     * Whether key existing or not.
+     * Watch pipeLine root path.
      *
-     * @param key registry center key
-     * @return true if job exists, else false
+     * @param listener data changed event listener
      */
-    boolean isExisted(String key);
+    void watchPipeLineRootPath(DataChangedEventListener listener);
+    
+    /**
+     * Whether job configuration existed.
+     *
+     * @param jobId jobId
+     * @return job configuration exist or not
+     */
+    boolean isJobConfigurationExisted(String jobId);
     
     /**
      * Persist job offset info.
@@ -45,7 +54,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobId job id
      * @param jobOffsetInfo job offset info
      */
-    void persistJobOffsetInfo(String jobId, String jobOffsetInfo);
+    void persistJobOffsetInfo(String jobId, JobOffsetInfo jobOffsetInfo);
     
     /**
      * Get job offset info.
@@ -53,7 +62,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobId job id
      * @return job offset info
      */
-    Optional<String> getJobOffsetInfo(String jobId);
+    JobOffsetInfo getJobOffsetInfo(String jobId);
     
     /**
      * Persist job item progress.
@@ -147,36 +156,29 @@ public interface GovernanceRepositoryAPI {
     void deleteJob(String jobId);
     
     /**
-     * Get node's sub-nodes list.
+     * Persist job root info.
      *
-     * @param key key of data
-     * @return sub-nodes name list
+     * @param jobId job ID
+     * @param jobClass job class
      */
-    List<String> getChildrenKeys(String key);
+    void persistJobRootInfo(String jobId, Class<? extends PipelineJob> jobClass);
     
     /**
-     * Watch key or path of governance server.
-     *
-     * @param key key of data
-     * @param listener data changed event listener
+     * Persist job configuration.
+     * 
+     * @param jobId job ID
+     * @param jobConfigPOJO job configuration POJO
      */
-    void watch(String key, DataChangedEventListener listener);
+    void persistJobConfiguration(String jobId, JobConfigurationPOJO jobConfigPOJO);
     
     /**
-     * Persist data.
+     * Update job item error message.
      *
-     * @param key key of data
-     * @param value value of data
+     * @param jobId job ID
+     * @param shardingItem sharding item
+     * @param errorMessage error message
      */
-    void persist(String key, String value);
-    
-    /**
-     * Update data.
-     *
-     * @param key key of data
-     * @param value value of data
-     */
-    void update(String key, String value);
+    void updateJobItemErrorMessage(String jobId, int shardingItem, String errorMessage);
     
     /**
      * Get sharding items of job.
@@ -192,7 +194,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobType job type
      * @return data source properties
      */
-    String getMetaDataDataSources(JobType jobType);
+    String getMetaDataDataSources(String jobType);
     
     /**
      * Persist meta data data sources.
@@ -200,7 +202,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobType job type
      * @param metaDataDataSources data source properties
      */
-    void persistMetaDataDataSources(JobType jobType, String metaDataDataSources);
+    void persistMetaDataDataSources(String jobType, String metaDataDataSources);
     
     /**
      * Get meta data process configuration.
@@ -208,7 +210,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobType job type, nullable
      * @return process configuration YAML text
      */
-    String getMetaDataProcessConfiguration(JobType jobType);
+    String getMetaDataProcessConfiguration(String jobType);
     
     /**
      * Persist meta data process configuration.
@@ -216,7 +218,7 @@ public interface GovernanceRepositoryAPI {
      * @param jobType job type, nullable
      * @param processConfigYamlText process configuration YAML text
      */
-    void persistMetaDataProcessConfiguration(JobType jobType, String processConfigYamlText);
+    void persistMetaDataProcessConfiguration(String jobType, String processConfigYamlText);
     
     /**
      * Get job item error msg.

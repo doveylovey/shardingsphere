@@ -17,22 +17,14 @@
 
 package org.apache.shardingsphere.data.pipeline.core.job.service;
 
-import org.apache.shardingsphere.data.pipeline.common.config.PipelineTaskConfiguration;
-import org.apache.shardingsphere.data.pipeline.common.config.job.PipelineJobConfiguration;
-import org.apache.shardingsphere.data.pipeline.common.config.job.yaml.YamlPipelineJobConfiguration;
-import org.apache.shardingsphere.data.pipeline.common.config.process.PipelineProcessConfiguration;
-import org.apache.shardingsphere.data.pipeline.common.context.PipelineContextKey;
-import org.apache.shardingsphere.data.pipeline.common.context.PipelineJobItemContext;
-import org.apache.shardingsphere.data.pipeline.common.context.PipelineProcessContext;
-import org.apache.shardingsphere.data.pipeline.common.job.JobStatus;
-import org.apache.shardingsphere.data.pipeline.common.job.PipelineJobId;
+import org.apache.shardingsphere.data.pipeline.common.job.PipelineJob;
 import org.apache.shardingsphere.data.pipeline.common.job.progress.PipelineJobItemProgress;
-import org.apache.shardingsphere.data.pipeline.common.job.type.JobType;
-import org.apache.shardingsphere.data.pipeline.common.pojo.PipelineJobInfo;
+import org.apache.shardingsphere.data.pipeline.core.job.yaml.YamlPipelineJobConfigurationSwapper;
+import org.apache.shardingsphere.data.pipeline.core.job.yaml.YamlPipelineJobItemProgressConfiguration;
+import org.apache.shardingsphere.data.pipeline.core.job.yaml.YamlPipelineJobItemProgressSwapper;
 import org.apache.shardingsphere.infra.spi.annotation.SingletonSPI;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPI;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -42,139 +34,54 @@ import java.util.Optional;
 public interface PipelineJobAPI extends TypedSPI {
     
     /**
-     * Get job type.
-     *
-     * @return job type
+     * Get YAML pipeline job configuration swapper.
+     * 
+     * @return YAML pipeline job configuration swapper
      */
-    JobType getJobType();
+    YamlPipelineJobConfigurationSwapper<?, ?> getYamlJobConfigurationSwapper();
     
     /**
-     * Marshal pipeline job id.
-     *
-     * @param pipelineJobId pipeline job id
-     * @return marshaled text
+     * Get YAML pipeline job item progress swapper.
+     * 
+     * @param <T> type of pipeline job item progress
+     * @return YAML pipeline job item progress swapper
      */
-    String marshalJobId(PipelineJobId pipelineJobId);
+    <T extends PipelineJobItemProgress> YamlPipelineJobItemProgressSwapper<YamlPipelineJobItemProgressConfiguration, T> getYamlJobItemProgressSwapper();
     
     /**
-     * Extend YAML job configuration.
-     *
-     * @param contextKey context key
-     * @param yamlJobConfig YAML job configuration
+     * Whether to ignore to start disabled job when job item progress is finished.
+     * 
+     * @return ignore to start disabled job when job item progress is finished or not
      */
-    void extendYamlJobConfiguration(PipelineContextKey contextKey, YamlPipelineJobConfiguration yamlJobConfig);
+    default boolean isIgnoreToStartDisabledJobWhenJobItemProgressIsFinished() {
+        return false;
+    }
     
     /**
-     * Build task configuration.
+     * Get to be start disabled next job type.
      *
-     * @param pipelineJobConfig pipeline job configuration
-     * @param jobShardingItem job sharding item
-     * @param pipelineProcessConfig pipeline process configuration
-     * @return task configuration
+     * @return to be start disabled next job type
      */
-    PipelineTaskConfiguration buildTaskConfiguration(PipelineJobConfiguration pipelineJobConfig, int jobShardingItem, PipelineProcessConfiguration pipelineProcessConfig);
+    default Optional<String> getToBeStartDisabledNextJobType() {
+        return Optional.empty();
+    }
     
     /**
-     * Build pipeline process context.
+     * Get to be stopped previous job type.
      *
-     * @param pipelineJobConfig pipeline job configuration
-     * @return pipeline process context
+     * @return to be stopped previous job type
      */
-    PipelineProcessContext buildPipelineProcessContext(PipelineJobConfiguration pipelineJobConfig);
+    default Optional<String> getToBeStoppedPreviousJobType() {
+        return Optional.empty();
+    }
     
     /**
-     * Start job.
-     *
-     * @param jobConfig job configuration
-     * @return job id
+     * Get pipeline job class.
+     * 
+     * @return pipeline job class
      */
-    Optional<String> start(PipelineJobConfiguration jobConfig);
+    Class<? extends PipelineJob> getJobClass();
     
-    /**
-     * Start disabled job.
-     *
-     * @param jobId job id
-     */
-    void startDisabledJob(String jobId);
-    
-    /**
-     * Stop pipeline job.
-     *
-     * @param jobId job id
-     */
-    void stop(String jobId);
-    
-    /**
-     * Get job configuration.
-     *
-     * @param jobId job id
-     * @return job configuration
-     */
-    PipelineJobConfiguration getJobConfiguration(String jobId);
-    
-    /**
-     * Get pipeline job info.
-     *
-     * @param contextKey context key
-     * @return job info list
-     */
-    List<PipelineJobInfo> list(PipelineContextKey contextKey);
-    
-    /**
-     * Persist job item progress.
-     *
-     * @param jobItemContext job item context
-     */
-    void persistJobItemProgress(PipelineJobItemContext jobItemContext);
-    
-    /**
-     * Update job item progress.
-     *
-     * @param jobItemContext job item context
-     */
-    void updateJobItemProgress(PipelineJobItemContext jobItemContext);
-    
-    /**
-     * Get job item progress.
-     *
-     * @param jobId job id
-     * @param shardingItem sharding item
-     * @return job item progress, may be null
-     */
-    Optional<? extends PipelineJobItemProgress> getJobItemProgress(String jobId, int shardingItem);
-    
-    /**
-     * Update job item status.
-     *
-     * @param jobId job id
-     * @param shardingItem sharding item
-     * @param status status
-     */
-    void updateJobItemStatus(String jobId, int shardingItem, JobStatus status);
-    
-    /**
-     * Get job item error message.
-     *
-     * @param jobId job id
-     * @param shardingItem sharding item
-     * @return map, key is sharding item, value is error message
-     */
-    String getJobItemErrorMessage(String jobId, int shardingItem);
-    
-    /**
-     * Update job item error message.
-     *
-     * @param jobId job id
-     * @param shardingItem sharding item
-     * @param error error
-     */
-    void updateJobItemErrorMessage(String jobId, int shardingItem, Object error);
-    
-    /**
-     * Clean job item error message.
-     *
-     * @param jobId job id
-     * @param shardingItem sharding item
-     */
-    void cleanJobItemErrorMessage(String jobId, int shardingItem);
+    @Override
+    String getType();
 }

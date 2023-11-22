@@ -17,20 +17,26 @@
 
 package org.apache.shardingsphere.test.it.data.pipeline.core.job.service;
 
-import org.apache.shardingsphere.data.pipeline.api.config.ingest.InventoryDumperConfiguration;
-import org.apache.shardingsphere.data.pipeline.api.ingest.dumper.Dumper;
-import org.apache.shardingsphere.data.pipeline.common.constant.DataPipelineConstants;
+import org.apache.shardingsphere.data.pipeline.common.context.PipelineContextManager;
 import org.apache.shardingsphere.data.pipeline.common.ingest.position.PlaceholderPosition;
+import org.apache.shardingsphere.data.pipeline.common.job.progress.JobOffsetInfo;
+import org.apache.shardingsphere.data.pipeline.common.metadata.node.PipelineNodePath;
 import org.apache.shardingsphere.data.pipeline.common.registrycenter.repository.GovernanceRepositoryAPI;
 import org.apache.shardingsphere.data.pipeline.core.consistencycheck.result.TableDataConsistencyCheckResult;
 import org.apache.shardingsphere.data.pipeline.core.importer.Importer;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.Dumper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.InventoryDumperContext;
 import org.apache.shardingsphere.data.pipeline.core.job.service.PipelineAPIFactory;
 import org.apache.shardingsphere.data.pipeline.core.task.InventoryTask;
 import org.apache.shardingsphere.data.pipeline.core.task.PipelineTaskUtils;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.config.MigrationTaskConfiguration;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.context.MigrationJobItemContext;
+import org.apache.shardingsphere.elasticjob.infra.pojo.JobConfigurationPOJO;
+import org.apache.shardingsphere.infra.util.yaml.YamlEngine;
 import org.apache.shardingsphere.mode.event.DataChangedEvent;
 import org.apache.shardingsphere.mode.event.DataChangedEvent.Type;
+import org.apache.shardingsphere.mode.manager.ContextManager;
+import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepository;
 import org.apache.shardingsphere.test.it.data.pipeline.core.util.JobConfigurationBuilder;
 import org.apache.shardingsphere.test.it.data.pipeline.core.util.PipelineContextUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,10 +54,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 class GovernanceRepositoryAPIImplTest {
@@ -70,8 +76,8 @@ class GovernanceRepositoryAPIImplTest {
     }
     
     private static void watch() {
-        governanceRepositoryAPI.watch(DataPipelineConstants.DATA_PIPELINE_ROOT, event -> {
-            if ((DataPipelineConstants.DATA_PIPELINE_ROOT + "/1").equals(event.getKey())) {
+        governanceRepositoryAPI.watchPipeLineRootPath(event -> {
+            if ((PipelineNodePath.DATA_PIPELINE_ROOT + "/1").equals(event.getKey())) {
                 EVENT_ATOMIC_REFERENCE.set(event);
                 COUNT_DOWN_LATCH.countDown();
             }
@@ -79,11 +85,13 @@ class GovernanceRepositoryAPIImplTest {
     }
     
     @Test
-    void assertIsExisted() {
-        String testKey = "/testKey1";
-        assertFalse(governanceRepositoryAPI.isExisted(testKey));
-        governanceRepositoryAPI.persist(testKey, "testValue1");
-        assertTrue(governanceRepositoryAPI.isExisted(testKey));
+    void assertIsJobConfigurationExisted() {
+        assertFalse(governanceRepositoryAPI.isJobConfigurationExisted("foo_job"));
+        JobConfigurationPOJO value = new JobConfigurationPOJO();
+        value.setJobName("foo_job");
+        value.setShardingTotalCount(1);
+        getClusterPersistRepository().persist("/pipeline/jobs/foo_job/config", YamlEngine.marshal(value));
+        assertTrue(governanceRepositoryAPI.isJobConfigurationExisted("foo_job"));
     }
     
     @Test
@@ -114,24 +122,16 @@ class GovernanceRepositoryAPIImplTest {
     
     @Test
     void assertDeleteJob() {
-        governanceRepositoryAPI.persist(DataPipelineConstants.DATA_PIPELINE_ROOT + "/1", "");
+        getClusterPersistRepository().persist(PipelineNodePath.DATA_PIPELINE_ROOT + "/1", "");
         governanceRepositoryAPI.deleteJob("1");
         Optional<String> actual = governanceRepositoryAPI.getJobItemProgress("1", 0);
         assertFalse(actual.isPresent());
     }
     
     @Test
-    void assertGetChildrenKeys() {
-        governanceRepositoryAPI.persist(DataPipelineConstants.DATA_PIPELINE_ROOT + "/1", "");
-        List<String> actual = governanceRepositoryAPI.getChildrenKeys(DataPipelineConstants.DATA_PIPELINE_ROOT);
-        assertFalse(actual.isEmpty());
-        assertTrue(actual.contains("1"));
-    }
-    
-    @Test
     void assertWatch() throws InterruptedException {
-        String key = DataPipelineConstants.DATA_PIPELINE_ROOT + "/1";
-        governanceRepositoryAPI.persist(key, "");
+        String key = PipelineNodePath.DATA_PIPELINE_ROOT + "/1";
+        getClusterPersistRepository().persist(key, "");
         boolean awaitResult = COUNT_DOWN_LATCH.await(10, TimeUnit.SECONDS);
         assertTrue(awaitResult);
         DataChangedEvent event = EVENT_ATOMIC_REFERENCE.get();
@@ -150,11 +150,9 @@ class GovernanceRepositoryAPIImplTest {
     
     @Test
     void assertPersistJobOffsetInfo() {
-        assertFalse(governanceRepositoryAPI.getJobOffsetInfo("1").isPresent());
-        governanceRepositoryAPI.persistJobOffsetInfo("1", "testValue");
-        Optional<String> actual = governanceRepositoryAPI.getJobOffsetInfo("1");
-        assertTrue(actual.isPresent());
-        assertThat(actual.get(), is("testValue"));
+        assertFalse(governanceRepositoryAPI.getJobOffsetInfo("1").isTargetSchemaTableCreated());
+        governanceRepositoryAPI.persistJobOffsetInfo("1", new JobOffsetInfo(true));
+        assertTrue(governanceRepositoryAPI.getJobOffsetInfo("1").isTargetSchemaTableCreated());
     }
     
     @Test
@@ -169,6 +167,11 @@ class GovernanceRepositoryAPIImplTest {
         assertFalse(governanceRepositoryAPI.getLatestCheckJobId(parentJobId).isPresent(), "Expected no checkJobId to be present after deletion");
     }
     
+    private ClusterPersistRepository getClusterPersistRepository() {
+        ContextManager contextManager = PipelineContextManager.getContext(PipelineContextUtils.getContextKey()).getContextManager();
+        return (ClusterPersistRepository) contextManager.getMetaDataContexts().getPersistService().getRepository();
+    }
+    
     private MigrationJobItemContext mockJobItemContext() {
         MigrationJobItemContext result = PipelineContextUtils.mockMigrationJobItemContext(JobConfigurationBuilder.createJobConfiguration());
         MigrationTaskConfiguration taskConfig = result.getTaskConfig();
@@ -177,13 +180,13 @@ class GovernanceRepositoryAPIImplTest {
     }
     
     private InventoryTask mockInventoryTask(final MigrationTaskConfiguration taskConfig) {
-        InventoryDumperConfiguration dumperConfig = new InventoryDumperConfiguration(taskConfig.getDumperConfig());
-        dumperConfig.setPosition(new PlaceholderPosition());
-        dumperConfig.setActualTableName("t_order");
-        dumperConfig.setLogicTableName("t_order");
-        dumperConfig.setUniqueKeyColumns(Collections.singletonList(PipelineContextUtils.mockOrderIdColumnMetaData()));
-        dumperConfig.setShardingItem(0);
-        return new InventoryTask(PipelineTaskUtils.generateInventoryTaskId(dumperConfig), PipelineContextUtils.getExecuteEngine(), PipelineContextUtils.getExecuteEngine(),
+        InventoryDumperContext dumperContext = new InventoryDumperContext(taskConfig.getDumperContext().getCommonContext());
+        dumperContext.getCommonContext().setPosition(new PlaceholderPosition());
+        dumperContext.setActualTableName("t_order");
+        dumperContext.setLogicTableName("t_order");
+        dumperContext.setUniqueKeyColumns(Collections.singletonList(PipelineContextUtils.mockOrderIdColumnMetaData()));
+        dumperContext.setShardingItem(0);
+        return new InventoryTask(PipelineTaskUtils.generateInventoryTaskId(dumperContext), PipelineContextUtils.getExecuteEngine(), PipelineContextUtils.getExecuteEngine(),
                 mock(Dumper.class), mock(Importer.class), new AtomicReference<>(new PlaceholderPosition()));
     }
 }

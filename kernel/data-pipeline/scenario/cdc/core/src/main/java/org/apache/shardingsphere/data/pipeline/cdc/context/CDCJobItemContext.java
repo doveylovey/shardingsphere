@@ -18,12 +18,10 @@
 package org.apache.shardingsphere.data.pipeline.cdc.context;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.concurrent.ConcurrentException;
 import org.apache.commons.lang3.concurrent.LazyInitializer;
-import org.apache.shardingsphere.data.pipeline.api.metadata.loader.PipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.cdc.config.job.CDCJobConfiguration;
 import org.apache.shardingsphere.data.pipeline.cdc.config.task.CDCTaskConfiguration;
 import org.apache.shardingsphere.data.pipeline.common.context.InventoryIncrementalJobItemContext;
@@ -32,6 +30,7 @@ import org.apache.shardingsphere.data.pipeline.common.datasource.PipelineDataSou
 import org.apache.shardingsphere.data.pipeline.common.job.JobStatus;
 import org.apache.shardingsphere.data.pipeline.common.job.progress.InventoryIncrementalJobItemProgress;
 import org.apache.shardingsphere.data.pipeline.common.job.progress.listener.PipelineJobProgressUpdatedParameter;
+import org.apache.shardingsphere.data.pipeline.common.metadata.loader.PipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.common.metadata.loader.StandardPipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.core.importer.sink.PipelineSink;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.persist.PipelineJobProgressPersistService;
@@ -44,7 +43,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * CDC job item context.
  */
-@RequiredArgsConstructor
 @Getter
 public final class CDCJobItemContext implements InventoryIncrementalJobItemContext {
     
@@ -80,7 +78,7 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
         
         @Override
         protected PipelineDataSourceWrapper initialize() {
-            return dataSourceManager.getDataSource(taskConfig.getDumperConfig().getDataSourceConfig());
+            return dataSourceManager.getDataSource(taskConfig.getDumperContext().getCommonContext().getDataSourceConfig());
         }
     };
     
@@ -92,6 +90,21 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
         }
     };
     
+    public CDCJobItemContext(final CDCJobConfiguration jobConfig, final int shardingItem, final InventoryIncrementalJobItemProgress initProgress, final CDCProcessContext jobProcessContext,
+                             final CDCTaskConfiguration taskConfig, final PipelineDataSourceManager dataSourceManager, final PipelineSink sink) {
+        this.jobConfig = jobConfig;
+        this.shardingItem = shardingItem;
+        this.initProgress = initProgress;
+        if (null != initProgress) {
+            processedRecordsCount.set(initProgress.getProcessedRecordsCount());
+            inventoryRecordsCount.set(initProgress.getInventoryRecordsCount());
+        }
+        this.jobProcessContext = jobProcessContext;
+        this.taskConfig = taskConfig;
+        this.dataSourceManager = dataSourceManager;
+        this.sink = sink;
+    }
+    
     @Override
     public String getJobId() {
         return jobConfig.getJobId();
@@ -99,7 +112,7 @@ public final class CDCJobItemContext implements InventoryIncrementalJobItemConte
     
     @Override
     public String getDataSourceName() {
-        return taskConfig.getDumperConfig().getDataSourceName();
+        return taskConfig.getDumperContext().getCommonContext().getDataSourceName();
     }
     
     @Override

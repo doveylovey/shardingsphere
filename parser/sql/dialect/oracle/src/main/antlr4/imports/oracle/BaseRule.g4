@@ -783,7 +783,11 @@ leadLagInfo
 
 specialFunction
     : castFunction | charFunction | extractFunction | formatFunction | firstOrLastValueFunction | trimFunction | featureFunction
-    | setFunction | translateFunction | cursorFunction | toDateFunction | approxRank
+    | setFunction | translateFunction | cursorFunction | toDateFunction | approxRank | wmConcatFunction
+    ;
+
+wmConcatFunction
+    : WM_CONCAT LP_ expr RP_ overClause?
     ;
 
 approxRank
@@ -906,6 +910,10 @@ orderByClause
 
 orderByItem
     : (columnName | numberLiterals | expr) (ASC | DESC)? (NULLS FIRST | NULLS LAST)?
+    ;
+
+attribute
+    : (owner DOT_)? identifier
     ;
 
 attributeName
@@ -2097,4 +2105,20 @@ keyForBlob
 
 sourceText
     : identifier
+    ;
+
+fullPathName
+    : STRING_
+    ;
+
+directoryObject
+    : identifier
+    ;
+
+credentialName
+    : identifier
+    ;
+
+agentDblink
+    : STRING_
     ;

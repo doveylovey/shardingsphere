@@ -56,7 +56,7 @@ class ShowTrafficRuleExecutorTest {
         assertThat(row.getCell(1), is("rule_name_1"));
         assertThat(row.getCell(2), is("olap,order_by"));
         assertThat(row.getCell(3), is("SQL_MATCH"));
-        assertThat(row.getCell(4), is("sql=select * from t_order"));
+        assertThat(row.getCell(4), is("{\"sql\":\"select * from t_order\"}"));
         assertThat(row.getCell(5), is("RANDOM"));
         assertThat(row.getCell(6), is(""));
         row = iterator.next();

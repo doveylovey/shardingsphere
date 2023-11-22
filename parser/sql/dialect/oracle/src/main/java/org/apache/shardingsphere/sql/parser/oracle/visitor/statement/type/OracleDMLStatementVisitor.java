@@ -82,7 +82,6 @@ import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.QueryT
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.QueryTableExprContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.ReferenceModelContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.RollupCubeClauseContext;
-import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.SelectCombineClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.SelectContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.SelectFromClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.SelectJoinOptionContext;
@@ -108,6 +107,7 @@ import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.UsingC
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.WhereClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.OracleStatementParser.WithClauseContext;
 import org.apache.shardingsphere.sql.parser.oracle.visitor.statement.OracleStatementVisitor;
+import org.apache.shardingsphere.sql.parser.sql.common.enums.CombineType;
 import org.apache.shardingsphere.sql.parser.sql.common.enums.JoinType;
 import org.apache.shardingsphere.sql.parser.sql.common.enums.OrderDirection;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dal.VariableSegment;
@@ -117,10 +117,12 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.In
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.SetAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.InsertColumnsSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.combine.CombineSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.BetweenExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.BinaryOperationExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.CaseWhenExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.CollateExpression;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.sql.dialect.segment.oracle.datetime.DatetimeExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ExpressionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ExpressionWithParamsSegment;
@@ -458,6 +460,16 @@ public final class OracleDMLStatementVisitor extends OracleStatementVisitor impl
     
     @Override
     public ASTNode visitDmlTableClause(final DmlTableClauseContext ctx) {
+        if (null != ctx.AT_() && null != ctx.dbLink()) {
+            SimpleTableSegment result = new SimpleTableSegment(new TableNameSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), new IdentifierValue(ctx.tableName().name().getText())));
+            if (null != ctx.tableName().owner()) {
+                result.setOwner(
+                        new OwnerSegment(ctx.tableName().owner().start.getStartIndex(), ctx.tableName().owner().stop.getStopIndex(), (IdentifierValue) visit(ctx.tableName().owner().identifier())));
+            }
+            result.setAt(new IdentifierValue(ctx.AT_().getText()));
+            result.setDbLink(new IdentifierValue(ctx.dbLink().identifier(0).getText()));
+            return result;
+        }
         return visit(ctx.tableName());
     }
     
@@ -531,18 +543,34 @@ public final class OracleDMLStatementVisitor extends OracleStatementVisitor impl
     @Override
     public ASTNode visitSelectSubquery(final SelectSubqueryContext ctx) {
         OracleSelectStatement result;
-        if (null != ctx.queryBlock()) {
-            result = (OracleSelectStatement) visit(ctx.queryBlock());
-        } else if (null != ctx.selectCombineClause()) {
-            result = (OracleSelectStatement) visit(ctx.selectCombineClause());
+        if (null != ctx.combineType()) {
+            result = new OracleSelectStatement();
+            OracleSelectStatement left = (OracleSelectStatement) visit(ctx.selectSubquery(0));
+            result.setProjections(left.getProjections());
+            result.setFrom(left.getFrom());
+            createSelectCombineClause(ctx, result, left);
         } else {
-            result = (OracleSelectStatement) visit(ctx.parenthesisSelectSubquery());
+            result = null != ctx.queryBlock() ? (OracleSelectStatement) visit(ctx.queryBlock()) : (OracleSelectStatement) visit(ctx.parenthesisSelectSubquery());
         }
         if (null != ctx.orderByClause()) {
             result.setOrderBy((OrderBySegment) visit(ctx.orderByClause()));
         }
         result.addParameterMarkerSegments(ctx.getParent() instanceof ExecuteContext ? getGlobalParameterMarkerSegments() : popAllStatementParameterMarkerSegments());
         return result;
+    }
+    
+    private void createSelectCombineClause(final SelectSubqueryContext ctx, final OracleSelectStatement result, final OracleSelectStatement left) {
+        CombineType combineType;
+        if (null != ctx.combineType().UNION() && null != ctx.combineType().ALL()) {
+            combineType = CombineType.UNION_ALL;
+        } else if (null != ctx.combineType().UNION()) {
+            combineType = CombineType.UNION;
+        } else if (null != ctx.combineType().INTERSECT()) {
+            combineType = CombineType.INTERSECT;
+        } else {
+            combineType = CombineType.MINUS;
+        }
+        result.setCombine(new CombineSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), left, combineType, (OracleSelectStatement) visit(ctx.selectSubquery(1))));
     }
     
     @Override
@@ -645,23 +673,6 @@ public final class OracleDMLStatementVisitor extends OracleStatementVisitor impl
     public ASTNode visitReferenceModel(final ReferenceModelContext ctx) {
         OracleSelectStatement subquery = (OracleSelectStatement) visit(ctx.selectSubquery());
         return new SubquerySegment(ctx.selectSubquery().start.getStartIndex(), ctx.selectSubquery().stop.getStopIndex(), subquery, getOriginalText(ctx.selectSubquery()));
-    }
-    
-    @Override
-    public ASTNode visitSelectCombineClause(final SelectCombineClauseContext ctx) {
-        OracleSelectStatement result;
-        if (null != ctx.queryBlock()) {
-            result = (OracleSelectStatement) visit(ctx.queryBlock());
-        } else {
-            result = (OracleSelectStatement) visit(ctx.parenthesisSelectSubquery());
-        }
-        if (null != ctx.orderByClause()) {
-            result.setOrderBy((OrderBySegment) visit(ctx.orderByClause()));
-        }
-        for (SelectSubqueryContext each : ctx.selectSubquery()) {
-            visit(each);
-        }
-        return result;
     }
     
     @Override
