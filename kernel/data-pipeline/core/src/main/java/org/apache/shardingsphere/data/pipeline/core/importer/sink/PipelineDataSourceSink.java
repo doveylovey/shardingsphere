@@ -21,27 +21,28 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceManager;
+import org.apache.shardingsphere.data.pipeline.core.exception.job.PipelineImporterJobWriteException;
+import org.apache.shardingsphere.data.pipeline.core.ingest.record.group.DataRecordGroupEngine;
+import org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration;
+import org.apache.shardingsphere.data.pipeline.core.ingest.IngestDataChangeType;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.Column;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
-import org.apache.shardingsphere.data.pipeline.core.ingest.record.GroupedDataRecord;
+import org.apache.shardingsphere.data.pipeline.core.ingest.record.group.GroupedDataRecord;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.Record;
-import org.apache.shardingsphere.data.pipeline.common.job.JobOperationType;
-import org.apache.shardingsphere.data.pipeline.common.config.ImporterConfiguration;
-import org.apache.shardingsphere.data.pipeline.common.datasource.PipelineDataSourceManager;
-import org.apache.shardingsphere.data.pipeline.common.ingest.IngestDataChangeType;
-import org.apache.shardingsphere.data.pipeline.common.ingest.record.RecordUtils;
-import org.apache.shardingsphere.data.pipeline.common.job.progress.listener.PipelineJobProgressUpdatedParameter;
-import org.apache.shardingsphere.data.pipeline.common.sqlbuilder.PipelineImportSQLBuilder;
-import org.apache.shardingsphere.data.pipeline.common.util.PipelineJdbcUtils;
-import org.apache.shardingsphere.data.pipeline.core.exception.job.PipelineImporterJobWriteException;
-import org.apache.shardingsphere.data.pipeline.core.importer.DataRecordMerger;
-import org.apache.shardingsphere.data.pipeline.common.spi.algorithm.JobRateLimitAlgorithm;
+import org.apache.shardingsphere.data.pipeline.core.ingest.record.RecordUtils;
+import org.apache.shardingsphere.data.pipeline.core.job.JobOperationType;
+import org.apache.shardingsphere.data.pipeline.core.job.progress.listener.PipelineJobProgressUpdatedParameter;
+import org.apache.shardingsphere.data.pipeline.core.ratelimit.JobRateLimitAlgorithm;
+import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql.PipelineImportSQLBuilder;
+import org.apache.shardingsphere.data.pipeline.core.util.PipelineJdbcUtils;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -54,8 +55,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public final class PipelineDataSourceSink implements PipelineSink {
     
-    private static final DataRecordMerger MERGER = new DataRecordMerger();
-    
     @Getter(AccessLevel.PROTECTED)
     private final ImporterConfiguration importerConfig;
     
@@ -64,6 +63,8 @@ public final class PipelineDataSourceSink implements PipelineSink {
     private final JobRateLimitAlgorithm rateLimitAlgorithm;
     
     private final PipelineImportSQLBuilder importSQLBuilder;
+    
+    private final DataRecordGroupEngine groupEngine;
     
     private final AtomicReference<Statement> batchInsertStatement = new AtomicReference<>();
     
@@ -76,20 +77,16 @@ public final class PipelineDataSourceSink implements PipelineSink {
         this.dataSourceManager = dataSourceManager;
         rateLimitAlgorithm = importerConfig.getRateLimitAlgorithm();
         importSQLBuilder = new PipelineImportSQLBuilder(importerConfig.getDataSourceConfig().getDatabaseType());
+        groupEngine = new DataRecordGroupEngine();
     }
     
     @Override
-    public boolean identifierMatched(final Object identifier) {
-        throw new UnsupportedOperationException();
-    }
-    
-    @Override
-    public PipelineJobProgressUpdatedParameter write(final String ackId, final List<Record> records) {
+    public PipelineJobProgressUpdatedParameter write(final String ackId, final Collection<Record> records) {
         return flush(dataSourceManager.getDataSource(importerConfig.getDataSourceConfig()), records);
     }
     
-    private PipelineJobProgressUpdatedParameter flush(final DataSource dataSource, final List<Record> buffer) {
-        List<DataRecord> dataRecords = buffer.stream().filter(DataRecord.class::isInstance).map(DataRecord.class::cast).collect(Collectors.toList());
+    private PipelineJobProgressUpdatedParameter flush(final DataSource dataSource, final Collection<Record> buffer) {
+        Collection<DataRecord> dataRecords = buffer.stream().filter(DataRecord.class::isInstance).map(DataRecord.class::cast).collect(Collectors.toList());
         if (dataRecords.isEmpty()) {
             return new PipelineJobProgressUpdatedParameter(0);
         }
@@ -99,8 +96,8 @@ public final class PipelineDataSourceSink implements PipelineSink {
                 insertRecordNumber++;
             }
         }
-        List<GroupedDataRecord> result = MERGER.group(dataRecords);
-        for (GroupedDataRecord each : result) {
+        Collection<GroupedDataRecord> groupedDataRecords = groupEngine.group(dataRecords);
+        for (GroupedDataRecord each : groupedDataRecords) {
             flushInternal(dataSource, each.getBatchDeleteDataRecords());
             flushInternal(dataSource, each.getBatchInsertDataRecords());
             flushInternal(dataSource, each.getBatchUpdateDataRecords());

@@ -10,18 +10,18 @@ ShardingSphere JDBC 已在 GraalVM Native Image 下完成可用性验证。
 
 构建包含 `org.apache.shardingsphere:shardingsphere-jdbc-core:${shardingsphere.version}` 的 Maven 依赖的 GraalVM Native 
 Image，你需要借助于 GraalVM Native Build Tools。GraalVM Native Build Tools 提供了 Maven Plugin 和 Gradle Plugin 来简化 GraalVM
-CE 的 `native-image` 工具的长篇大论的 shell 命令。
+CE 的 `native-image` 命令行工具的长篇大论的 shell 命令。
 
 ShardingSphere JDBC 要求在如下或更高版本的 `GraalVM CE` 完成构建 GraalVM Native Image。使用者可通过 SDKMAN! 快速切换 JDK。这同理
 适用于 `Oracle GraalVM`， `Liberica Native Image Kit` 和 `Mandrel` 等 `GraalVM CE` 的下游发行版。
 
 - GraalVM CE 23.0.2 For JDK 17.0.9，对应于 SDKMAN! 的 `17.0.9-graalce`
-- GraalVM CE 23.0.2 For JDK 21.0.1，对应于 SDKMAN! 的 `21.0.1-graalce`
+- GraalVM CE 23.1.1 For JDK 21.0.1，对应于 SDKMAN! 的 `21.0.1-graalce`
 
 ### Maven 生态
 
-使用者需要配置额外的 BuildArgs ，以阻止 GroovyShell 的相关类在构建 GraalVM Native Image 时报错。并主动使用 GraalVM Reachability 
-Metadata 中央仓库。如下配置可供参考，以配置项目额外的 Maven Profile，以 GraalVM Native Build Tools 的文档为准。
+使用者需要主动使用 GraalVM Reachability Metadata 中央仓库。
+如下配置可供参考，以配置项目额外的 Maven Profiles，以 GraalVM Native Build Tools 的文档为准。
 
 ```xml
 <project>
@@ -42,7 +42,7 @@ Metadata 中央仓库。如下配置可供参考，以配置项目额外的 Mave
                 <extensions>true</extensions>
                 <configuration>
                     <buildArgs>
-                        <arg>--report-unsupported-elements-at-runtime</arg>
+                        <buildArg>-H:+AddAllCharsets</buildArg>
                     </buildArgs>
                     <metadataRepository>
                         <enabled>true</enabled>
@@ -72,39 +72,38 @@ Metadata 中央仓库。如下配置可供参考，以配置项目额外的 Mave
 
 ### Gradle 生态
 
-使用者需要配置额外的 BuildArgs ，以阻止 GroovyShell 的相关类在构建 GraalVM Native Image 时报错。并主动使用 GraalVM Reachability
-Metadata 中央仓库。如下配置可供参考，以配置项目额外的 Gradle Task，以 GraalVM Native Build Tools 的文档为准。
+使用者需要主动使用 GraalVM Reachability Metadata 中央仓库。
+如下配置可供参考，以配置项目额外的 Gradle Tasks，以 GraalVM Native Build Tools 的文档为准。
 
 ```groovy
 plugins {
-    id 'org.graalvm.buildtools.native' version '0.9.28'
+   id 'org.graalvm.buildtools.native' version '0.9.28'
 }
 
 dependencies {
-    implementation 'org.apache.shardingsphere:shardingsphere-jdbc-core:${shardingsphere.version}'
+   implementation 'org.apache.shardingsphere:shardingsphere-jdbc-core:${shardingsphere.version}'
 }
 
 graalvmNative {
-    binaries {
-        main {
-            buildArgs.add('--report-unsupported-elements-at-runtime')
-        }
-        test {
-            buildArgs.add('--report-unsupported-elements-at-runtime')
-        }
-    }
-    metadataRepository {
-        enabled = true
-    }
+   binaries {
+      main {
+         buildArgs.add('-H:+AddAllCharsets')
+      }
+      test {
+         buildArgs.add('-H:+AddAllCharsets')
+      }
+   }
+   metadataRepository {
+      enabled = true
+   }
 }
 ```
 
-### 对于 SBT 等不被 GraalVM Native Build Tools 支持的构建工具
+### 对于 sbt 等不被 GraalVM Native Build Tools 支持的构建工具
 
 此类需求需要在 https://github.com/graalvm/native-build-tools 打开额外的 issue 并提供对应构建工具的 Plugin 实现。
 
-
-### 使用限制
+## 使用限制
 
 1. 如下的算法类由于涉及到 https://github.com/oracle/graal/issues/5522 ， 暂未可在 GraalVM Native Image 下使用。
     - `org.apache.shardingsphere.sharding.algorithm.sharding.inline.InlineShardingAlgorithm`
@@ -205,7 +204,21 @@ rules:
 文件的 GraalVM Reachability Metadata。使用者可通过 GraalVM Native Build Tools 的 GraalVM Tracing Agent 来快速采集 GraalVM 
 Reachability Metadata。
 
-4. 尚未验证 DistSQL 的可用性。使用者需自行添加额外的 GraalVM Reachability Metadata。
+4. 以 MS SQL Server 的 JDBC Driver 为代表的 `com.microsoft.sqlserver:mssql-jdbc` 等 Maven 模块会根据数据库中使用的编码动态加载不同的字符集，这是不可预测的行为。
+当遇到如下 Error，使用者需要添加 `-H:+AddAllCharsets` 的 `buildArg` 到 GraalVM Native Build Tools 的配置中。
+
+```shell
+Caused by: java.io.UnsupportedEncodingException: SQL Server collation SQL_Latin1_General_CP1_CI_AS is not supported by this driver.
+ com.microsoft.sqlserver.jdbc.SQLCollation.encodingFromSortId(SQLCollation.java:506)
+ com.microsoft.sqlserver.jdbc.SQLCollation.<init>(SQLCollation.java:63)
+ com.microsoft.sqlserver.jdbc.SQLServerConnection.processEnvChange(SQLServerConnection.java:3174)
+ [...]
+Caused by: java.io.UnsupportedEncodingException: Codepage Cp1252 is not supported by the Java environment.
+ com.microsoft.sqlserver.jdbc.Encoding.checkSupported(SQLCollation.java:572)
+ com.microsoft.sqlserver.jdbc.SQLCollation$SortOrder.getEncoding(SQLCollation.java:473)
+ com.microsoft.sqlserver.jdbc.SQLCollation.encodingFromSortId(SQLCollation.java:501)
+ [...]
+```
 
 ## 贡献 GraalVM Reachability Metadata
 
@@ -221,6 +234,8 @@ ShardingSphere 定义了 `nativeTestInShardingSphere` 的 Maven Profile 用于�
 
 假设贡献者处于新的 Ubuntu 22.04.3 LTS 实例下，其可通过如下 bash 命令通过 SDKMAN! 管理 JDK 和工具链，
 并为 `shardingsphere-test-native` 子模块执行 nativeTest。
+
+你必须安装 Docker Engine 以执行 `testcontainers-java` 相关的单元测试。
 
 ```bash
 sudo apt install unzip zip curl sed -y

@@ -20,15 +20,14 @@ package org.apache.shardingsphere.data.pipeline.cdc.core.importer.sink;
 import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
-import org.apache.shardingsphere.data.pipeline.core.ingest.record.Record;
 import org.apache.shardingsphere.data.pipeline.cdc.generator.CDCResponseUtils;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.response.CDCResponse.ResponseCase;
 import org.apache.shardingsphere.data.pipeline.cdc.protocol.response.DataRecordResult;
 import org.apache.shardingsphere.data.pipeline.cdc.util.DataRecordResultConvertUtils;
-import org.apache.shardingsphere.data.pipeline.common.job.progress.listener.PipelineJobProgressUpdatedParameter;
 import org.apache.shardingsphere.data.pipeline.core.importer.sink.PipelineSink;
+import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
+import org.apache.shardingsphere.data.pipeline.core.ingest.record.Record;
+import org.apache.shardingsphere.data.pipeline.core.job.progress.listener.PipelineJobProgressUpdatedParameter;
 import org.apache.shardingsphere.infra.exception.core.external.sql.sqlstate.XOpenSQLState;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 
@@ -46,10 +45,9 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * CDC socket sink.
  */
-@Slf4j
 public final class CDCSocketSink implements PipelineSink {
     
-    private static final long DEFAULT_TIMEOUT_MILLISECONDS = 200L;
+    private static final long DEFAULT_TIMEOUT_MILLISECONDS = 100L;
     
     private final Lock lock = new ReentrantLock();
     
@@ -72,12 +70,7 @@ public final class CDCSocketSink implements PipelineSink {
     }
     
     @Override
-    public boolean identifierMatched(final Object identifier) {
-        return channel.id().equals(identifier);
-    }
-    
-    @Override
-    public PipelineJobProgressUpdatedParameter write(final String ackId, final List<Record> records) {
+    public PipelineJobProgressUpdatedParameter write(final String ackId, final Collection<Record> records) {
         if (records.isEmpty()) {
             return new PipelineJobProgressUpdatedParameter(0);
         }
