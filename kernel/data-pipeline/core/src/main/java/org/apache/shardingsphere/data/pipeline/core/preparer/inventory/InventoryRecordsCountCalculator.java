@@ -20,11 +20,12 @@ package org.apache.shardingsphere.data.pipeline.core.preparer.inventory;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.InventoryDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.inventory.InventoryDumperContext;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceWrapper;
 import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql.PipelinePrepareSQLBuilder;
 import org.apache.shardingsphere.data.pipeline.core.exception.job.SplitPipelineJobByUniqueKeyException;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.infra.database.mariadb.type.MariaDBDatabaseType;
 import org.apache.shardingsphere.infra.database.mysql.type.MySQLDatabaseType;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 
@@ -59,7 +60,7 @@ public final class InventoryRecordsCountCalculator {
             if (sql.isPresent()) {
                 DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, dataSource.getDatabaseType().getType());
                 long result = getEstimatedCount(databaseType, dataSource, sql.get());
-                return result > 0 ? result : getCount(dataSource, pipelineSQLBuilder.buildCountSQL(schemaName, actualTableName));
+                return result > 0L ? result : getCount(dataSource, pipelineSQLBuilder.buildCountSQL(schemaName, actualTableName));
             }
             return getCount(dataSource, pipelineSQLBuilder.buildCountSQL(schemaName, actualTableName));
         } catch (final SQLException ex) {
@@ -72,7 +73,7 @@ public final class InventoryRecordsCountCalculator {
         try (
                 Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(estimatedCountSQL)) {
-            if (databaseType instanceof MySQLDatabaseType) {
+            if (databaseType instanceof MySQLDatabaseType || databaseType instanceof MariaDBDatabaseType) {
                 preparedStatement.setString(1, connection.getCatalog());
             }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {

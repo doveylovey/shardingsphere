@@ -20,24 +20,17 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>shardingsphere-infra-key-generator</artifactId>
-        <version>5.4.2-SNAPSHOT</version>
+        <artifactId>shardingsphere-infra-algorithm-key-generator</artifactId>
+        <version>5.5.1-SNAPSHOT</version>
     </parent>
-    <artifactId>shardingsphere-infra-key-generator-core</artifactId>
+    <artifactId>shardingsphere-infra-algorithm-key-generator-core</artifactId>
     <name>${project.artifactId}</name>
     
     <dependencies>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-infra-common</artifactId>
+            <artifactId>shardingsphere-infra-algorithm-core</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-test-util</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

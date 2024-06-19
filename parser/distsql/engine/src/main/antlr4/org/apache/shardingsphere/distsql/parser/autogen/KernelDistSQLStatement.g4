@@ -46,11 +46,10 @@ execute
     | importMetaData
     | exportStorageNodes
     | convertYamlConfiguration
-    | showMigrationRule
-    | alterMigrationRule
     | lockCluster
     | unlockCluster
-    | showServiceProviderImplementations
-    | showKeyGenerateAlgorithmImplementations
+    | showPluginImplementations
+    | showKeyGenerateAlgorithmPlugins
+    | showLoadBalanceAlgorithmPlugins
     ) SEMI_? EOF
     ;

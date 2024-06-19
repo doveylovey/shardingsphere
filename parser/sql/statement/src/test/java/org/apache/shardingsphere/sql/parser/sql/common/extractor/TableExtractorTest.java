@@ -21,7 +21,6 @@ import org.apache.shardingsphere.sql.parser.sql.common.enums.AggregationType;
 import org.apache.shardingsphere.sql.parser.sql.common.enums.CombineType;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.routine.RoutineBodySegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.routine.ValidStatementSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.AssignmentSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.ColumnAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.OnDuplicateKeyColumnsSegment;
@@ -116,7 +115,7 @@ class TableExtractorTest {
     void assertExtractTablesFromInsert() {
         MySQLInsertStatement insertStatement = new MySQLInsertStatement();
         insertStatement.setTable(new SimpleTableSegment(new TableNameSegment(122, 128, new IdentifierValue("t_order"))));
-        Collection<AssignmentSegment> assignmentSegments = new LinkedList<>();
+        Collection<ColumnAssignmentSegment> assignmentSegments = new LinkedList<>();
         ColumnSegment columnSegment = new ColumnSegment(133, 136, new IdentifierValue("id"));
         columnSegment.setOwner(new OwnerSegment(130, 132, new IdentifierValue("t_order")));
         assignmentSegments.add(new ColumnAssignmentSegment(130, 140, Collections.singletonList(columnSegment), new LiteralExpressionSegment(141, 142, 1)));
@@ -152,7 +151,9 @@ class TableExtractorTest {
     @Test
     void assertExtractTablesFromCombineSegment() {
         MySQLSelectStatement selectStatement = createSelectStatement("t_order");
-        selectStatement.setCombine(new CombineSegment(0, 0, createSelectStatement("t_order"), CombineType.UNION, createSelectStatement("t_order_item")));
+        SubquerySegment left = new SubquerySegment(0, 0, createSelectStatement("t_order"), "");
+        SubquerySegment right = new SubquerySegment(0, 0, createSelectStatement("t_order_item"), "");
+        selectStatement.setCombine(new CombineSegment(0, 0, left, CombineType.UNION, right));
         tableExtractor.extractTablesFromSelect(selectStatement);
         Collection<SimpleTableSegment> actual = tableExtractor.getRewriteTables();
         assertThat(actual.size(), is(2));
@@ -173,7 +174,9 @@ class TableExtractorTest {
     @Test
     void assertExtractTablesFromCombineSegmentWithColumnProjection() {
         MySQLSelectStatement selectStatement = createSelectStatementWithColumnProjection("t_order");
-        selectStatement.setCombine(new CombineSegment(0, 0, createSelectStatementWithColumnProjection("t_order"), CombineType.UNION, createSelectStatementWithColumnProjection("t_order_item")));
+        SubquerySegment left = new SubquerySegment(0, 0, createSelectStatementWithColumnProjection("t_order"), "");
+        SubquerySegment right = new SubquerySegment(0, 0, createSelectStatementWithColumnProjection("t_order_item"), "");
+        selectStatement.setCombine(new CombineSegment(0, 0, left, CombineType.UNION, right));
         tableExtractor.extractTablesFromSelect(selectStatement);
         Collection<SimpleTableSegment> actual = tableExtractor.getRewriteTables();
         assertThat(actual.size(), is(2));
@@ -198,7 +201,9 @@ class TableExtractorTest {
     @Test
     void assertExtractTablesFromCombineWithSubQueryProjection() {
         MySQLSelectStatement selectStatement = createSelectStatementWithSubQueryProjection("t_order");
-        selectStatement.setCombine(new CombineSegment(0, 0, createSelectStatementWithSubQueryProjection("t_order"), CombineType.UNION, createSelectStatementWithSubQueryProjection("t_order_item")));
+        SubquerySegment left = new SubquerySegment(0, 0, createSelectStatementWithSubQueryProjection("t_order"), "");
+        SubquerySegment right = new SubquerySegment(0, 0, createSelectStatementWithSubQueryProjection("t_order_item"), "");
+        selectStatement.setCombine(new CombineSegment(0, 0, left, CombineType.UNION, right));
         tableExtractor.extractTablesFromSelect(selectStatement);
         Collection<SimpleTableSegment> actual = tableExtractor.getRewriteTables();
         assertThat(actual.size(), is(2));

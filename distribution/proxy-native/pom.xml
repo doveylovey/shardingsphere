@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-distribution</artifactId>
-        <version>5.4.2-SNAPSHOT</version>
+        <version>5.5.1-SNAPSHOT</version>
     </parent>
     
     <artifactId>shardingsphere-proxy-native-distribution</artifactId>
@@ -35,6 +35,11 @@
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-proxy-bootstrap</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-reachability-metadata</artifactId>
             <version>${project.version}</version>
         </dependency>
         
@@ -71,9 +76,6 @@
     <profiles>
         <profile>
             <id>release.native</id>
-            <properties>
-                <java.version>17</java.version>
-            </properties>
             <build>
                 <finalName>apache-shardingsphere-${project.version}</finalName>
                 <plugins>
@@ -85,13 +87,8 @@
                         <configuration>
                             <mainClass>org.apache.shardingsphere.proxy.Bootstrap</mainClass>
                             <buildArgs>
-                                <arg>-J-Xmx7g</arg>
-                                <arg>-H:+AddAllCharsets</arg>
+                                <buildArg>-H:+AddAllCharsets</buildArg>
                             </buildArgs>
-                            <metadataRepository>
-                                <enabled>true</enabled>
-                                <version>0.3.5</version>
-                            </metadataRepository>
                         </configuration>
                         <executions>
                             <execution>

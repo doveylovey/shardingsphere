@@ -18,17 +18,17 @@
 package org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal;
 
 import org.apache.shardingsphere.data.pipeline.api.type.StandardPipelineDataSourceConfiguration;
+import org.apache.shardingsphere.data.pipeline.core.constant.PipelineSQLOperationType;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceManager;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceWrapper;
-import org.apache.shardingsphere.data.pipeline.core.ingest.IngestDataChangeType;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.DumperCommonContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.IncrementalDumperContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.ActualAndLogicTableNameMapper;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.TableAndSchemaNameMapper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.DumperCommonContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.ActualAndLogicTableNameMapper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.TableAndSchemaNameMapper;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.PlaceholderRecord;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.Record;
-import org.apache.shardingsphere.data.pipeline.core.metadata.CaseInsensitiveIdentifier;
+import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveIdentifier;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.StandardPipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.core.metadata.model.PipelineColumnMetaData;
 import org.apache.shardingsphere.data.pipeline.core.metadata.model.PipelineTableMetaData;
@@ -40,7 +40,7 @@ import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.Delet
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.PlaceholderEvent;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.UpdateRowEvent;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.WriteRowEvent;
-import org.apache.shardingsphere.infra.exception.core.external.sql.type.generic.UnsupportedSQLOperationException;
+import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,8 +105,8 @@ class WALEventConverterTest {
         }
     }
     
-    private Map<String, PipelineColumnMetaData> mockOrderColumnsMetaDataMap() {
-        return mockOrderColumnsMetaDataList().stream().collect(Collectors.toMap(PipelineColumnMetaData::getName, Function.identity()));
+    private Map<CaseInsensitiveIdentifier, PipelineColumnMetaData> mockOrderColumnsMetaDataMap() {
+        return mockOrderColumnsMetaDataList().stream().collect(Collectors.toMap(metaData -> new CaseInsensitiveIdentifier(metaData.getName()), Function.identity()));
     }
     
     private List<PipelineColumnMetaData> mockOrderColumnsMetaDataList() {
@@ -125,7 +125,7 @@ class WALEventConverterTest {
     @Test
     void assertWriteRowEvent() throws ReflectiveOperationException {
         DataRecord actual = getDataRecord(createWriteRowEvent());
-        assertThat(actual.getType(), is(IngestDataChangeType.INSERT));
+        assertThat(actual.getType(), is(PipelineSQLOperationType.INSERT));
         assertThat(actual.getColumnCount(), is(3));
     }
     
@@ -144,7 +144,7 @@ class WALEventConverterTest {
     
     @Test
     void assertConvertBeginTXEvent() {
-        BeginTXEvent beginTXEvent = new BeginTXEvent(100);
+        BeginTXEvent beginTXEvent = new BeginTXEvent(100L, null);
         beginTXEvent.setLogSequenceNumber(new PostgreSQLLogSequenceNumber(logSequenceNumber));
         Record record = walEventConverter.convert(beginTXEvent);
         assertInstanceOf(PlaceholderRecord.class, record);
@@ -153,7 +153,7 @@ class WALEventConverterTest {
     
     @Test
     void assertConvertCommitTXEvent() {
-        CommitTXEvent commitTXEvent = new CommitTXEvent(1, 3468L);
+        CommitTXEvent commitTXEvent = new CommitTXEvent(1L, 3468L);
         commitTXEvent.setLogSequenceNumber(new PostgreSQLLogSequenceNumber(logSequenceNumber));
         Record record = walEventConverter.convert(commitTXEvent);
         assertInstanceOf(PlaceholderRecord.class, record);
@@ -164,21 +164,21 @@ class WALEventConverterTest {
     void assertConvertWriteRowEvent() {
         Record record = walEventConverter.convert(mockWriteRowEvent());
         assertThat(record, instanceOf(DataRecord.class));
-        assertThat(((DataRecord) record).getType(), is(IngestDataChangeType.INSERT));
+        assertThat(((DataRecord) record).getType(), is(PipelineSQLOperationType.INSERT));
     }
     
     @Test
     void assertConvertUpdateRowEvent() {
         Record record = walEventConverter.convert(mockUpdateRowEvent());
         assertThat(record, instanceOf(DataRecord.class));
-        assertThat(((DataRecord) record).getType(), is(IngestDataChangeType.UPDATE));
+        assertThat(((DataRecord) record).getType(), is(PipelineSQLOperationType.UPDATE));
     }
     
     @Test
     void assertConvertDeleteRowEvent() {
         Record record = walEventConverter.convert(mockDeleteRowEvent());
         assertThat(record, instanceOf(DataRecord.class));
-        assertThat(((DataRecord) record).getType(), is(IngestDataChangeType.DELETE));
+        assertThat(((DataRecord) record).getType(), is(PipelineSQLOperationType.DELETE));
     }
     
     @Test

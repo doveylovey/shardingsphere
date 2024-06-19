@@ -57,6 +57,15 @@ It must follow the enumeration value of Java `java.time.temporal.ChronoUnit#toSt
 7. `C` stands for the abbreviation of chronology, which means calendar system and must follow the format of Java `java.time.chrono.Chronology#getId()`.
 For example: `Japanese`, `Minguo`, `ThaiBuddhist`. There is a default value of `ISO`.
 
+Whether the Value corresponding to the Key of `C` is available depends on the system environment in which the JVM is located. 
+This means that if the user needs to set `C=Japanese`, they may need to call `java.util.Locale.setDefault(java.util.Locale.JAPAN);` in the application's startup class to modify the system environment. 
+Discuss two JVM environments.
+
+1. Hotspot JVM determines the return value of `java.util.Locale.getDefault()` at RunTime.
+
+2. GraalVM Native Image determines the return value of `java.util.Locale.Locale.getDefault()` at BuildTime, which is inconsistent with the performance of Hotspot JVM. 
+Refer to https://github.com/oracle/graal/issues/8022 .
+
 Type: INTERVAL
 
 Example:
@@ -73,8 +82,13 @@ Example:
 
 ## Row Value Expressions that uses the Groovy syntax based on GraalVM Truffle's Espresso implementation
 
-This is an optional implementation, and you need to actively declare the following dependencies in the `pom.xml` of your own project.
-And make sure your own project is compiled with GraalVM CE 23.0.1 For JDK 17.0.9.
+This is an optional implementation. You need to actively declare the following dependencies in the `pom.xml` of your own project. 
+And please make sure your own projects are compiled with OpenJDK 21+ or its downstream distribution.
+
+Due to the limitations of https://www.graalvm.org/jdk21/reference-manual/java-on-truffle/faq/#does-java-running-on-truffle-run-on-hotspot-too , 
+this module is only ready on Linux when used in environments other than GraalVM Native Image.
+
+Truffle's backward compatibility matrix with the JDK is located at https://medium.com/graalvm/40027a59c401 .
 
 ```xml
 <dependencies>
@@ -83,13 +97,18 @@ And make sure your own project is compiled with GraalVM CE 23.0.1 For JDK 17.0.9
         <artifactId>shardingsphere-infra-expr-espresso</artifactId>
         <version>${shardingsphere.version}</version>
     </dependency>
+    <dependency>
+        <groupId>org.graalvm.polyglot</groupId>
+        <artifactId>polyglot</artifactId>
+        <version>24.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.graalvm.polyglot</groupId>
+        <artifactId>java-community</artifactId>
+        <version>24.0.0</version>
+        <type>pom</type>
+    </dependency>
 </dependencies>
-```
-
-The user must install the Espresso component via GraalVM Updater, i.e. execute the following command in bash
-
-```bash
-gu install espresso
 ```
 
 `ESPRESSO` is still an experimental module that allows the use of Row Value Expressions with Groovy syntax under GraalVM

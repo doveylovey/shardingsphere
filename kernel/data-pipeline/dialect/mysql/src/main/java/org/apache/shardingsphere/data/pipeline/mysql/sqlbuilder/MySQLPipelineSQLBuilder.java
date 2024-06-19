@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.data.pipeline.mysql.sqlbuilder;
 
-import org.apache.shardingsphere.data.pipeline.core.exception.syntax.CreateTableSQLGenerateException;
+import org.apache.shardingsphere.data.pipeline.core.exception.job.CreateTableSQLGenerateException;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.Column;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.DataRecord;
 import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.segment.PipelineSQLSegmentBuilder;
@@ -43,13 +43,6 @@ public final class MySQLPipelineSQLBuilder implements DialectPipelineSQLBuilder 
         PipelineSQLSegmentBuilder sqlSegmentBuilder = new PipelineSQLSegmentBuilder(getType());
         for (int i = 0; i < dataRecord.getColumnCount(); i++) {
             Column column = dataRecord.getColumn(i);
-            if (!column.isUpdated()) {
-                continue;
-            }
-            // TOOD not skip unique key
-            if (column.isUniqueKey()) {
-                continue;
-            }
             result.append(sqlSegmentBuilder.getEscapedIdentifier(column.getName())).append("=VALUES(").append(sqlSegmentBuilder.getEscapedIdentifier(column.getName())).append("),");
         }
         result.setLength(result.length() - 1);

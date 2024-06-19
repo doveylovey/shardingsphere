@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.data.pipeline.core.ingest.record;
 
-import org.apache.shardingsphere.data.pipeline.core.ingest.IngestDataChangeType;
+import org.apache.shardingsphere.data.pipeline.core.constant.PipelineSQLOperationType;
 import org.apache.shardingsphere.data.pipeline.core.ingest.position.type.placeholder.IngestPlaceholderPosition;
 import org.junit.jupiter.api.Test;
 
@@ -27,20 +27,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 class DataRecordTest {
     
     @Test
-    void assertGetKeyWithUpdate() {
-        DataRecord beforeDataRecord = new DataRecord(IngestDataChangeType.UPDATE, "foo_tbl", new IngestPlaceholderPosition(), 1);
+    void assertGetKey() {
+        DataRecord beforeDataRecord = new DataRecord(PipelineSQLOperationType.UPDATE, "foo_tbl", new IngestPlaceholderPosition(), 1);
         beforeDataRecord.addColumn(new Column("id", 1, true, true));
-        DataRecord afterDataRecord = new DataRecord(IngestDataChangeType.UPDATE, "foo_tbl", new IngestPlaceholderPosition(), 1);
+        DataRecord afterDataRecord = new DataRecord(PipelineSQLOperationType.UPDATE, "foo_tbl", new IngestPlaceholderPosition(), 1);
         afterDataRecord.addColumn(new Column("id", 2, 1, true, true));
         assertThat(beforeDataRecord.getKey(), is(afterDataRecord.getKey()));
     }
     
     @Test
-    void assertGetKeyWithDelete() {
-        DataRecord beforeDataRecord = new DataRecord(IngestDataChangeType.DELETE, "foo_tbl", new IngestPlaceholderPosition(), 1);
+    void assertGetOldKey() {
+        DataRecord beforeDataRecord = new DataRecord(PipelineSQLOperationType.DELETE, "foo_tbl", new IngestPlaceholderPosition(), 1);
         beforeDataRecord.addColumn(new Column("id", 1, 2, true, true));
-        DataRecord afterDataRecord = new DataRecord(IngestDataChangeType.DELETE, "foo_tbl", new IngestPlaceholderPosition(), 1);
+        DataRecord afterDataRecord = new DataRecord(PipelineSQLOperationType.DELETE, "foo_tbl", new IngestPlaceholderPosition(), 1);
         afterDataRecord.addColumn(new Column("id", 1, 3, true, true));
-        assertThat(beforeDataRecord.getKey(), is(afterDataRecord.getKey()));
+        assertThat(beforeDataRecord.getOldKey(), is(afterDataRecord.getOldKey()));
     }
 }

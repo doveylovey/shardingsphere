@@ -30,7 +30,6 @@ import java.time.YearMonth;
 import java.time.chrono.Chronology;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
@@ -100,8 +99,7 @@ public class IntervalInlineExpressionParser implements InlineExpressionParser {
     @Override
     public void init(final Properties props) {
         inlineExpression = props.getProperty(INLINE_EXPRESSION_KEY);
-        Map<String, String> propsMap = Arrays.stream(inlineExpression.split(";"))
-                .collect(Collectors.toMap(string -> string.split("=")[0], string -> string.split("=")[1]));
+        Map<String, String> propsMap = Arrays.stream(inlineExpression.split(";")).collect(Collectors.toMap(key -> key.split("=")[0], value -> value.split("=")[1]));
         prefix = getPrefix(propsMap);
         dateTimeFormatterForSuffixPattern = getSuffixPattern(propsMap);
         startTime = getDateTimeLower(propsMap);
@@ -111,58 +109,43 @@ public class IntervalInlineExpressionParser implements InlineExpressionParser {
     }
     
     @Override
-    public String handlePlaceHolder() {
-        return inlineExpression;
-    }
-    
-    @Override
     public List<String> splitAndEvaluate() {
         return Strings.isNullOrEmpty(inlineExpression) ? Collections.emptyList() : split();
     }
     
     private String getPrefix(final Map<String, String> props) {
-        ShardingSpherePreconditions.checkState(props.containsKey(PREFIX_KEY),
-                () -> new RuntimeException(String.format("%s can not be null.", PREFIX_KEY)));
+        ShardingSpherePreconditions.checkContainsKey(props, PREFIX_KEY, () -> new RuntimeException(String.format("%s can not be null.", PREFIX_KEY)));
         return props.get(PREFIX_KEY);
     }
     
     private TemporalAccessor getDateTimeLower(final Map<String, String> props) {
-        ShardingSpherePreconditions.checkState(props.containsKey(DATE_TIME_LOWER_KEY),
-                () -> new RuntimeException(String.format("%s can not be null.", DATE_TIME_LOWER_KEY)));
+        ShardingSpherePreconditions.checkContainsKey(props, DATE_TIME_LOWER_KEY, () -> new RuntimeException(String.format("%s can not be null.", DATE_TIME_LOWER_KEY)));
         return getDateTime(props.get(DATE_TIME_LOWER_KEY));
     }
     
     private TemporalAccessor getDateTimeUpper(final Map<String, String> props) {
-        ShardingSpherePreconditions.checkState(props.containsKey(DATE_TIME_UPPER_KEY),
-                () -> new RuntimeException(String.format("%s can not be null.", DATE_TIME_UPPER_KEY)));
+        ShardingSpherePreconditions.checkContainsKey(props, DATE_TIME_UPPER_KEY, () -> new RuntimeException(String.format("%s can not be null.", DATE_TIME_UPPER_KEY)));
         return getDateTime(props.get(DATE_TIME_UPPER_KEY));
     }
     
     private TemporalAccessor getDateTime(final String dateTimeValue) {
-        try {
-            return dateTimeFormatterForSuffixPattern.parse(dateTimeValue);
-        } catch (final DateTimeParseException dateTimeParseException) {
-            throw new RuntimeException(dateTimeParseException);
-        }
+        return dateTimeFormatterForSuffixPattern.parse(dateTimeValue);
     }
     
     private DateTimeFormatter getSuffixPattern(final Map<String, String> props) {
         String suffix = props.get(SUFFIX_PATTERN_KEY);
-        ShardingSpherePreconditions.checkState(!Strings.isNullOrEmpty(suffix),
-                () -> new RuntimeException(String.format("%s can not be null or empty.", SUFFIX_PATTERN_KEY)));
+        ShardingSpherePreconditions.checkNotEmpty(suffix, () -> new RuntimeException(String.format("%s can not be null or empty.", SUFFIX_PATTERN_KEY)));
         Chronology chronology = getChronology(props);
         return DateTimeFormatter.ofPattern(suffix).withChronology(chronology);
     }
     
     private int getStepAmount(final Map<String, String> props) {
-        ShardingSpherePreconditions.checkState(props.containsKey(INTERVAL_AMOUNT_KEY),
-                () -> new RuntimeException(String.format("%s can not be null.", INTERVAL_AMOUNT_KEY)));
+        ShardingSpherePreconditions.checkContainsKey(props, INTERVAL_AMOUNT_KEY, () -> new RuntimeException(String.format("%s can not be null.", INTERVAL_AMOUNT_KEY)));
         return Integer.parseInt(props.get(INTERVAL_AMOUNT_KEY));
     }
     
     private ChronoUnit getStepUnit(final Map<String, String> props) {
-        ShardingSpherePreconditions.checkState(props.containsKey(INTERVAL_UNIT_KEY),
-                () -> new RuntimeException(String.format("%s can not be null.", INTERVAL_UNIT_KEY)));
+        ShardingSpherePreconditions.checkContainsKey(props, INTERVAL_UNIT_KEY, () -> new RuntimeException(String.format("%s can not be null.", INTERVAL_UNIT_KEY)));
         String stepUnit = props.get(INTERVAL_UNIT_KEY);
         return Arrays.stream(ChronoUnit.values())
                 .filter(chronoUnit -> chronoUnit.toString().equals(stepUnit))
@@ -207,8 +190,8 @@ public class IntervalInlineExpressionParser implements InlineExpressionParser {
     private List<String> convertStringFromMonth() {
         Month startTimeAsMonth = startTime.query(Month::from);
         Month endTimeAsMonth = endTime.query(Month::from);
-        return LongStream.iterate(0, x -> x + stepAmount)
-                .limit((endTimeAsMonth.getValue() - startTimeAsMonth.getValue()) / stepAmount + 1L)
+        return LongStream.iterate(0L, x -> x + stepAmount)
+                .limit(((endTimeAsMonth.getValue() - startTimeAsMonth.getValue()) / stepAmount) + 1L)
                 .parallel()
                 .boxed()
                 .map(startTimeAsMonth::plus)
@@ -218,8 +201,8 @@ public class IntervalInlineExpressionParser implements InlineExpressionParser {
     }
     
     private List<String> convertStringFromTemporal(final Temporal startTimeAsTemporal, final Temporal endTimeAsTemporal) {
-        return LongStream.iterate(0, x -> x + stepAmount)
-                .limit(stepUnit.between(startTimeAsTemporal, endTimeAsTemporal) / stepAmount + 1)
+        return LongStream.iterate(0L, x -> x + stepAmount)
+                .limit(stepUnit.between(startTimeAsTemporal, endTimeAsTemporal) / stepAmount + 1L)
                 .parallel()
                 .boxed()
                 .map(arithmeticSequence -> startTimeAsTemporal.plus(arithmeticSequence, stepUnit))

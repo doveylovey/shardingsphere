@@ -99,14 +99,6 @@ convertYamlConfiguration
     : CONVERT YAML CONFIGURATION FROM FILE filePath
     ;
 
-showMigrationRule
-    : SHOW MIGRATION RULE
-    ;
-
-alterMigrationRule
-    : ALTER MIGRATION RULE transmissionRule?
-    ;
-
 lockCluster
     : LOCK CLUSTER WITH lockStrategy
     ;
@@ -115,44 +107,16 @@ unlockCluster
     : UNLOCK CLUSTER
     ;
 
-showServiceProviderImplementations
-    : SHOW IMPLEMENTATIONS OF serviceProviderInterface
+showPluginImplementations
+    : SHOW PLUGINS OF pluginClass
     ;
 
-showKeyGenerateAlgorithmImplementations
-    : SHOW KEY GENERATE ALGORITHM IMPLEMENTATIONS
+showKeyGenerateAlgorithmPlugins
+    : SHOW KEY GENERATE ALGORITHM PLUGINS
     ;
 
-transmissionRule
-    : LP_ readDefinition? (COMMA_? writeDefinition)? (COMMA_? streamChannel)? RP_
-    ;
-
-readDefinition
-    : READ LP_ workerThread? (COMMA_? batchSize)? (COMMA_? shardingSize)? (COMMA_? rateLimiter)? RP_
-    ;
-
-writeDefinition
-    : WRITE LP_ workerThread? (COMMA_? batchSize)? (COMMA_? rateLimiter)? RP_
-    ;
-
-workerThread
-    : WORKER_THREAD EQ_ intValue
-    ;
-
-batchSize
-    : BATCH_SIZE EQ_ intValue
-    ;
-
-shardingSize
-    : SHARDING_SIZE EQ_ intValue
-    ;
-
-rateLimiter
-    : RATE_LIMITER LP_ algorithmDefinition RP_
-    ;
-
-streamChannel
-    : STREAM_CHANNEL LP_ algorithmDefinition RP_
+showLoadBalanceAlgorithmPlugins
+    : SHOW LOAD BALANCE ALGORITHM PLUGINS
     ;
 
 confPath
@@ -199,10 +163,6 @@ label
     : IDENTIFIER_
     ;
 
-intValue
-    : INT_
-    ;
-
 showLike
     : LIKE likePattern
     ;
@@ -211,6 +171,6 @@ likePattern
     : STRING_
     ;
 
-serviceProviderInterface
-    : IDENTIFIER_ | STRING_
+pluginClass
+    : STRING_
     ;

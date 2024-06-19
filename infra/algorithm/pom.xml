@@ -21,13 +21,16 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-infra</artifactId>
-        <version>5.4.2-SNAPSHOT</version>
+        <version>5.5.1-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-infra-algorithm</artifactId>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
     
     <modules>
+        <module>core</module>
         <module>key-generator</module>
+        <module>load-balancer</module>
+        <module>message-digest</module>
     </modules>
 </project>

@@ -21,16 +21,17 @@ import io.netty.util.AttributeMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.shardingsphere.infra.session.query.QueryContext;
-import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.executor.sql.prepare.driver.ExecutorStatementManager;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
+import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
+import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.proxy.backend.connector.ProxyDatabaseConnectionManager;
 import org.apache.shardingsphere.proxy.backend.connector.jdbc.statement.JDBCBackendStatement;
 import org.apache.shardingsphere.proxy.backend.session.transaction.TransactionStatus;
 import org.apache.shardingsphere.sql.parser.sql.common.enums.TransactionIsolationLevel;
-import org.apache.shardingsphere.transaction.api.TransactionType;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Connection session.
@@ -45,8 +46,6 @@ public final class ConnectionSession {
     private volatile String databaseName;
     
     private volatile int connectionId;
-    
-    private Grantee grantee;
     
     private final TransactionStatus transactionStatus;
     
@@ -67,7 +66,7 @@ public final class ConnectionSession {
     
     private final ServerPreparedStatementRegistry serverPreparedStatementRegistry = new ServerPreparedStatementRegistry();
     
-    private final ConnectionContext connectionContext;
+    private final AtomicReference<ConnectionContext> connectionContext = new AtomicReference<>();
     
     private final RequiredSessionVariableRecorder requiredSessionVariableRecorder = new RequiredSessionVariableRecorder();
     
@@ -75,13 +74,21 @@ public final class ConnectionSession {
     
     private QueryContext queryContext;
     
-    public ConnectionSession(final DatabaseType protocolType, final TransactionType initialTransactionType, final AttributeMap attributeMap) {
+    public ConnectionSession(final DatabaseType protocolType, final AttributeMap attributeMap) {
         this.protocolType = protocolType;
-        transactionStatus = new TransactionStatus(initialTransactionType);
+        transactionStatus = new TransactionStatus();
         this.attributeMap = attributeMap;
         databaseConnectionManager = new ProxyDatabaseConnectionManager(this);
         statementManager = new JDBCBackendStatement();
-        connectionContext = new ConnectionContext(databaseConnectionManager::getUsedDataSourceNames);
+    }
+    
+    /**
+     * Set grantee.
+     *
+     * @param grantee grantee
+     */
+    public void setGrantee(final Grantee grantee) {
+        connectionContext.set(new ConnectionContext(databaseConnectionManager::getUsedDataSourceNames, grantee));
     }
     
     /**
@@ -93,6 +100,15 @@ public final class ConnectionSession {
         if (null == databaseName || !databaseName.equals(this.databaseName)) {
             this.databaseName = databaseName;
         }
+    }
+    
+    /**
+     * Get connection context.
+     *
+     * @return connection context
+     */
+    public ConnectionContext getConnectionContext() {
+        return connectionContext.get();
     }
     
     /**

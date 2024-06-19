@@ -55,7 +55,7 @@
         column1 VARCHAR(10),
         column2 VARCHAR(10),
         column3 VARCHAR(10)
-    )" db-types="MySQL,Oracle,SQLServer" />
+    )" db-types="MySQL,Oracle,SQLServer,Presto" />
     <sql-case id="create_table_with_back_quota" value="CREATE TABLE `t_order` (`order_id` INT, `user_id` INT, `status` VARCHAR(10), `column1` VARCHAR(10), `column2` VARCHAR(10), `column3` VARCHAR(10)) ENGINE=INNODB" db-types="MySQL" />
     <sql-case id="create_temporary_table" value="CREATE TEMPORARY TABLE t_order (order_id INT, user_id INT, status VARCHAR(10), column1 VARCHAR(10), column2 VARCHAR(10), column3 VARCHAR(10))" db-types="MySQL" />
     <sql-case id="create_table_with_column_not_null" value="CREATE TABLE t_order (order_id INT NOT NULL, user_id INT, status VARCHAR(10), column1 VARCHAR(10), column2 VARCHAR(10), column3 VARCHAR(10))" db-types="MySQL,Oracle,PostgreSQL,openGauss,SQLServer" />
@@ -92,7 +92,7 @@
     <sql-case id="create_table_with_inline_constraints_cascade" value="CREATE TABLE t_order_item (item_id NUMBER(10) PRIMARY KEY UNIQUE NOT NULL CHECK (order_id > 0), order_id NUMBER(10) CONSTRAINT fk_order_id REFERENCES t_order (order_id) ON DELETE CASCADE, user_id NUMBER(10), status VARCHAR2(10) NULL, column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10))" db-types="Oracle,PostgreSQL,openGauss" />
     <sql-case id="create_table_with_out_of_line_foreign_key_oracle" value="CREATE TABLE t_order_item (item_id NUMBER(10), order_id NUMBER(10), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10), CONSTRAINT fk_order_id FOREIGN KEY (order_id) REFERENCES t_order (order_id) ON DELETE CASCADE)" db-types="Oracle" />
     <sql-case id="create_table_with_out_of_line_composite_foreign_key_oracle" value="CREATE TABLE t_order_item (item_id NUMBER(10), order_id NUMBER(10), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10), CONSTRAINT fk_order_id FOREIGN KEY (order_id, user_id, status) REFERENCES t_order (order_id, user_id, status) ON DELETE CASCADE)" db-types="Oracle" />
-    <sql-case id="create_table_with_out_of_line_constraints_oracle" value="CREATE TABLE t_order_item (item_id NUMBER(10), order_id NUMBER(10), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10), PRIMARY KEY (item_id), UNIQUE (item_id), FOREIGN KEY (order_id) REFERENCES t_order (order_id) ON DELETE CASCADE), CHECK (item_id > 0))" db-types="Oracle" />
+    <sql-case id="create_table_with_out_of_line_constraints_oracle" value="CREATE TABLE t_order_item (item_id NUMBER(10), order_id NUMBER(10), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10), PRIMARY KEY (item_id), UNIQUE (item_id), FOREIGN KEY (order_id) REFERENCES t_order (order_id) ON DELETE CASCADE)" db-types="Oracle" />
     <sql-case id="create_table_with_exist_index" value="CREATE TABLE t_order (order_id NUMBER(10) PRIMARY KEY USING INDEX order_index, user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10))" db-types="Oracle" />
     <sql-case id="create_table_with_create_index" value="CREATE TABLE t_order (order_id NUMBER(10) PRIMARY KEY USING INDEX (CREATE INDEX order_index ON t_order (order_id)), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10))" db-types="Oracle" />
     <sql-case id="create_table_with_double_quota" value="CREATE TABLE &quot;t_order&quot; (&quot;order_id&quot; INTEGER, &quot;user_id&quot; INTEGER, &quot;status&quot; VARCHAR(10), &quot;column1&quot; VARCHAR(10), &quot;column2&quot; VARCHAR(10), &quot;column3&quot; VARCHAR(10))" db-types="PostgreSQL,openGauss" />
@@ -100,8 +100,8 @@
     <sql-case id="create_table_with_range_partition" value="CREATE TABLE t_order (order_id INTEGER, user_id INTEGER, status VARCHAR(10), column1 VARCHAR(10), column2 VARCHAR(10), column3 VARCHAR(10)) PARTITION BY RANGE (order_id)" db-types="PostgreSQL,openGauss" />
     <sql-case id="create_table_with_partition_oracle" value="CREATE TABLE t_order (order_id NUMBER(10), user_id NUMBER(10), status VARCHAR2(10), column1 VARCHAR2(10), column2 VARCHAR2(10), column3 VARCHAR2(10)) PARTITION BY HASH (order_id) PARTITIONS 2" db-types="Oracle" />
     <sql-case id="create_table_with_xmltype_table_oracle" value="CREATE TABLE xwarehouses OF XMLTYPE XMLSCHEMA &quot;http://www.example.com/xwarehouses.xsd&quot; ELEMENT &quot;Warehouse&quot; ;" db-types="Oracle" />
-    <sql-case id="create_table_with_xmltype_column_oracle" value="CREATE TABLE xwarehouses (warehouse_id NUMBER, warehouse_spec XMLTYPE) XMLTYPE warehouse_spec STORE AS CLOB (TABLESPACE example STORAGE (INITIAL 6144) CHUNK 4000 NOCACHE LOGGING);" db-types="Oracle" />
-    <sql-case id="create_table_with_xmltype_column_clob_oracle" value="CREATE TABLE xwarehouses (warehouse_id NUMBER, warehouse_spec XMLTYPE) XMLTYPE warehouse_spec STORE AS SECUREFILE CLOB (TABLESPACE auto_seg_ts STORAGE (INITIAL 6144) CACHE);" db-types="Oracle" />
+    <sql-case id="create_table_with_xmltype_column_oracle" value="CREATE TABLE xwarehouses (warehouse_id NUMBER, warehouse_spec XMLTYPE) XMLTYPE warehouse_spec STORE AS CLOB;" db-types="Oracle" />
+    <sql-case id="create_table_with_xmltype_column_clob_oracle" value="CREATE TABLE xwarehouses (warehouse_id NUMBER, warehouse_spec XMLTYPE) XMLTYPE warehouse_spec STORE AS SECUREFILE CLOB;" db-types="Oracle" />
     <!--    TODO support create table with like and inherits on PostgreSQL,openGauss-->
     <sql-case id="create_table_with_bracket" value="CREATE TABLE [t_order] ([order_id] INT, [user_id] INT, [status] VARCHAR(10), [column1] VARCHAR(10), [column2] VARCHAR(10), [column3] VARCHAR(10))" db-types="SQLServer" />
     <sql-case id="create_table_with_identity" value="CREATE TABLE t_order (order_id INT IDENTITY, user_id INT, status VARCHAR(10), column1 VARCHAR(10), column2 VARCHAR(10), column3 VARCHAR(10))" db-types="SQLServer" />
@@ -298,4 +298,73 @@
     (PARTITION p1 VALUES LESS THAN (1000),
     PARTITION p2 VALUES LESS THAN (2500),
     PARTITION p3 VALUES LESS THAN (MAXVALUE))" db-types="Oracle" />
+    <sql-case id="create_table_with_queue" value="CREATE TABLE t_log(id int PRIMARY KEY, status varchar(10)) USAGE QUEUE" db-types="Oracle" />
+    <sql-case id="create_table_with_relational_and_physical_properties" value="CREATE TABLE &quot;C##TPCC2&quot;.&quot;TEST_BASIC2&quot;
+    (&quot;BS_COL01&quot; NUMBER,
+    &quot;BS_COL02&quot; NUMBER,
+    PRIMARY KEY (&quot;BS_COL01&quot;)
+    USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS
+    STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+    PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+    BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+    TABLESPACE &quot;TPCCTAB&quot; ENABLE
+    ) SEGMENT CREATION IMMEDIATE
+    PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255
+    NOCOMPRESS LOGGING
+    STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+    PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+    BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+    TABLESPACE &quot;TPCCTAB&quot;" db-types="Oracle" />
+    <sql-case id="create_table_cluster_with_select1" value="CREATE TABLE dept_10 CLUSTER personnel (department_id) AS SELECT * FROM employees WHERE department_id = 10" db-types="Oracle" />
+    <sql-case id="create_table_cluster_with_select2" value="CREATE TABLE dept_20 CLUSTER personnel (department_id) AS SELECT * FROM employees WHERE department_id = 20" db-types="Oracle" />
+    <sql-case id="create_table_cluster_with_select3" value="CREATE TABLE customers_demo AS SELECT * FROM customers" db-types="Oracle" />
+    <sql-case id="create_table_with_ref_type_column_department_typ" value="CREATE TABLE employees_obj( e_name   VARCHAR2(100), e_number NUMBER, e_dept   REF department_typ SCOPE IS departments_obj_t );" db-types="Oracle"/>
+    <sql-case id="create_table_with_result_cache_annotations" value="CREATE TABLE foo (a NUMBER, b VARCHAR2(20)) RESULT_CACHE (MODE FORCE);" db-types="Oracle"/>
+    <sql-case id="create_table_with_as_sub_query" value="CREATE TABLE employees_temp AS SELECT * FROM EMPLOYEES;" db-types="Oracle"/>
+    <sql-case id="create_table_parallel_with_as_sub_query" value="CREATE TABLE hr.admin_emp_dept PARALLEL COMPRESS AS SELECT * FROM hr.employees WHERE department_id = 10;" db-types="Oracle"/>
+    <sql-case id="create_table_with_edge_constraint" value="CREATE TABLE bought ( PurchaseCount INT ,CONSTRAINT EC_BOUGHT CONNECTION (Customer TO Product) ON DELETE NO ACTION );" db-types="SQLServer"/>
+    <sql-case id="create_table_with_enclosed" value="CREATE TABLE emp_load(first_name CHAR(15), last_name CHAR(20), year_of_birth CHAR(4)) ORGANIZATION EXTERNAL (TYPE ORACLE_LOADER DEFAULT DIRECTORY ext_tab_dir ACCESS PARAMETERS FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '(' and ')'LRTRIM LOCATION (info.dat));" db-types="Oracle"/>
+    <sql-case id="create_table_with_builtin_function" value="CREATE TABLE tab AS SELECT DBMS_LOB.GETLENGTH@dbs2(clob_col) len FROM tab@dbs2;" db-types="Oracle"/>
+    <sql-case id="create_table_with_autoextend_size" value="CREATE TABLESPACE ts1 AUTOEXTEND_SIZE = 4M" db-types="MySQL"/>
+    <sql-case id="create_table_with_cast_function1" value="create table test_schema.tb_ods_bs_class_all as
+        select jw.id,
+               jw.product_level_code,
+               jw.product_type
+        from test_schema.tb_bs_class jw
+        where if(op_type is null,'0',op_type) != '1'
+        union all
+        select arc.id,
+               cast(arc.ClassScaleType as bigint),
+               jw.mother_class_id, -- mother_class_id&#x000A;
+               arc.product_type
+        from test_schema.tb_archive_bs_class arc
+                 left join (select mother_class_id from test_schema.tb_bs_class
+                 where if(op_type is null,'0',op_type) != '1') jw
+                           on arc.nSchoolId = jw.NSCHOOLID and arc.sCode = jw.SCODE
+        where  if(arc.op_type is null,'0',arc.op_type) != '1' and jw.NSCHOOLID is null;" db-types="Doris"/>
+    <sql-case id="create_table_with_split" value="create table test_schema.tmp_classcode_property_new as
+        select a.scode as classcode,
+               c.all_layer_value_name,
+               split(c.all_layer_value_name,',')[1] as f_dept_name_update,
+               split(c.all_layer_value_name,',')[4] as productlevelname_update,
+               c.memo,split(c.memo,',')[1] as f_dept_code_update,
+               split(c.memo,',')[4] as productlevelcode_update
+        from test_schema.tb_ods_bs_class_all a
+                 inner join (select * from test_schema.tb_product_course_product where if(op_type is null,'0',op_type) != '1') b on aa.course_code_target = b.code
+        where coalesce(a.f_dept_code,'') in ('05','16','31')
+          and date(a.dtbegindate) >= date('2018-06-01');" db-types="Doris"/>
+    <sql-case id="create_table_with_properties" value="CREATE TABLE `dim_ehr_all_dimension_dict1` (
+      `id` varchar(255) NULL COMMENT &quot;id&quot;,
+      `code` varchar(255) NULL COMMENT &quot;编码&quot;,
+      `px` int(11) NULL COMMENT &quot;排序&quot;
+        ) ENGINE=OLAP
+        DUPLICATE KEY(`id`)
+        DISTRIBUTED BY HASH(`id`) BUCKETS 3
+        PROPERTIES (
+        &quot;replication_num&quot; = &quot;3&quot;,
+        &quot;in_memory&quot; = &quot;false&quot;,
+        &quot;storage_format&quot; = &quot;DEFAULT&quot;,
+        &quot;enable_persistent_index&quot; = &quot;false&quot;,
+        &quot;compression&quot; = &quot;LZ4&quot;
+            );" db-types="Doris"/>
 </sql-cases>

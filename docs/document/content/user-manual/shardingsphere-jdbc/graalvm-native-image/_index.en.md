@@ -8,16 +8,23 @@ chapter = true
 
 ShardingSphere JDBC has been validated for availability under GraalVM Native Image.
 
-Build GraalVM Native containing Maven dependencies of `org.apache.shardingsphere:shardingsphere-jdbc-core:${shardingsphere.version}`
+Build GraalVM Native containing Maven dependencies of `org.apache.shardingsphere:shardingsphere-jdbc:${shardingsphere.version}`
 Image, you need to resort to GraalVM Native Build Tools. GraalVM Native Build Tools provides Maven Plugin and Gradle Plugin 
 to simplify long list of shell commands for GraalVM CE's `native-image` command line tool.
 
 ShardingSphere JDBC requires GraalVM Native Image to be built with GraalVM CE as follows or higher. Users can quickly switch 
-JDK through `SDKMAN!`. Same reason applicable to downstream distributions of `GraalVM CE` such as `Oracle GraalVM`, `Liberica Native Image Kit` 
+JDK through `SDKMAN!`. Same reason applicable to downstream distributions of `GraalVM CE` such as `Oracle GraalVM`, `Liberica NIK` 
 and `Mandrel`.
 
-- GraalVM CE 23.0.2 For JDK 17.0.9, corresponding to `17.0.9-graalce` of SDKMAN!
-- GraalVM CE 23.1.1 For JDK 21.0.1, corresponding to `21.0.1-graalce` of SDKMAN!
+- GraalVM CE For JDK 22.0.1, corresponding to `21.0.2-graalce` of SDKMAN!
+- Oracle GraalVM For JDK 22.0.1, corresponding to `22.0.1-graal` of SDKMAN!
+- Liberica NIK For JDK 22.0.1, corresponding to `24.0.1.r22-nik` of SDKMAN!
+- Mandrel For JDK 22.0.1, corresponding to `24.0.1.r22-mandrel` of SDKMAN!
+
+Users can still use the old versions of GraalVM CE such as `21.0.2-graalce` on SDKMAN! to build the GraalVM Native Image product of ShardingSphere. 
+However, this will cause the failure of building the GraalVM Native Image when integrating some third-party dependencies. 
+A typical example is related to the `org.apache.hive:hive-jdbc:4.0.0` HiveServer2 JDBC Driver, which uses AWT-related classes. 
+GraalVM CE only supports AWT for GraalVM CE For JDK22 and higher versions.
 
 ### Maven Ecology
 
@@ -30,7 +37,7 @@ and the documentation of GraalVM Native Build Tools shall prevail.
      <dependencies>
          <dependency>
              <groupId>org.apache.shardingsphere</groupId>
-             <artifactId>shardingsphere-jdbc-core</artifactId>
+             <artifactId>shardingsphere-jdbc</artifactId>
              <version>${shardingsphere.version}</version>
          </dependency>
      </dependencies>
@@ -40,15 +47,12 @@ and the documentation of GraalVM Native Build Tools shall prevail.
              <plugin>
                  <groupId>org.graalvm.buildtools</groupId>
                  <artifactId>native-maven-plugin</artifactId>
-                 <version>0.9.28</version>
+                 <version>0.10.2</version>
                  <extensions>true</extensions>
                  <configuration>
                     <buildArgs>
                        <buildArg>-H:+AddAllCharsets</buildArg>
                     </buildArgs>
-                    <metadataRepository>
-                       <enabled>true</enabled>
-                    </metadataRepository>
                  </configuration>
                  <executions>
                      <execution>
@@ -77,14 +81,18 @@ and the documentation of GraalVM Native Build Tools shall prevail.
 Users need to actively use the GraalVM Reachability Metadata central repository.
 The following configuration is for reference to configure additional Gradle Tasks for the project,
 and the documentation of GraalVM Native Build Tools shall prevail.
+Due to the limitations of Gradle 8.6, 
+users need to introduce the JSON file of Metadata Repository through Maven dependency. 
+Reference https://github.com/graalvm/native-build-tools/issues/572 .
 
 ```groovy
 plugins {
-     id 'org.graalvm.buildtools.native' version '0.9.28'
+   id 'org.graalvm.buildtools.native' version '0.10.2'
 }
 
 dependencies {
-     implementation 'org.apache.shardingsphere:shardingsphere-jdbc-core:${shardingsphere.version}'
+   implementation 'org.apache.shardingsphere:shardingsphere-jdbc:${shardingsphere.version}'
+   implementation(group: 'org.graalvm.buildtools', name: 'graalvm-reachability-metadata', version: '0.10.2', classifier: 'repository', ext: 'zip')
 }
 
 graalvmNative {
@@ -97,7 +105,7 @@ graalvmNative {
       }
    }
    metadataRepository {
-      enabled = true
+      enabled.set(false)
    }
 }
 ```
@@ -193,19 +201,30 @@ normally under GraalVM Native Image.
 ```
 
 2. For the `ReadWrite Splitting` feature, you need to use other implementations of `Row Value Expressions` SPI to configure 
-`logic database name`, `writeDataSourceName` and `readDataSourceNames` when bypassing calls to GroovyShell. One possible 
-configuration is to use the `Row Value Expressions` SPI implementation of `LITERAL`. The same applies to `actualDataNodes` 
-for the `Sharding` feature.
+`logic database name`, `writeDataSourceName` and `readDataSourceNames` when bypassing calls to GroovyShell. 
+One possible configuration is to use the `Row Value Expressions` SPI implementation of `LITERAL`.
 
 ```yaml
 rules:
 - !READWRITE_SPLITTING
-   dataSources:
+   dataSourceGroups:
      <LITERAL>readwrite_ds:
        writeDataSourceName: <LITERAL>ds_0
        readDataSourceNames:
          - <LITERAL>ds_1
          - <LITERAL>ds_2
+```
+
+The same applies to `actualDataNodes` for the `Sharding` feature.
+
+```yaml
+- !SHARDING
+   tables:
+      t_order:
+         actualDataNodes: <LITERAL>ds_0.t_order_0, ds_0.t_order_1, ds_1.t_order_0, ds_1.t_order_1
+         keyGenerateStrategy:
+            column: order_id
+            keyGeneratorName: snowflake
 ```
 
 3. Users still need to configure GraalVM Reachability Metadata for independent files in the `src/main/resources/META-INF/native-image` 
@@ -217,17 +236,75 @@ will dynamically load different character sets based on the encoding used in the
 When encountering the following Error, users need to add the `buildArg` of `-H:+AddAllCharsets` to the configuration of GraalVM Native Build Tools.
 
 ```shell
-Caused by: java.io.UnsupportedEncodingException: SQL Server collation SQL_Latin1_General_CP1_CI_AS is not supported by this driver.
- com.microsoft.sqlserver.jdbc.SQLCollation.encodingFromSortId(SQLCollation.java:506)
- com.microsoft.sqlserver.jdbc.SQLCollation.<init>(SQLCollation.java:63)
- com.microsoft.sqlserver.jdbc.SQLServerConnection.processEnvChange(SQLServerConnection.java:3174)
- [...]
 Caused by: java.io.UnsupportedEncodingException: Codepage Cp1252 is not supported by the Java environment.
  com.microsoft.sqlserver.jdbc.Encoding.checkSupported(SQLCollation.java:572)
  com.microsoft.sqlserver.jdbc.SQLCollation$SortOrder.getEncoding(SQLCollation.java:473)
  com.microsoft.sqlserver.jdbc.SQLCollation.encodingFromSortId(SQLCollation.java:501)
  [...]
 ```
+
+5. When using Seata's BASE integration, 
+users need to use a specific `io.seata:seata-all:1.8.0` version to avoid using the ByteBuddy Java API,
+and exclude the outdated Maven dependency of `org.antlr:antlr4-runtime:4.8` in `io.seata:seata-all:1.8.0`.
+Possible configuration examples are as follows,
+
+```xml
+<project>
+    <dependencies>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-jdbc</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-transaction-base-seata-at</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>io.seata</groupId>
+         <artifactId>seata-all</artifactId>
+         <version>1.8.0</version>
+         <exclusions>
+            <exclusion>
+               <groupId>org.antlr</groupId>
+               <artifactId>antlr4-runtime</artifactId>
+            </exclusion>
+         </exclusions>
+      </dependency>
+    </dependencies>
+</project>
+```
+
+6. When using the ClickHouse dialect through ShardingSphere JDBC, 
+users need to manually introduce the relevant optional modules and the ClickHouse JDBC driver with the classifier `http`.
+In principle, ShardingSphere's GraalVM Native Image integration does not want to use `com.clickhouse:clickhouse-jdbc` with classifier `all`, 
+because Uber Jar will cause the collection of duplicate GraalVM Reachability Metadata.
+Possible configuration examples are as follows,
+```xml
+<project>
+    <dependencies>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-jdbc</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+       <dependency>
+          <groupId>org.apache.shardingsphere</groupId>
+          <artifactId>shardingsphere-parser-sql-clickhouse</artifactId>
+          <version>${shardingsphere.version}</version>
+      </dependency>
+       <dependency>
+          <groupId>com.clickhouse</groupId>
+          <artifactId>clickhouse-jdbc</artifactId>
+          <version>0.6.0-patch5</version>
+          <classifier>http</classifier>
+       </dependency>
+    </dependencies>
+</project>
+```
+ClickHouse does not support local transactions, XA transactions, and Seata AT mode transactions at the ShardingSphere integration level. 
+More discussion is at https://github.com/ClickHouse/clickhouse-docs/issues/2300 .
 
 ## Contribute GraalVM Reachability Metadata
 
@@ -251,8 +328,8 @@ You must install Docker Engine to execute `testcontainers-java` related unit tes
 sudo apt install unzip zip curl sed -y
 curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install java 17.0.9-graalce
-sdk use java 17.0.9-graalce
+sdk install java 21.0.2-graalce
+sdk use java 21.0.2-graalce
 sudo apt-get install build-essential libz-dev zlib1g-dev -y
 
 git clone git@github.com:apache/shardingsphere.git
@@ -265,27 +342,27 @@ they should open a new issue and submit PR containing the missing third-party li
 on https://github.com/oracle/graalvm-reachability-metadata . ShardingSphere actively hosts the GraalVM Reachability Metadata of 
 some third-party libraries in the `shardingsphere-infra-reachability-metadata` submodule.
 
-If nativeTest execution fails, preliminary GraalVM Reachability Metadata should be generated for unit tests and manually 
-adjusted to fix nativeTest. If necessary, use the `org.junit.jupiter.api.condition.DisabledInNativeImage` annotation or the 
-`org.graalvm.nativeimage.imagecode` System Property blocks some unit tests from running under GraalVM Native Image.
+If nativeTest execution fails, preliminary GraalVM Reachability Metadata should be generated for unit tests,
+and manually adjust the contents of the `META-INF/native-image/org.apache.shardingsphere/shardingsphere-infra-reachability-metadata` folder on the classpath of the `shardingsphere-infra-reachability-metadata` submodule to fix nativeTest.
+If necessary, 
+use the `org.junit.jupiter.api.condition.DisabledInNativeImage` annotation or the `org.graalvm.nativeimage.imagecode` System Property blocks some unit tests from running under GraalVM Native Image.
 
-ShardingSphere defines the Maven Profile of `generateMetadata`, which is used to carry GraalVM Reachability Metadata. Bring 
-GraalVM Tracing Agent under GraalVM JIT Compiler to perform unit testing, and generate or merge existing GraalVM Reachability 
-Metadata files in a specific directory.
-This process can be easily handled with the following bash command. Contributors may still need to manually adjust specific 
-JSON entries and GraalVM Tracing Agent Filter chain of Maven Profile.
+ShardingSphere defines the Maven Profile of `generateMetadata` to carry the GraalVM Tracing Agent under the GraalVM JIT Compiler to perform unit testing,
+and generate or overwrite existing GraalVM Reachability Metadata files  in the `META-INF/native-image/org.apache.shardingsphere/generated-reachability-metadata/` folder of the classpath of the `shardingsphere-infra-reachability-metadata` submodule. 
+This process can be easily handled with the following bash command.
+Contributors may still need to manually adjust specific JSON entries and adjust the Filter chain of Maven Profile and GraalVM Tracing Agent as appropriate.
+For the `shardingsphere-infra-reachability-metadata` submodule,
+manually added, deleted, and changed JSON entries should be located in the `META-INF/native-image/org.apache.shardingsphere/shardingsphere-infra-reachability-metadata/` folder,
+entries in `META-INF/native-image/org.apache.shardingsphere/generated-reachability-metadata/` should only be generated by the Maven Profile of `generateMetadata`.
 
-The following command is only an example of using `shardingsphere-test-native` to generate GraalVM Reachability Metadata 
-in Conditional form. Generated GraalVM Reachability Metadata is located under the `shardingsphere-infra-reachability-metadata` submodule.
+The following command is only an example of using `shardingsphere-test-native` to generate GraalVM Reachability Metadata in Conditional form. 
+Generated GraalVM Reachability Metadata is located under the `shardingsphere-infra-reachability-metadata` submodule.
 
-For GraalVM Reachability Metadata used independently by test classes and test files, contributors should place
-`${user.dir}/infra/nativetest/src/test/resources/META-INF/native-image/shardingsphere-test-native-test-metadata/`
-folder. `${}` contains the regular system variables of POM 4.0 corresponding to the relevant submodules, which can be replaced by yourself.
+For GraalVM Reachability Metadata to be used independently by test classes and test files, 
+contributors should place it on the classpath of the `shardingsphere-test-native` submodule `META-INF/native-image/shardingsphere-test-native-test-metadata/`.
 
 ```bash
 git clone git@github.com:apache/shardingsphere.git
 cd ./shardingsphere/
 ./mvnw -PgenerateMetadata -DskipNativeTests -e -T1C clean test native:metadata-copy
 ```
-
-Please manually delete JSON files without any specific entries.

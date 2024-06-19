@@ -151,10 +151,6 @@ RULES
     : R U L E S
     ;
 
-RULE
-    : R U L E
-    ;
-
 REFRESH
     : R E F R E S H
     ;
@@ -239,38 +235,6 @@ INFO
     : I N F O
     ;
 
-MIGRATION
-    : M I G R A T I O N
-    ;
-
-READ
-    : R E A D
-    ;
-
-WRITE
-    : W R I T E
-    ;
-
-WORKER_THREAD
-    : W O R K E R UL_ T H R E A D
-    ;
-
-BATCH_SIZE
-    : B A T C H UL_ S I Z E
-    ;
-
-SHARDING_SIZE
-    : S H A R D I N G UL_ S I Z E
-    ;
-
-RATE_LIMITER
-    : R A T E UL_ L I M I T E R
-    ;
-
-STREAM_CHANNEL
-    : S T R E A M UL_ C H A N N E L
-    ;
-
 STORAGE
     : S T O R A G E
     ;
@@ -351,8 +315,8 @@ BROADCAST
     : B R O A D C A S T
     ;
 
-IMPLEMENTATIONS
-    : I M P L E M E N T A T I O N S
+PLUGINS
+    : P L U G I N S
     ;
 
 OF
@@ -365,6 +329,14 @@ KEY
 
 GENERATE
     : G E N E R A T E
+    ;
+
+LOAD
+    : L O A D
+    ;
+
+BALANCE
+    : B A L A N C E
     ;
 
 ALGORITHM

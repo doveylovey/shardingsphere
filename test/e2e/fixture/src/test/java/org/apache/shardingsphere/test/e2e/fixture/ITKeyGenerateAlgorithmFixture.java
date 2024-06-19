@@ -17,17 +17,17 @@
 
 package org.apache.shardingsphere.test.e2e.fixture;
 
-import org.apache.shardingsphere.infra.instance.InstanceContext;
-import org.apache.shardingsphere.infra.instance.InstanceContextAware;
-import org.apache.shardingsphere.keygen.core.algorithm.KeyGenerateAlgorithm;
-import org.apache.shardingsphere.keygen.core.context.KeyGenerateContext;
+import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
+import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContextAware;
+import org.apache.shardingsphere.infra.algorithm.keygen.core.KeyGenerateAlgorithm;
+import org.apache.shardingsphere.infra.algorithm.core.context.AlgorithmSQLContext;
 
 import java.util.Collection;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public final class ITKeyGenerateAlgorithmFixture implements KeyGenerateAlgorithm, InstanceContextAware {
+public final class ITKeyGenerateAlgorithmFixture implements KeyGenerateAlgorithm, ComputeNodeInstanceContextAware {
     
     private Properties props;
     
@@ -37,7 +37,7 @@ public final class ITKeyGenerateAlgorithmFixture implements KeyGenerateAlgorithm
     }
     
     @Override
-    public Collection<Comparable<?>> generateKeys(final KeyGenerateContext keyGenerateContext, final int keyGenerateCount) {
+    public Collection<Comparable<?>> generateKeys(final AlgorithmSQLContext context, final int keyGenerateCount) {
         return IntStream.range(0, keyGenerateCount).mapToObj(each -> 1L).collect(Collectors.toList());
     }
     
@@ -47,9 +47,9 @@ public final class ITKeyGenerateAlgorithmFixture implements KeyGenerateAlgorithm
     }
     
     @Override
-    public void setInstanceContext(final InstanceContext instanceContext) {
-        if (null != instanceContext) {
-            instanceContext.generateWorkerId(props);
+    public void setComputeNodeInstanceContext(final ComputeNodeInstanceContext computeNodeInstanceContext) {
+        if (null != computeNodeInstanceContext) {
+            computeNodeInstanceContext.generateWorkerId(props);
         }
     }
 }

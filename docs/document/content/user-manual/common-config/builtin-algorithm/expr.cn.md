@@ -49,6 +49,14 @@ weight = 10
 7. `C` 代表 chronology 的缩写，意为日历系统，必须遵循 Java `java.time.chrono.Chronology#getId()` 的格式。
 例如：`Japanese`，`Minguo`，`ThaiBuddhist`。存在默认值为 `ISO`。
 
+对于 `C` 的 Key 对应的 Value 是否可用，这取决于 JVM 所处的系统环境。
+这意味着如果用户需要设置 `C=Japanese`，则可能需要在应用的启动类调用 `java.util.Locale.setDefault(java.util.Locale.JAPAN);` 以修改系统环境。
+讨论两种 JVM 环境。
+
+1. Hotspot JVM 在 RunTime 决定 `java.util.Locale.getDefault()` 的返回值。
+
+2. GraalVM Native Image 在 BuildTime 决定 `java.util.Locale.Locale.getDefault()` 的返回值，与 Hotspot JVM 的表现并不一致，参考 https://github.com/oracle/graal/issues/8022 。
+
 类型：INTERVAL
 
 用例：
@@ -65,7 +73,12 @@ weight = 10
 
 ## 基于 GraalVM Truffle 的 Espresso 实现的使用 Groovy 语法的行表达式
 
-此为可选实现，你需要在自有项目的 `pom.xml` 主动声明如下依赖。并且请确保自有项目通过 GraalVM CE 23.0.1 For JDK 17.0.9 编译。
+此为可选实现，你需要在自有项目的 `pom.xml` 主动声明如下依赖。并且请确保自有项目通过 OpenJDK 21+ 或其下游发行版编译。
+
+由于 https://www.graalvm.org/jdk21/reference-manual/java-on-truffle/faq/#does-java-running-on-truffle-run-on-hotspot-too 的限制，
+当此模块在非 GraalVM Native Image 的环境中被使用时，仅在 Linux 上就绪。
+
+Truffle 与 JDK 的向后兼容性矩阵位于 https://medium.com/graalvm/40027a59c401 。
 
 ```xml
 <dependencies>
@@ -74,13 +87,18 @@ weight = 10
         <artifactId>shardingsphere-infra-expr-espresso</artifactId>
         <version>${shardingsphere.version}</version>
     </dependency>
+    <dependency>
+        <groupId>org.graalvm.polyglot</groupId>
+        <artifactId>polyglot</artifactId>
+        <version>24.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.graalvm.polyglot</groupId>
+        <artifactId>java-community</artifactId>
+        <version>24.0.0</version>
+        <type>pom</type>
+    </dependency>
 </dependencies>
-```
-
-用户必须通过 GraalVM Updater 安装 Espresso 组件，即在 bash 执行如下命令
-
-```bash
-gu install espresso
 ```
 
 `ESPRESSO` 仍为实验性模块，其允许在 GraalVM Native Image 下通过 GraalVM Truffle 的 Espresso 实现来使用带 Groovy 语法的行表达式。

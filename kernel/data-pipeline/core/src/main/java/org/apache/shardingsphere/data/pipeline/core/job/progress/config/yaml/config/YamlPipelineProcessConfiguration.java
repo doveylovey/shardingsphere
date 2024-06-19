@@ -20,7 +20,7 @@ package org.apache.shardingsphere.data.pipeline.core.job.progress.config.yaml.co
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.shardingsphere.infra.util.yaml.YamlConfiguration;
-import org.apache.shardingsphere.infra.yaml.config.pojo.algorithm.YamlAlgorithmConfiguration;
+import org.apache.shardingsphere.infra.algorithm.core.yaml.YamlAlgorithmConfiguration;
 
 /**
  * YAML pipeline process configuration.
@@ -35,12 +35,8 @@ public final class YamlPipelineProcessConfiguration implements YamlConfiguration
     
     private YamlAlgorithmConfiguration streamChannel;
     
-    /**
-     * Check all fields is null.
-     *
-     * @return true if all fields is null, otherwise is false.
-     */
-    public boolean isAllFieldsNull() {
+    @Override
+    public boolean isEmpty() {
         return null == read && null == write && null == streamChannel;
     }
 }

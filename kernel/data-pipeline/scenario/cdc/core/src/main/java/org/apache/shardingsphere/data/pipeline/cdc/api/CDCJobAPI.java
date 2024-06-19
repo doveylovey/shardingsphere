@@ -41,9 +41,9 @@ import org.apache.shardingsphere.data.pipeline.core.exception.PipelineInternalEx
 import org.apache.shardingsphere.data.pipeline.core.exception.job.PipelineJobCreationWithInvalidShardingCountException;
 import org.apache.shardingsphere.data.pipeline.core.exception.job.PrepareJobWithGetBinlogPositionException;
 import org.apache.shardingsphere.data.pipeline.core.importer.sink.PipelineSink;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.DumperCommonContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.IncrementalDumperContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.TableAndSchemaNameMapper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.DumperCommonContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.TableAndSchemaNameMapper;
 import org.apache.shardingsphere.data.pipeline.core.job.PipelineJobRegistry;
 import org.apache.shardingsphere.data.pipeline.core.job.api.PipelineAPIFactory;
 import org.apache.shardingsphere.data.pipeline.core.job.api.TransmissionJobAPI;
@@ -168,7 +168,7 @@ public final class CDCJobAPI implements TransmissionJobAPI {
     }
     
     private ShardingSpherePipelineDataSourceConfiguration getDataSourceConfiguration(final ShardingSphereDatabase database) {
-        Map<String, Map<String, Object>> dataSourcePoolProps = new HashMap<>();
+        Map<String, Map<String, Object>> dataSourcePoolProps = new HashMap<>(database.getResourceMetaData().getStorageUnits().size(), 1F);
         for (Entry<String, StorageUnit> entry : database.getResourceMetaData().getStorageUnits().entrySet()) {
             dataSourcePoolProps.put(entry.getKey(), dataSourceConfigSwapper.swapToMap(entry.getValue().getDataSourcePoolProperties()));
         }
@@ -260,7 +260,6 @@ public final class CDCJobAPI implements TransmissionJobAPI {
      */
     public void drop(final String jobId) {
         CDCJobConfiguration jobConfig = jobConfigManager.getJobConfiguration(jobId);
-        ShardingSpherePreconditions.checkState(PipelineJobIdUtils.getElasticJobConfigurationPOJO(jobId).isDisabled(), () -> new PipelineInternalException("Can't drop streaming job which is active"));
         jobManager.drop(jobId);
         cleanup(jobConfig);
     }

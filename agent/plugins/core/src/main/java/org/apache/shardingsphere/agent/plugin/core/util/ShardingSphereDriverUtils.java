@@ -20,10 +20,13 @@ package org.apache.shardingsphere.agent.plugin.core.util;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.driver.ShardingSphereDriver;
+import org.apache.shardingsphere.driver.jdbc.core.datasource.ShardingSphereDataSource;
 
 import java.sql.Driver;
 import java.sql.DriverManager;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -33,14 +36,19 @@ import java.util.Optional;
 public final class ShardingSphereDriverUtils {
     
     /**
-     * Get sharding sphere driver.
+     * Find ShardingSphere data sources.
      *
-     * @return ShardingSphereDriver
+     * @return found data source
      */
-    public static Optional<ShardingSphereDriver> getShardingSphereDriver() {
-        Enumeration<Driver> driverEnumeration = DriverManager.getDrivers();
-        while (driverEnumeration.hasMoreElements()) {
-            Driver driver = driverEnumeration.nextElement();
+    public static Map<String, ShardingSphereDataSource> findShardingSphereDataSources() {
+        return findShardingSphereDriver().map(ShardingSphereDriver::getShardingSphereDataSources).orElse(Collections.emptyMap());
+    }
+    
+    @SuppressWarnings("UseOfJDBCDriverClass")
+    private static Optional<ShardingSphereDriver> findShardingSphereDriver() {
+        Enumeration<Driver> drivers = DriverManager.getDrivers();
+        while (drivers.hasMoreElements()) {
+            Driver driver = drivers.nextElement();
             if (driver instanceof ShardingSphereDriver) {
                 return Optional.of((ShardingSphereDriver) driver);
             }

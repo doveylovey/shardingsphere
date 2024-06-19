@@ -28,6 +28,7 @@ import org.apache.shardingsphere.test.e2e.framework.param.model.AssertionTestPar
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
 
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
@@ -36,6 +37,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,6 +55,9 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
         }
         SingleE2EContainerComposer containerComposer = new SingleE2EContainerComposer(testParam);
         init(testParam, containerComposer);
+        if (null != testParam.getTestCaseContext().getTestCase().getDelayAssertionSeconds()) {
+            Awaitility.await().atMost(Duration.ofMinutes(5L)).pollDelay(testParam.getTestCaseContext().getTestCase().getDelayAssertionSeconds(), TimeUnit.SECONDS).until(() -> true);
+        }
         if (isUseXMLAsExpectedDataset()) {
             assertExecuteQueryWithXmlExpected(testParam, containerComposer);
         } else {
@@ -60,8 +66,9 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
     }
     
     private void assertExecuteQueryWithXmlExpected(final AssertionTestParameter testParam, final SingleE2EContainerComposer containerComposer) throws SQLException {
-        // TODO Fix jdbc adapter
-        if ("jdbc".equals(testParam.getAdapter())) {
+        // TODO Fix jdbc adapter and empty_storage_units proxy adapter
+        if ("jdbc".equals(testParam.getAdapter()) && !"empty_storage_units".equalsIgnoreCase(testParam.getScenario())
+                || "proxy".equals(testParam.getAdapter()) && "empty_storage_units".equalsIgnoreCase(testParam.getScenario())) {
             return;
         }
         try (
@@ -122,6 +129,9 @@ class GeneralDQLE2EIT extends BaseDQLE2EIT {
         }
         SingleE2EContainerComposer containerComposer = new SingleE2EContainerComposer(testParam);
         init(testParam, containerComposer);
+        if (null != testParam.getTestCaseContext().getTestCase().getDelayAssertionSeconds()) {
+            Awaitility.await().atMost(Duration.ofMinutes(5L)).pollDelay(testParam.getTestCaseContext().getTestCase().getDelayAssertionSeconds(), TimeUnit.SECONDS).until(() -> true);
+        }
         if (isUseXMLAsExpectedDataset()) {
             assertExecuteWithXmlExpected(testParam, containerComposer);
         } else {

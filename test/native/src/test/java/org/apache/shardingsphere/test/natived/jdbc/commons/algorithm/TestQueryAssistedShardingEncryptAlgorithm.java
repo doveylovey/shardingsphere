@@ -18,25 +18,25 @@
 package org.apache.shardingsphere.test.natived.jdbc.commons.algorithm;
 
 import lombok.Getter;
-import org.apache.shardingsphere.encrypt.api.context.EncryptContext;
-import org.apache.shardingsphere.encrypt.api.encrypt.assisted.AssistedEncryptAlgorithm;
+import org.apache.shardingsphere.encrypt.spi.EncryptAlgorithm;
+import org.apache.shardingsphere.encrypt.spi.EncryptAlgorithmMetaData;
+import org.apache.shardingsphere.infra.algorithm.core.context.AlgorithmSQLContext;
 
 import java.util.Properties;
 
-@SuppressWarnings("LombokGetterMayBeUsed")
-public final class TestQueryAssistedShardingEncryptAlgorithm implements AssistedEncryptAlgorithm {
+@Getter
+public final class TestQueryAssistedShardingEncryptAlgorithm implements EncryptAlgorithm {
     
-    @Getter
-    private Properties properties;
+    private final EncryptAlgorithmMetaData metaData = new EncryptAlgorithmMetaData(false, true, false, new Properties());
     
     @Override
-    public void init(final Properties props) {
-        this.properties = props;
+    public String encrypt(final Object plainValue, final AlgorithmSQLContext algorithmSQLContext) {
+        return "assistedEncryptValue";
     }
     
     @Override
-    public String encrypt(final Object plainValue, final EncryptContext encryptContext) {
-        return "assistedEncryptValue";
+    public Object decrypt(final Object cipherValue, final AlgorithmSQLContext algorithmSQLContext) {
+        throw new UnsupportedOperationException(String.format("Algorithm `%s` is unsupported to decrypt", getType()));
     }
     
     @Override

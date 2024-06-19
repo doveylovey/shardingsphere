@@ -29,6 +29,8 @@ import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
 import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.OneOffJobBootstrap;
 import org.apache.shardingsphere.mode.event.DataChangedEvent.Type;
 
+import java.util.Collection;
+
 /**
  * Job configuration changed process engine.
  */
@@ -47,13 +49,17 @@ public final class JobConfigurationChangedProcessEngine {
     public <T extends PipelineJobConfiguration> void process(final Type eventType, final JobConfiguration jobConfig, final JobConfigurationChangedProcessor<T> processor) {
         String jobId = jobConfig.getJobName();
         if (jobConfig.isDisabled()) {
+            // Get sharding items before stop job, because sharding items will be cleared after stop job.
+            Collection<Integer> shardingItems = PipelineJobRegistry.getShardingItems(jobId);
             PipelineJobRegistry.stop(jobId);
-            disableJob(jobId);
-            return;
+            disableJob(jobId, shardingItems);
         }
         switch (eventType) {
             case ADDED:
             case UPDATED:
+                if (jobConfig.isDisabled()) {
+                    break;
+                }
                 if (PipelineJobRegistry.isExisting(jobId)) {
                     log.info("{} added to executing jobs failed since it already exists", jobId);
                 } else {
@@ -70,9 +76,9 @@ public final class JobConfigurationChangedProcessEngine {
         }
     }
     
-    private void disableJob(final String jobId) {
+    private void disableJob(final String jobId, final Collection<Integer> shardingItems) {
         PipelineDistributedBarrier distributedBarrier = PipelineDistributedBarrier.getInstance(PipelineJobIdUtils.parseContextKey(jobId));
-        for (Integer each : PipelineJobRegistry.getShardingItems(jobId)) {
+        for (Integer each : shardingItems) {
             distributedBarrier.persistEphemeralChildrenNode(PipelineMetaDataNode.getJobBarrierDisablePath(jobId), each);
         }
     }

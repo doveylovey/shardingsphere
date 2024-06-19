@@ -18,15 +18,15 @@
 package org.apache.shardingsphere.data.pipeline.postgresql.ingest;
 
 import org.apache.shardingsphere.data.pipeline.api.type.StandardPipelineDataSourceConfiguration;
+import org.apache.shardingsphere.data.pipeline.core.channel.memory.MemoryPipelineChannel;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceManager;
 import org.apache.shardingsphere.data.pipeline.core.exception.IngestException;
-import org.apache.shardingsphere.data.pipeline.core.ingest.channel.EmptyAckCallback;
-import org.apache.shardingsphere.data.pipeline.core.ingest.channel.memory.SimpleMemoryPipelineChannel;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.DumperCommonContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.IncrementalDumperContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.ActualAndLogicTableNameMapper;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.TableAndSchemaNameMapper;
-import org.apache.shardingsphere.data.pipeline.core.metadata.CaseInsensitiveIdentifier;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.DumperCommonContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.ActualAndLogicTableNameMapper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.TableAndSchemaNameMapper;
+import org.apache.shardingsphere.infra.exception.core.external.sql.type.wrapper.SQLWrapperException;
+import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveIdentifier;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.StandardPipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.PostgreSQLLogicalReplication;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.WALPosition;
@@ -49,7 +49,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,14 +75,16 @@ class PostgreSQLWALDumperTest {
     
     private PostgreSQLWALDumper walDumper;
     
-    private SimpleMemoryPipelineChannel channel;
+    private MemoryPipelineChannel channel;
     
     private final PipelineDataSourceManager dataSourceManager = new PipelineDataSourceManager();
     
     @BeforeEach
     void setUp() {
         position = new WALPosition(new PostgreSQLLogSequenceNumber(LogSequenceNumber.valueOf(100L)));
-        channel = new SimpleMemoryPipelineChannel(10000, new EmptyAckCallback());
+        channel = new MemoryPipelineChannel(10000, records -> {
+            
+        });
         String jdbcUrl = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;MODE=PostgreSQL";
         String username = "root";
         String password = "root";
@@ -100,7 +101,7 @@ class PostgreSQLWALDumperTest {
                 Statement statement = connection.createStatement()) {
             statement.execute(sql);
         } catch (final SQLException ex) {
-            throw new RuntimeException("Init table failed.", ex);
+            throw new SQLWrapperException(ex);
         }
     }
     
@@ -133,6 +134,6 @@ class PostgreSQLWALDumperTest {
             walDumper.start();
         } catch (final IngestException ignored) {
         }
-        assertThat(channel.fetchRecords(100, 0, TimeUnit.SECONDS).size(), is(1));
+        assertThat(channel.fetch(100, 0L).size(), is(1));
     }
 }

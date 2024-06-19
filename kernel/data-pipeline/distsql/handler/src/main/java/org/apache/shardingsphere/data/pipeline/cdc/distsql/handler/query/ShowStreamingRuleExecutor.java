@@ -17,27 +17,28 @@
 
 package org.apache.shardingsphere.data.pipeline.cdc.distsql.handler.query;
 
-import org.apache.shardingsphere.data.pipeline.cdc.distsql.statement.ShowStreamingRuleStatement;
-import org.apache.shardingsphere.data.pipeline.distsql.ShowTransmissionRuleQueryResult;
-import org.apache.shardingsphere.distsql.handler.ral.query.QueryableRALExecutor;
+import org.apache.shardingsphere.data.pipeline.cdc.distsql.statement.queryable.ShowStreamingRuleStatement;
+import org.apache.shardingsphere.data.pipeline.distsql.handler.query.ShowTransmissionRuleQueryResult;
+import org.apache.shardingsphere.distsql.handler.engine.query.DistSQLQueryExecutor;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
+import org.apache.shardingsphere.mode.manager.ContextManager;
 
 import java.util.Collection;
 
 /**
  * Show streaming rule executor.
  */
-public final class ShowStreamingRuleExecutor implements QueryableRALExecutor<ShowStreamingRuleStatement> {
+public final class ShowStreamingRuleExecutor implements DistSQLQueryExecutor<ShowStreamingRuleStatement> {
     
     private final ShowTransmissionRuleQueryResult queryResult = new ShowTransmissionRuleQueryResult("STREAMING");
     
     @Override
-    public Collection<String> getColumnNames() {
+    public Collection<String> getColumnNames(final ShowStreamingRuleStatement sqlStatement) {
         return queryResult.getColumnNames();
     }
     
     @Override
-    public Collection<LocalDataQueryResultRow> getRows(final ShowStreamingRuleStatement sqlStatement) {
+    public Collection<LocalDataQueryResultRow> getRows(final ShowStreamingRuleStatement sqlStatement, final ContextManager contextManager) {
         return queryResult.getRows();
     }
     

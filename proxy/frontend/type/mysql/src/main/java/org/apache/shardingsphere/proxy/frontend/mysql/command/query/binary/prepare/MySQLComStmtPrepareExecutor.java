@@ -32,6 +32,7 @@ import org.apache.shardingsphere.infra.binder.context.segment.select.projection.
 import org.apache.shardingsphere.infra.binder.context.segment.select.projection.impl.ColumnProjection;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
+import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
 import org.apache.shardingsphere.infra.binder.engine.SQLBindEngine;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
@@ -58,7 +59,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -126,21 +127,23 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
     
     private Collection<MySQLPacket> createParameterColumnDefinition41Packets(final SQLStatementContext sqlStatementContext, final int characterSet,
                                                                              final MySQLServerPreparedStatement serverPreparedStatement) {
-        Map<ParameterMarkerSegment, ShardingSphereColumn> columnsOfParameterMarkers =
+        List<ShardingSphereColumn> columnsOfParameterMarkers =
                 MySQLComStmtPrepareParameterMarkerExtractor.findColumnsOfParameterMarkers(sqlStatementContext.getSqlStatement(), getSchema(sqlStatementContext));
         Collection<ParameterMarkerSegment> parameterMarkerSegments = ((AbstractSQLStatement) sqlStatementContext.getSqlStatement()).getParameterMarkerSegments();
         Collection<MySQLPacket> result = new ArrayList<>(parameterMarkerSegments.size());
-        for (ParameterMarkerSegment each : parameterMarkerSegments) {
-            ShardingSphereColumn column = columnsOfParameterMarkers.get(each);
+        Collection<Integer> paramColumnDefinitionFlags = new ArrayList<>(parameterMarkerSegments.size());
+        for (int index = 0; index < parameterMarkerSegments.size(); index++) {
+            ShardingSphereColumn column = columnsOfParameterMarkers.isEmpty() ? null : columnsOfParameterMarkers.get(index);
             if (null != column) {
                 int columnDefinitionFlag = calculateColumnDefinitionFlag(column);
                 result.add(createMySQLColumnDefinition41Packet(characterSet, columnDefinitionFlag, MySQLBinaryColumnType.valueOfJDBCType(column.getDataType())));
-                serverPreparedStatement.getParameterColumnDefinitionFlags().add(columnDefinitionFlag);
+                paramColumnDefinitionFlags.add(columnDefinitionFlag);
             } else {
                 result.add(createMySQLColumnDefinition41Packet(characterSet, 0, MySQLBinaryColumnType.VAR_STRING));
-                serverPreparedStatement.getParameterColumnDefinitionFlags().add(0);
+                paramColumnDefinitionFlags.add(0);
             }
         }
+        serverPreparedStatement.getParameterColumnDefinitionFlags().addAll(paramColumnDefinitionFlags);
         return result;
     }
     
@@ -163,9 +166,9 @@ public final class MySQLComStmtPrepareExecutor implements CommandExecutor {
     }
     
     private ShardingSphereSchema getSchema(final SQLStatementContext sqlStatementContext) {
-        String databaseName = sqlStatementContext.getTablesContext().getDatabaseName().orElseGet(connectionSession::getDefaultDatabaseName);
+        String databaseName = ((TableAvailable) sqlStatementContext).getTablesContext().getDatabaseName().orElseGet(connectionSession::getDefaultDatabaseName);
         ShardingSphereDatabase database = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getDatabase(databaseName);
-        return sqlStatementContext.getTablesContext().getSchemaName().map(database::getSchema)
+        return ((TableAvailable) sqlStatementContext).getTablesContext().getSchemaName().map(database::getSchema)
                 .orElseGet(() -> database.getSchema(new DatabaseTypeRegistry(sqlStatementContext.getDatabaseType()).getDefaultSchemaName(database.getName())));
     }
     

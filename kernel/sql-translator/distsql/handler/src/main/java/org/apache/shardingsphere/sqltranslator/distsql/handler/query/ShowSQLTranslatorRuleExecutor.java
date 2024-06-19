@@ -17,10 +17,11 @@
 
 package org.apache.shardingsphere.sqltranslator.distsql.handler.query;
 
-import org.apache.shardingsphere.distsql.handler.ral.query.MetaDataRequiredQueryableRALExecutor;
+import lombok.Setter;
+import org.apache.shardingsphere.distsql.handler.aware.DistSQLExecutorRuleAware;
+import org.apache.shardingsphere.distsql.handler.engine.query.DistSQLQueryExecutor;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
-import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
-import org.apache.shardingsphere.infra.props.PropertiesConverter;
+import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.sqltranslator.api.config.SQLTranslatorRuleConfiguration;
 import org.apache.shardingsphere.sqltranslator.distsql.statement.queryable.ShowSQLTranslatorRuleStatement;
 import org.apache.shardingsphere.sqltranslator.rule.SQLTranslatorRule;
@@ -32,22 +33,25 @@ import java.util.Collections;
 /**
  * Show SQL translator rule executor.
  */
-public final class ShowSQLTranslatorRuleExecutor implements MetaDataRequiredQueryableRALExecutor<ShowSQLTranslatorRuleStatement> {
+@Setter
+public final class ShowSQLTranslatorRuleExecutor implements DistSQLQueryExecutor<ShowSQLTranslatorRuleStatement>, DistSQLExecutorRuleAware<SQLTranslatorRule> {
+    
+    private SQLTranslatorRule rule;
     
     @Override
-    public Collection<LocalDataQueryResultRow> getRows(final ShardingSphereMetaData metaData, final ShowSQLTranslatorRuleStatement sqlStatement) {
-        SQLTranslatorRule rule = metaData.getGlobalRuleMetaData().getSingleRule(SQLTranslatorRule.class);
-        return buildData(rule.getConfiguration());
-    }
-    
-    private Collection<LocalDataQueryResultRow> buildData(final SQLTranslatorRuleConfiguration ruleConfig) {
-        return Collections.singleton(new LocalDataQueryResultRow(null == ruleConfig.getType() ? "" : ruleConfig.getType(),
-                PropertiesConverter.convert(ruleConfig.getProps()), String.valueOf(ruleConfig.isUseOriginalSQLWhenTranslatingFailed())));
-    }
-    
-    @Override
-    public Collection<String> getColumnNames() {
+    public Collection<String> getColumnNames(final ShowSQLTranslatorRuleStatement sqlStatement) {
         return Arrays.asList("type", "props", "use_original_sql_when_translating_failed");
+    }
+    
+    @Override
+    public Collection<LocalDataQueryResultRow> getRows(final ShowSQLTranslatorRuleStatement sqlStatement, final ContextManager contextManager) {
+        SQLTranslatorRuleConfiguration ruleConfig = rule.getConfiguration();
+        return Collections.singleton(new LocalDataQueryResultRow(ruleConfig.getType(), ruleConfig.getProps(), ruleConfig.isUseOriginalSQLWhenTranslatingFailed()));
+    }
+    
+    @Override
+    public Class<SQLTranslatorRule> getRuleClass() {
+        return SQLTranslatorRule.class;
     }
     
     @Override

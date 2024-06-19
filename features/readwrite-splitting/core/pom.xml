@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-readwrite-splitting</artifactId>
-        <version>5.4.2-SNAPSHOT</version>
+        <version>5.5.1-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-readwrite-splitting-core</artifactId>
     <name>${project.artifactId}</name>
@@ -51,6 +51,21 @@
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-infra-expr-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-algorithm-load-balancer-random</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-algorithm-load-balancer-round-robin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-algorithm-load-balancer-weight</artifactId>
             <version>${project.version}</version>
         </dependency>
         

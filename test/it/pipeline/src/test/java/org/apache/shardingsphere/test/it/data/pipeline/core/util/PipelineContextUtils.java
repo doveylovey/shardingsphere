@@ -28,15 +28,13 @@ import org.apache.shardingsphere.data.pipeline.core.datanode.JobDataNodeEntry;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceManager;
 import org.apache.shardingsphere.data.pipeline.core.execute.ExecuteEngine;
 import org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.IncrementalDumperContext;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.mapper.TableAndSchemaNameMapper;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.mapper.TableAndSchemaNameMapper;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.config.PipelineProcessConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.config.PipelineProcessConfigurationUtils;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.config.yaml.config.YamlPipelineProcessConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.config.yaml.config.YamlPipelineReadConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.config.yaml.swapper.YamlPipelineProcessConfigurationSwapper;
-import org.apache.shardingsphere.data.pipeline.core.metadata.CaseInsensitiveIdentifier;
-import org.apache.shardingsphere.data.pipeline.core.metadata.CaseInsensitiveQualifiedTable;
 import org.apache.shardingsphere.data.pipeline.core.metadata.model.PipelineColumnMetaData;
 import org.apache.shardingsphere.data.pipeline.core.preparer.datasource.param.CreateTableConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.ratelimit.JobRateLimitAlgorithm;
@@ -45,29 +43,36 @@ import org.apache.shardingsphere.data.pipeline.scenario.migration.config.Migrati
 import org.apache.shardingsphere.data.pipeline.scenario.migration.config.MigrationTaskConfiguration;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.context.MigrationJobItemContext;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.ingest.dumper.MigrationIncrementalDumperContextCreator;
-import org.apache.shardingsphere.driver.api.yaml.YamlShardingSphereDataSourceFactory;
+import org.apache.shardingsphere.driver.api.ShardingSphereDataSourceFactory;
 import org.apache.shardingsphere.driver.jdbc.core.datasource.ShardingSphereDataSource;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
+import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.database.core.metadata.database.DialectDatabaseMetaData;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.datanode.DataNode;
+import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
 import org.apache.shardingsphere.infra.instance.metadata.InstanceType;
+import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveIdentifier;
+import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveQualifiedTable;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereColumn;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.infra.yaml.config.pojo.YamlRootConfiguration;
 import org.apache.shardingsphere.infra.yaml.config.swapper.mode.YamlModeConfigurationSwapper;
-import org.apache.shardingsphere.metadata.persist.MetaDataBasedPersistService;
+import org.apache.shardingsphere.infra.yaml.config.swapper.resource.YamlDataSourceConfigurationSwapper;
+import org.apache.shardingsphere.infra.yaml.config.swapper.rule.YamlRuleConfigurationSwapperEngine;
 import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
-import org.apache.shardingsphere.metadata.persist.NewMetaDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
+import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
 import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepository;
 import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepositoryConfiguration;
 import org.apache.shardingsphere.test.it.data.pipeline.core.fixture.EmbedTestingServer;
 import org.apache.shardingsphere.test.util.ConfigurationFileUtils;
 import org.mockito.internal.configuration.plugins.Plugins;
 
+import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,6 +82,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Pipeline context utility class.
@@ -90,7 +97,6 @@ public final class PipelineContextUtils {
     /**
      * Mock mode configuration and context manager.
      */
-    @SneakyThrows
     public static void mockModeConfigAndContextManager() {
         EmbedTestingServer.start();
         PipelineContextKey contextKey = getContextKey();
@@ -101,27 +107,33 @@ public final class PipelineContextUtils {
                 ConfigurationFileUtils.readFileAndIgnoreComments("config_sharding_sphere_jdbc_source.yaml"));
         YamlRootConfiguration rootConfig = (YamlRootConfiguration) pipelineDataSourceConfig.getDataSourceConfiguration();
         ModeConfiguration modeConfig = new YamlModeConfigurationSwapper().swapToObject(rootConfig.getMode());
-        ShardingSphereDataSource dataSource = (ShardingSphereDataSource) YamlShardingSphereDataSourceFactory.createDataSourceWithoutCache(rootConfig);
-        ContextManager contextManager = getContextManager(dataSource);
+        ContextManager contextManager = getContextManager(rootConfig);
         ClusterPersistRepository persistRepository = getClusterPersistRepository((ClusterPersistRepositoryConfiguration) modeConfig.getRepository());
-        MetaDataBasedPersistService persistService = "Cluster".equals(modeConfig.getType()) ? new NewMetaDataPersistService(persistRepository) : new MetaDataPersistService(persistRepository);
-        MetaDataContexts metaDataContexts = renewMetaDataContexts(contextManager.getMetaDataContexts(), persistService);
-        PipelineContext pipelineContext = new PipelineContext(modeConfig, new ContextManager(metaDataContexts, contextManager.getInstanceContext()));
+        MetaDataContexts metaDataContexts = renewMetaDataContexts(contextManager.getMetaDataContexts(), new MetaDataPersistService(persistRepository));
+        PipelineContext pipelineContext = new PipelineContext(modeConfig, new ContextManager(metaDataContexts, contextManager.getComputeNodeInstanceContext(),
+                contextManager.getRepository()));
         PipelineContextManager.putContext(contextKey, pipelineContext);
     }
     
-    @SneakyThrows(ReflectiveOperationException.class)
-    private static ContextManager getContextManager(final ShardingSphereDataSource dataSource) {
-        return (ContextManager) Plugins.getMemberAccessor().get(ShardingSphereDataSource.class.getDeclaredField("contextManager"), dataSource);
+    @SneakyThrows({ReflectiveOperationException.class, SQLException.class})
+    private static ContextManager getContextManager(final YamlRootConfiguration rootConfig) {
+        return (ContextManager) Plugins.getMemberAccessor().get(ShardingSphereDataSource.class.getDeclaredField("contextManager"), createDataSource(rootConfig));
+    }
+    
+    private static DataSource createDataSource(final YamlRootConfiguration rootConfig) throws SQLException {
+        Map<String, DataSource> dataSourceMap = new YamlDataSourceConfigurationSwapper().swapToDataSources(rootConfig.getDataSources(), false);
+        ModeConfiguration modeConfig = new YamlModeConfigurationSwapper().swapToObject(rootConfig.getMode());
+        Collection<RuleConfiguration> ruleConfigs = new YamlRuleConfigurationSwapperEngine().swapToRuleConfigurations(rootConfig.getRules());
+        return ShardingSphereDataSourceFactory.createDataSource(rootConfig.getDatabaseName(), modeConfig, dataSourceMap, ruleConfigs, rootConfig.getProps());
     }
     
     private static ClusterPersistRepository getClusterPersistRepository(final ClusterPersistRepositoryConfiguration repositoryConfig) {
         ClusterPersistRepository result = TypedSPILoader.getService(ClusterPersistRepository.class, repositoryConfig.getType(), repositoryConfig.getProps());
-        result.init(repositoryConfig);
+        result.init(repositoryConfig, mock(ComputeNodeInstanceContext.class));
         return result;
     }
     
-    private static MetaDataContexts renewMetaDataContexts(final MetaDataContexts old, final MetaDataBasedPersistService persistService) {
+    private static MetaDataContexts renewMetaDataContexts(final MetaDataContexts old, final MetaDataPersistService persistService) {
         Map<String, ShardingSphereTable> tables = new HashMap<>(3, 1F);
         tables.put("t_order", new ShardingSphereTable("t_order", Arrays.asList(
                 new ShardingSphereColumn("order_id", Types.INTEGER, true, false, false, true, false, false),
@@ -134,7 +146,7 @@ public final class PipelineContextUtils {
                 new ShardingSphereColumn("status", Types.VARCHAR, false, false, false, true, false, false)),
                 Collections.emptyList(), Collections.emptyList()));
         old.getMetaData().getDatabase("logic_db").getSchema("logic_db").putAll(tables);
-        return new MetaDataContexts(persistService, old.getMetaData());
+        return MetaDataContextsFactory.create(persistService, old.getMetaData());
     }
     
     /**

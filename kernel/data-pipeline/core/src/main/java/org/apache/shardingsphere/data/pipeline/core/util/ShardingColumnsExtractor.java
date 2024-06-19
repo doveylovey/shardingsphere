@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.data.pipeline.core.util;
 
-import org.apache.shardingsphere.data.pipeline.core.metadata.CaseInsensitiveIdentifier;
+import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveIdentifier;
 import org.apache.shardingsphere.infra.yaml.config.pojo.rule.YamlRuleConfiguration;
 import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.api.config.rule.ShardingAutoTableRuleConfiguration;
@@ -55,7 +55,7 @@ public final class ShardingColumnsExtractor {
         }
         Set<String> defaultDatabaseShardingColumns = extractShardingColumns(shardingRuleConfig.get().getDefaultDatabaseShardingStrategy());
         Set<String> defaultTableShardingColumns = extractShardingColumns(shardingRuleConfig.get().getDefaultTableShardingStrategy());
-        Map<CaseInsensitiveIdentifier, Set<String>> result = new ConcurrentHashMap<>();
+        Map<CaseInsensitiveIdentifier, Set<String>> result = new ConcurrentHashMap<>(shardingRuleConfig.get().getTables().size(), 1F);
         for (ShardingTableRuleConfiguration each : shardingRuleConfig.get().getTables()) {
             CaseInsensitiveIdentifier logicTableName = new CaseInsensitiveIdentifier(each.getLogicTable());
             if (!logicTableNames.contains(logicTableName)) {

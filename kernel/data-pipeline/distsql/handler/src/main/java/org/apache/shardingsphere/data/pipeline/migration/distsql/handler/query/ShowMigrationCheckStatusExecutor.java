@@ -18,48 +18,40 @@
 package org.apache.shardingsphere.data.pipeline.migration.distsql.handler.query;
 
 import org.apache.shardingsphere.data.pipeline.core.consistencycheck.pojo.ConsistencyCheckJobItemInfo;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationCheckStatusStatement;
 import org.apache.shardingsphere.data.pipeline.scenario.consistencycheck.ConsistencyCheckJobType;
 import org.apache.shardingsphere.data.pipeline.scenario.consistencycheck.api.ConsistencyCheckJobAPI;
-import org.apache.shardingsphere.distsql.handler.ral.query.QueryableRALExecutor;
+import org.apache.shardingsphere.distsql.handler.engine.query.DistSQLQueryExecutor;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationCheckStatusStatement;
+import org.apache.shardingsphere.mode.manager.ContextManager;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Show migration check status executor.
  */
-public final class ShowMigrationCheckStatusExecutor implements QueryableRALExecutor<ShowMigrationCheckStatusStatement> {
+public final class ShowMigrationCheckStatusExecutor implements DistSQLQueryExecutor<ShowMigrationCheckStatusStatement> {
     
     private final ConsistencyCheckJobAPI jobAPI = new ConsistencyCheckJobAPI(new ConsistencyCheckJobType());
     
     @Override
-    public Collection<LocalDataQueryResultRow> getRows(final ShowMigrationCheckStatusStatement sqlStatement) {
-        List<ConsistencyCheckJobItemInfo> infos = jobAPI.getJobItemInfos(sqlStatement.getJobId());
-        Collection<LocalDataQueryResultRow> result = new LinkedList<>();
-        for (ConsistencyCheckJobItemInfo each : infos) {
-            result.add(convert(each));
-        }
-        return result;
-    }
-    
-    private LocalDataQueryResultRow convert(final ConsistencyCheckJobItemInfo info) {
-        String checkResult = null == info.getCheckSuccess() ? "" : info.getCheckSuccess().toString();
-        return new LocalDataQueryResultRow(Optional.ofNullable(info.getTableNames()).orElse(""), checkResult, Optional.ofNullable(info.getCheckFailedTableNames()).orElse(""),
-                info.isActive() ? Boolean.TRUE.toString() : Boolean.FALSE.toString(),
-                String.valueOf(info.getInventoryFinishedPercentage()), info.getInventoryRemainingSeconds(), info.getIncrementalIdleSeconds(),
-                Optional.ofNullable(info.getCheckBeginTime()).orElse(""), Optional.ofNullable(info.getCheckEndTime()).orElse(""), info.getDurationSeconds(),
-                info.getAlgorithmType(), Optional.ofNullable(info.getAlgorithmProps()).orElse(""), Optional.ofNullable(info.getErrorMessage()).orElse(""));
+    public Collection<String> getColumnNames(final ShowMigrationCheckStatusStatement sqlStatement) {
+        return Arrays.asList("tables", "result", "check_failed_tables", "active", "inventory_finished_percentage", "inventory_remaining_seconds", "incremental_idle_seconds",
+                "check_begin_time", "check_end_time", "duration_seconds", "algorithm_type", "algorithm_props", "error_message");
     }
     
     @Override
-    public Collection<String> getColumnNames() {
-        return Arrays.asList("tables", "result", "check_failed_tables", "active", "inventory_finished_percentage", "inventory_remaining_seconds", "incremental_idle_seconds",
-                "check_begin_time", "check_end_time", "duration_seconds", "algorithm_type", "algorithm_props", "error_message");
+    public Collection<LocalDataQueryResultRow> getRows(final ShowMigrationCheckStatusStatement sqlStatement, final ContextManager contextManager) {
+        return jobAPI.getJobItemInfos(sqlStatement.getJobId()).stream().map(this::convert).collect(Collectors.toList());
+    }
+    
+    private LocalDataQueryResultRow convert(final ConsistencyCheckJobItemInfo info) {
+        String incrementalIdleSeconds = null == info.getIncrementalIdleSeconds() ? "" : String.valueOf(info.getIncrementalIdleSeconds());
+        return new LocalDataQueryResultRow(info.getTableNames(), info.getCheckSuccess(), info.getCheckFailedTableNames(), info.isActive(),
+                info.getInventoryFinishedPercentage(), info.getInventoryRemainingSeconds(), incrementalIdleSeconds,
+                info.getCheckBeginTime(), info.getCheckEndTime(), info.getDurationSeconds(), info.getAlgorithmType(), info.getAlgorithmProps(), info.getErrorMessage());
     }
     
     @Override

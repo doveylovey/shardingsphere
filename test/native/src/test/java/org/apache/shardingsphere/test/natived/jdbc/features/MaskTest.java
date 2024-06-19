@@ -17,8 +17,8 @@
 
 package org.apache.shardingsphere.test.natived.jdbc.features;
 
-import org.apache.shardingsphere.driver.api.yaml.YamlShardingSphereDataSourceFactory;
-import org.apache.shardingsphere.test.natived.jdbc.commons.FileTestUtils;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Address;
 import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Order;
 import org.apache.shardingsphere.test.natived.jdbc.commons.entity.OrderItem;
@@ -28,10 +28,10 @@ import org.apache.shardingsphere.test.natived.jdbc.commons.repository.OrderRepos
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -48,20 +48,23 @@ class MaskTest {
     private AddressRepository addressRepository;
     
     @Test
-    void assertMaskInLocalTransactions() throws SQLException, IOException {
-        DataSource dataSource = YamlShardingSphereDataSourceFactory.createDataSource(FileTestUtils.readFromFileURLString("test-native/yaml/features/mask.yaml"));
+    void assertMaskInLocalTransactions() throws SQLException {
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName("org.apache.shardingsphere.driver.ShardingSphereDriver");
+        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/features/mask.yaml");
+        DataSource dataSource = new HikariDataSource(config);
         orderRepository = new OrderRepository(dataSource);
         orderItemRepository = new OrderItemRepository(dataSource);
         addressRepository = new AddressRepository(dataSource);
-        this.initEnvironment();
-        this.processSuccess();
-        this.cleanEnvironment();
+        initEnvironment();
+        processSuccess();
+        cleanEnvironment();
     }
     
     private void initEnvironment() throws SQLException {
         orderRepository.createTableIfNotExistsInMySQL();
         orderItemRepository.createTableIfNotExistsInMySQL();
-        addressRepository.createTableIfNotExists();
+        addressRepository.createTableIfNotExistsInMySQL();
         orderRepository.truncateTable();
         orderItemRepository.truncateTable();
         addressRepository.truncateTable();
@@ -70,15 +73,15 @@ class MaskTest {
     private void processSuccess() throws SQLException {
         final Collection<Long> orderIds = insertData();
         assertThat(orderRepository.selectAll(),
-                equalTo(IntStream.range(1, 11).mapToObj(i -> new Order(i, i % 2, i, i, "INSERT_TEST")).collect(Collectors.toList())));
+                equalTo(IntStream.range(1, 11).mapToObj(each -> new Order(each, each % 2, each, each, "INSERT_TEST")).collect(Collectors.toList())));
         assertThat(orderItemRepository.selectAll(),
-                equalTo(IntStream.range(1, 11).mapToObj(i -> new OrderItem(i, i, i, "138****0001", "INSERT_TEST")).collect(Collectors.toList())));
+                equalTo(IntStream.range(1, 11).mapToObj(each -> new OrderItem(each, each, each, "138****0001", "INSERT_TEST")).collect(Collectors.toList())));
         assertThat(addressRepository.selectAll(),
-                equalTo(LongStream.range(1, 11).mapToObj(i -> new Address(i, "address_test_" + i)).collect(Collectors.toList())));
+                equalTo(LongStream.range(1L, 11L).mapToObj(each -> new Address(each, "address_test_" + each)).collect(Collectors.toList())));
         deleteData(orderIds);
-        assertThat(orderRepository.selectAll(), equalTo(new ArrayList<>()));
-        assertThat(orderItemRepository.selectAll(), equalTo(new ArrayList<>()));
-        assertThat(addressRepository.selectAll(), equalTo(new ArrayList<>()));
+        assertThat(orderRepository.selectAll(), equalTo(Collections.emptyList()));
+        assertThat(orderItemRepository.selectAll(), equalTo(Collections.emptyList()));
+        assertThat(addressRepository.selectAll(), equalTo(Collections.emptyList()));
     }
     
     private Collection<Long> insertData() throws SQLException {

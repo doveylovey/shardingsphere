@@ -91,7 +91,7 @@ public final class ConsistencyCheckJobAPI {
         Optional<String> latestCheckJobId = governanceFacade.getJobFacade().getCheck().findLatestCheckJobId(parentJobId);
         if (latestCheckJobId.isPresent()) {
             Optional<ConsistencyCheckJobItemProgress> progress = new PipelineJobItemManager<ConsistencyCheckJobItemProgress>(progressSwapper).getProgress(latestCheckJobId.get(), 0);
-            ShardingSpherePreconditions.checkState(progress.isPresent() && JobStatus.FINISHED == progress.get().getStatus(),
+            ShardingSpherePreconditions.checkState(progress.isPresent() && (JobStatus.FINISHED == progress.get().getStatus() || JobStatus.CONSISTENCY_CHECK_FAILURE == progress.get().getStatus()),
                     () -> new UncompletedConsistencyCheckJobExistsException(latestCheckJobId.get(), progress.orElse(null)));
         }
         checkPipelineDatabaseTypes(param);
@@ -99,7 +99,7 @@ public final class ConsistencyCheckJobAPI {
         String result = PipelineJobIdUtils.marshal(
                 latestCheckJobId.map(optional -> new ConsistencyCheckJobId(contextKey, parentJobId, optional)).orElseGet(() -> new ConsistencyCheckJobId(contextKey, parentJobId)));
         governanceFacade.getJobFacade().getCheck().persistLatestCheckJobId(parentJobId, result);
-        governanceFacade.getJobFacade().getCheck().deleteCheckJobResult(parentJobId, result);
+        governanceFacade.getJobFacade().getCheck().initCheckJobResult(parentJobId, result);
         jobManager.drop(result);
         jobManager.start(new YamlConsistencyCheckJobConfigurationSwapper().swapToObject(getYamlConfiguration(result, parentJobId, param)));
         return result;
@@ -110,8 +110,8 @@ public final class ConsistencyCheckJobAPI {
         try (TableDataConsistencyChecker checker = TableDataConsistencyCheckerFactory.newInstance(param.getAlgorithmTypeName(), param.getAlgorithmProps())) {
             supportedDatabaseTypes = checker.getSupportedDatabaseTypes();
         }
-        ShardingSpherePreconditions.checkState(supportedDatabaseTypes.contains(param.getSourceDatabaseType()), () -> new UnsupportedPipelineDatabaseTypeException(param.getSourceDatabaseType()));
-        ShardingSpherePreconditions.checkState(supportedDatabaseTypes.contains(param.getTargetDatabaseType()), () -> new UnsupportedPipelineDatabaseTypeException(param.getTargetDatabaseType()));
+        ShardingSpherePreconditions.checkContains(supportedDatabaseTypes, param.getSourceDatabaseType(), () -> new UnsupportedPipelineDatabaseTypeException(param.getSourceDatabaseType()));
+        ShardingSpherePreconditions.checkContains(supportedDatabaseTypes, param.getTargetDatabaseType(), () -> new UnsupportedPipelineDatabaseTypeException(param.getTargetDatabaseType()));
     }
     
     private YamlConsistencyCheckJobConfiguration getYamlConfiguration(final String jobId, final String parentJobId, final CreateConsistencyCheckJobParameter param) {
@@ -243,16 +243,17 @@ public final class ConsistencyCheckJobAPI {
             result.setDurationSeconds(duration.getSeconds());
             result.setCheckEndTime(DateTimeFormatterFactory.getLongMillsFormatter().format(checkEndTime));
             result.setInventoryRemainingSeconds(0L);
-        } else if (0 != recordsCount && 0 != checkedRecordsCount) {
-            result.setInventoryFinishedPercentage((int) (checkedRecordsCount * 100 / recordsCount));
-            Long stopTimeMillis = jobConfigPOJO.isDisabled() ? Long.parseLong(jobConfigPOJO.getProps().getProperty("stop_time_millis")) : null;
-            long durationMillis = (null != stopTimeMillis ? stopTimeMillis : System.currentTimeMillis()) - jobItemProgress.getCheckBeginTimeMillis();
+        } else if (0L != recordsCount && 0L != checkedRecordsCount) {
+            result.setInventoryFinishedPercentage((int) (checkedRecordsCount * 100L / recordsCount));
+            LocalDateTime stopTime = jobConfigPOJO.isDisabled() ? LocalDateTime.from(DateTimeFormatterFactory.getStandardFormatter().parse(jobConfigPOJO.getProps().getProperty("stop_time")))
+                    : null;
+            long durationMillis = (null != stopTime ? Timestamp.valueOf(stopTime).getTime() : System.currentTimeMillis()) - jobItemProgress.getCheckBeginTimeMillis();
             result.setDurationSeconds(TimeUnit.MILLISECONDS.toSeconds(durationMillis));
-            if (null != stopTimeMillis) {
-                result.setCheckEndTime(DateTimeFormatterFactory.getLongMillsFormatter().format(new Timestamp(stopTimeMillis).toLocalDateTime()));
+            if (null != stopTime) {
+                result.setCheckEndTime(jobConfigPOJO.getProps().getProperty("stop_time"));
             }
-            long remainingMills = Math.max(0, (long) ((recordsCount - checkedRecordsCount) * 1.0D / checkedRecordsCount * durationMillis));
-            result.setInventoryRemainingSeconds(remainingMills / 1000);
+            long remainingMills = Math.max(0L, (long) ((recordsCount - checkedRecordsCount) * 1.0D / checkedRecordsCount * durationMillis));
+            result.setInventoryRemainingSeconds(remainingMills / 1000L);
         }
     }
     

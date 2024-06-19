@@ -15,7 +15,7 @@ ShardingSphere provides a JDBC driver, and developers can configure `ShardingSph
 ```xml
 <dependency>
     <groupId>org.apache.shardingsphere</groupId>
-    <artifactId>shardingsphere-jdbc-core</artifactId>
+    <artifactId>shardingsphere-jdbc</artifactId>
     <version>${shardingsphere.version}</version>
 </dependency>
 ```
@@ -29,7 +29,7 @@ spring.datasource.driver-class-name=org.apache.shardingsphere.driver.ShardingSph
 spring.datasource.url=jdbc:shardingsphere:classpath:xxx.yaml
 ```
 
-The YAML configuration file in 'spring.datasource.url' currently support in two ways, the absolute path 'absolutepath:' and CLASSPATH 'classpath:', which can be referred to `org.apache.shardingsphere.driver.jdbc.core.driver.ShardingSphereURLProvider`'s implementation for details.
+The YAML configuration file in 'spring.datasource.url' currently support in multiple ways, refer to [Known Implementation](../known-implementation/).
 
 ### Use Data Source
 
@@ -49,7 +49,7 @@ Users only need to configure as follows.
     <dependencies>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-jdbc-core</artifactId>
+            <artifactId>shardingsphere-jdbc</artifactId>
             <version>${shardingsphere.version}</version>
         </dependency>
     </dependencies>
@@ -67,7 +67,7 @@ This is reflected in Maven's `pom.xml` as follows.
     <dependencies>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-jdbc-core</artifactId>
+            <artifactId>shardingsphere-jdbc</artifactId>
             <version>${shardingsphere.version}</version>
         </dependency>
         <dependency>
@@ -91,7 +91,7 @@ following things.
     <dependencies>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>shardingsphere-jdbc-core</artifactId>
+            <artifactId>shardingsphere-jdbc</artifactId>
             <version>${shardingsphere.version}</version>
         </dependency>
     </dependencies>

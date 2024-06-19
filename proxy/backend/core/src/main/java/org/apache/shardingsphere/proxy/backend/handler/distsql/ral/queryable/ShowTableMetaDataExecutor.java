@@ -17,8 +17,10 @@
 
 package org.apache.shardingsphere.proxy.backend.handler.distsql.ral.queryable;
 
-import org.apache.shardingsphere.distsql.handler.ral.query.DatabaseRequiredQueryableRALExecutor;
-import org.apache.shardingsphere.distsql.statement.ral.queryable.ShowTableMetaDataStatement;
+import lombok.Setter;
+import org.apache.shardingsphere.distsql.handler.aware.DistSQLExecutorDatabaseAware;
+import org.apache.shardingsphere.distsql.handler.engine.query.DistSQLQueryExecutor;
+import org.apache.shardingsphere.distsql.statement.ral.queryable.show.ShowTableMetaDataStatement;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.merge.result.impl.local.LocalDataQueryResultRow;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
@@ -26,7 +28,7 @@ import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSp
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereIndex;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
-import org.apache.shardingsphere.infra.util.json.JsonUtils;
+import org.apache.shardingsphere.mode.manager.ContextManager;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,15 +38,18 @@ import java.util.stream.Collectors;
 /**
  * Show table meta data executor.
  */
-public final class ShowTableMetaDataExecutor implements DatabaseRequiredQueryableRALExecutor<ShowTableMetaDataStatement> {
+@Setter
+public final class ShowTableMetaDataExecutor implements DistSQLQueryExecutor<ShowTableMetaDataStatement>, DistSQLExecutorDatabaseAware {
+    
+    private ShardingSphereDatabase database;
     
     @Override
-    public Collection<String> getColumnNames() {
+    public Collection<String> getColumnNames(final ShowTableMetaDataStatement sqlStatement) {
         return Arrays.asList("database_name", "table_name", "type", "name", "value");
     }
     
     @Override
-    public Collection<LocalDataQueryResultRow> getRows(final ShardingSphereDatabase database, final ShowTableMetaDataStatement sqlStatement) {
+    public Collection<LocalDataQueryResultRow> getRows(final ShowTableMetaDataStatement sqlStatement, final ContextManager contextManager) {
         String defaultSchema = new DatabaseTypeRegistry(database.getProtocolType()).getDefaultSchemaName(database.getName());
         ShardingSphereSchema schema = database.getSchema(defaultSchema);
         return sqlStatement.getTableNames().stream().filter(each -> schema.getAllTableNames().contains(each.toLowerCase()))
@@ -60,11 +65,11 @@ public final class ShowTableMetaDataExecutor implements DatabaseRequiredQueryabl
     }
     
     private LocalDataQueryResultRow buildColumnRow(final String databaseName, final String tableName, final ShardingSphereColumn column) {
-        return new LocalDataQueryResultRow(databaseName, tableName, "COLUMN", column.getName(), JsonUtils.toJsonString(column));
+        return new LocalDataQueryResultRow(databaseName, tableName, "COLUMN", column.getName(), column);
     }
     
     private LocalDataQueryResultRow buildIndexRow(final String databaseName, final String tableName, final ShardingSphereIndex index) {
-        return new LocalDataQueryResultRow(databaseName, tableName, "INDEX", index.getName(), JsonUtils.toJsonString(index));
+        return new LocalDataQueryResultRow(databaseName, tableName, "INDEX", index.getName(), index);
     }
     
     @Override

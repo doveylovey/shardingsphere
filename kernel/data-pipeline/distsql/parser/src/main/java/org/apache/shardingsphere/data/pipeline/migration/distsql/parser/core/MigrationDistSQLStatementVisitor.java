@@ -19,9 +19,28 @@ package org.apache.shardingsphere.data.pipeline.migration.distsql.parser.core;
 
 import com.google.common.base.Splitter;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.CheckMigrationStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.CommitMigrationStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.DropMigrationCheckStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.MigrateTableStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.RegisterMigrationSourceStorageUnitStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.RollbackMigrationStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationCheckStatusStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationListStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationRuleStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationSourceStorageUnitsStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.queryable.ShowMigrationStatusStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.StartMigrationCheckStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.StartMigrationStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.StopMigrationCheckStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.StopMigrationStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.updatable.UnregisterMigrationSourceStorageUnitStatement;
+import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.pojo.SourceTargetEntry;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementBaseVisitor;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.AlgorithmDefinitionContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.AlterMigrationRuleContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.BatchSizeContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.CheckMigrationContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.CommitMigrationContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.DropMigrationCheckContext;
@@ -29,11 +48,15 @@ import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatemen
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.PasswordContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.PropertiesDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.PropertyContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.RateLimiterContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ReadDefinitionContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.RegisterMigrationSourceStorageUnitContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.RollbackMigrationContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShardingSizeContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationCheckAlgorithmsContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationCheckStatusContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationListContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationRuleContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationSourceStorageUnitsContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.ShowMigrationStatusContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.SourceTableNameContext;
@@ -42,30 +65,21 @@ import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatemen
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.StopMigrationCheckContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.StopMigrationContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.StorageUnitDefinitionContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.StreamChannelContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.TargetTableNameContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.TransmissionRuleContext;
 import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.UnregisterMigrationSourceStorageUnitContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.WorkerThreadContext;
+import org.apache.shardingsphere.distsql.parser.autogen.MigrationDistSQLStatementParser.WriteDefinitionContext;
 import org.apache.shardingsphere.distsql.segment.AlgorithmSegment;
 import org.apache.shardingsphere.distsql.segment.DataSourceSegment;
 import org.apache.shardingsphere.distsql.segment.HostnameAndPortBasedDataSourceSegment;
+import org.apache.shardingsphere.distsql.segment.ReadOrWriteSegment;
+import org.apache.shardingsphere.distsql.segment.TransmissionRuleSegment;
 import org.apache.shardingsphere.distsql.segment.URLBasedDataSourceSegment;
+import org.apache.shardingsphere.distsql.statement.ral.queryable.show.ShowPluginsStatement;
+import org.apache.shardingsphere.data.pipeline.distsql.statement.updatable.AlterTransmissionRuleStatement;
 import org.apache.shardingsphere.infra.datanode.DataNode;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.CheckMigrationStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.CommitMigrationStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.DropMigrationCheckStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.MigrateTableStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.RegisterMigrationSourceStorageUnitStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.RollbackMigrationStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationCheckAlgorithmsStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationCheckStatusStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationListStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationSourceStorageUnitsStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.ShowMigrationStatusStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.StartMigrationCheckStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.StartMigrationStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.StopMigrationCheckStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.StopMigrationStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.UnregisterMigrationSourceStorageUnitStatement;
-import org.apache.shardingsphere.data.pipeline.migration.distsql.statement.pojo.SourceTargetEntry;
 import org.apache.shardingsphere.sql.parser.api.ASTNode;
 import org.apache.shardingsphere.sql.parser.api.visitor.SQLVisitor;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
@@ -81,6 +95,67 @@ import java.util.stream.Collectors;
  * SQL statement visitor for migration DistSQL.
  */
 public final class MigrationDistSQLStatementVisitor extends MigrationDistSQLStatementBaseVisitor<ASTNode> implements SQLVisitor<ASTNode> {
+    
+    @Override
+    public ASTNode visitShowMigrationRule(final ShowMigrationRuleContext ctx) {
+        return new ShowMigrationRuleStatement();
+    }
+    
+    @Override
+    public ASTNode visitAlterMigrationRule(final AlterMigrationRuleContext ctx) {
+        return new AlterTransmissionRuleStatement("MIGRATION", (TransmissionRuleSegment) visit(ctx.transmissionRule()));
+    }
+    
+    @Override
+    public ASTNode visitTransmissionRule(final TransmissionRuleContext ctx) {
+        TransmissionRuleSegment result = new TransmissionRuleSegment();
+        if (null != ctx.readDefinition()) {
+            result.setReadSegment((ReadOrWriteSegment) visit(ctx.readDefinition()));
+        }
+        if (null != ctx.writeDefinition()) {
+            result.setWriteSegment((ReadOrWriteSegment) visit(ctx.writeDefinition()));
+        }
+        if (null != ctx.streamChannel()) {
+            result.setStreamChannel((AlgorithmSegment) visit(ctx.streamChannel()));
+        }
+        return result;
+    }
+    
+    @Override
+    public ASTNode visitReadDefinition(final ReadDefinitionContext ctx) {
+        return new ReadOrWriteSegment(getWorkerThread(ctx.workerThread()), getBatchSize(ctx.batchSize()), getShardingSize(ctx.shardingSize()), getAlgorithmSegment(ctx.rateLimiter()));
+    }
+    
+    @Override
+    public ASTNode visitWriteDefinition(final WriteDefinitionContext ctx) {
+        return new ReadOrWriteSegment(getWorkerThread(ctx.workerThread()), getBatchSize(ctx.batchSize()), getAlgorithmSegment(ctx.rateLimiter()));
+    }
+    
+    private AlgorithmSegment getAlgorithmSegment(final RateLimiterContext ctx) {
+        return null == ctx ? null : (AlgorithmSegment) visit(ctx);
+    }
+    
+    @Override
+    public ASTNode visitRateLimiter(final RateLimiterContext ctx) {
+        return visit(ctx.algorithmDefinition());
+    }
+    
+    @Override
+    public ASTNode visitStreamChannel(final StreamChannelContext ctx) {
+        return visit(ctx.algorithmDefinition());
+    }
+    
+    private Integer getWorkerThread(final WorkerThreadContext ctx) {
+        return null == ctx ? null : Integer.parseInt(ctx.intValue().getText());
+    }
+    
+    private Integer getBatchSize(final BatchSizeContext ctx) {
+        return null == ctx ? null : Integer.parseInt(ctx.intValue().getText());
+    }
+    
+    private Integer getShardingSize(final ShardingSizeContext ctx) {
+        return null == ctx ? null : Integer.parseInt(ctx.intValue().getText());
+    }
     
     @Override
     public ASTNode visitMigrateTable(final MigrateTableContext ctx) {
@@ -142,7 +217,7 @@ public final class MigrationDistSQLStatementVisitor extends MigrationDistSQLStat
     
     @Override
     public ASTNode visitShowMigrationCheckAlgorithms(final ShowMigrationCheckAlgorithmsContext ctx) {
-        return new ShowMigrationCheckAlgorithmsStatement();
+        return new ShowPluginsStatement("MIGRATION_CHECK");
     }
     
     @Override

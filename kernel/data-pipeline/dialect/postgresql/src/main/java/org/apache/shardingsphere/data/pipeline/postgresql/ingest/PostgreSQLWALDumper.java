@@ -19,11 +19,11 @@ package org.apache.shardingsphere.data.pipeline.postgresql.ingest;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.context.IncrementalDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumperContext;
 import org.apache.shardingsphere.data.pipeline.api.type.StandardPipelineDataSourceConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable;
-import org.apache.shardingsphere.data.pipeline.core.ingest.channel.PipelineChannel;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.IncrementalDumper;
+import org.apache.shardingsphere.data.pipeline.core.channel.PipelineChannel;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.incremental.IncrementalDumper;
 import org.apache.shardingsphere.data.pipeline.core.ingest.position.IngestPosition;
 import org.apache.shardingsphere.data.pipeline.core.ingest.record.Record;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.PipelineTableMetaDataLoader;
@@ -39,8 +39,9 @@ import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.Abstr
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.AbstractWALEvent;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.BeginTXEvent;
 import org.apache.shardingsphere.data.pipeline.postgresql.ingest.wal.event.CommitTXEvent;
+import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
-import org.apache.shardingsphere.infra.exception.core.external.sql.type.generic.UnsupportedSQLOperationException;
+import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
 import org.postgresql.jdbc.PgConnection;
 import org.postgresql.replication.PGReplicationStream;
 
@@ -57,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * PostgreSQL WAL dumper.
  */
+@HighFrequencyInvocation
 @Slf4j
 public final class PostgreSQLWALDumper extends AbstractPipelineLifecycleRunnable implements IncrementalDumper {
     
@@ -83,7 +85,7 @@ public final class PostgreSQLWALDumper extends AbstractPipelineLifecycleRunnable
         this.channel = channel;
         walEventConverter = new WALEventConverter(dumperContext, metaDataLoader);
         logicalReplication = new PostgreSQLLogicalReplication();
-        this.decodeWithTX = dumperContext.isDecodeWithTX();
+        decodeWithTX = dumperContext.isDecodeWithTX();
     }
     
     @SneakyThrows(InterruptedException.class)
@@ -98,7 +100,7 @@ public final class PostgreSQLWALDumper extends AbstractPipelineLifecycleRunnable
                 int times = reconnectTimes.incrementAndGet();
                 log.error("Connect failed, reconnect times={}", times, ex);
                 if (isRunning()) {
-                    Thread.sleep(5000);
+                    Thread.sleep(5000L);
                 }
                 if (times >= 5) {
                     throw new IngestException(ex);
@@ -148,7 +150,7 @@ public final class PostgreSQLWALDumper extends AbstractPipelineLifecycleRunnable
                 records.add(walEventConverter.convert(each));
             }
             records.add(walEventConverter.convert(event));
-            channel.pushRecords(records);
+            channel.push(records);
         }
     }
     
@@ -156,7 +158,7 @@ public final class PostgreSQLWALDumper extends AbstractPipelineLifecycleRunnable
         if (event instanceof BeginTXEvent) {
             return;
         }
-        channel.pushRecords(Collections.singletonList(walEventConverter.convert(event)));
+        channel.push(Collections.singletonList(walEventConverter.convert(event)));
     }
     
     @Override

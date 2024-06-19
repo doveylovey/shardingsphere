@@ -21,7 +21,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.distsql.segment.AlgorithmSegment;
 import org.apache.shardingsphere.distsql.segment.ReadOrWriteSegment;
-import org.apache.shardingsphere.distsql.statement.ral.updatable.AlterTransmissionRuleStatement;
+import org.apache.shardingsphere.data.pipeline.distsql.statement.updatable.AlterTransmissionRuleStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.cases.parser.domain.statement.ral.AlterTransmissionRuleStatementTestCase;
 import org.apache.shardingsphere.test.it.sql.parser.internal.cases.parser.jaxb.segment.impl.distsql.ExpectedAlgorithm;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * Alter transmission rule statement assert.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class AlterTransmissionRuleStatementAssert {
+public final class AlterTransmissionRuleStatementAssert {
     
     /**
      * Assert statement is correct with expected parser result.
