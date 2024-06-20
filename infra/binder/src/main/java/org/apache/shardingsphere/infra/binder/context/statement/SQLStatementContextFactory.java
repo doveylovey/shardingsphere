@@ -69,7 +69,15 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.AnalyzeTabl
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.DALStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ExplainStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.FlushStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.KillStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.OptimizeTableStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowColumnsStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowCreateTableStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowIndexStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowTableStatusStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowTablesStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dcl.DCLStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dcl.DenyUserStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dcl.GrantStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dcl.RevokeStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.AlterIndexStatement;
@@ -83,6 +91,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateProce
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateSchemaStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateTableStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateViewStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CursorStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.DDLStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.DropIndexStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.DropTableStatement;
@@ -98,20 +107,11 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.DMLStatemen
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.DeleteStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.DoStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.InsertStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.LoadDataStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.LoadXMLStatement;
+import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.MergeStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.UpdateStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLKillStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLOptimizeTableStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowColumnsStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowCreateTableStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowIndexStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowTableStatusStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowTablesStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLLoadDataStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dml.MySQLLoadXMLStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.opengauss.ddl.OpenGaussCursorStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.oracle.dml.OracleMergeStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.dcl.SQLServerDenyUserStatement;
 
 import java.util.Collections;
 import java.util.List;
@@ -170,14 +170,14 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof DoStatement) {
             return new DoStatementContext((DoStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLLoadDataStatement) {
-            return new LoadDataStatementContext((MySQLLoadDataStatement) sqlStatement);
+        if (sqlStatement instanceof LoadDataStatement) {
+            return new LoadDataStatementContext((LoadDataStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLLoadXMLStatement) {
-            return new LoadXMLStatementContext((MySQLLoadXMLStatement) sqlStatement);
+        if (sqlStatement instanceof LoadXMLStatement) {
+            return new LoadXMLStatementContext((LoadXMLStatement) sqlStatement);
         }
-        if (sqlStatement instanceof OracleMergeStatement) {
-            return new MergeStatementContext((OracleMergeStatement) sqlStatement);
+        if (sqlStatement instanceof MergeStatement) {
+            return new MergeStatementContext((MergeStatement) sqlStatement);
         }
         throw new UnsupportedSQLOperationException(String.format("Unsupported SQL statement `%s`", sqlStatement.getClass().getSimpleName()));
     }
@@ -232,8 +232,8 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof CommentStatement) {
             return new CommentStatementContext((CommentStatement) sqlStatement);
         }
-        if (sqlStatement instanceof OpenGaussCursorStatement) {
-            return new CursorStatementContext(metaData, params, (OpenGaussCursorStatement) sqlStatement, defaultDatabaseName);
+        if (sqlStatement instanceof CursorStatement) {
+            return new CursorStatementContext(metaData, params, (CursorStatement) sqlStatement, defaultDatabaseName);
         }
         if (sqlStatement instanceof CloseStatement) {
             return new CloseStatementContext((CloseStatement) sqlStatement);
@@ -254,8 +254,8 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof RevokeStatement) {
             return new RevokeStatementContext((RevokeStatement) sqlStatement);
         }
-        if (sqlStatement instanceof SQLServerDenyUserStatement) {
-            return new DenyUserStatementContext((SQLServerDenyUserStatement) sqlStatement);
+        if (sqlStatement instanceof DenyUserStatement) {
+            return new DenyUserStatementContext((DenyUserStatement) sqlStatement);
         }
         return new UnknownSQLStatementContext(sqlStatement);
     }
@@ -264,20 +264,20 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof ExplainStatement) {
             return new ExplainStatementContext((ExplainStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLShowCreateTableStatement) {
-            return new ShowCreateTableStatementContext((MySQLShowCreateTableStatement) sqlStatement);
+        if (sqlStatement instanceof ShowCreateTableStatement) {
+            return new ShowCreateTableStatementContext((ShowCreateTableStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLShowColumnsStatement) {
-            return new ShowColumnsStatementContext((MySQLShowColumnsStatement) sqlStatement);
+        if (sqlStatement instanceof ShowColumnsStatement) {
+            return new ShowColumnsStatementContext((ShowColumnsStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLShowTablesStatement) {
-            return new ShowTablesStatementContext((MySQLShowTablesStatement) sqlStatement);
+        if (sqlStatement instanceof ShowTablesStatement) {
+            return new ShowTablesStatementContext((ShowTablesStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLShowTableStatusStatement) {
-            return new ShowTableStatusStatementContext((MySQLShowTableStatusStatement) sqlStatement);
+        if (sqlStatement instanceof ShowTableStatusStatement) {
+            return new ShowTableStatusStatementContext((ShowTableStatusStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLShowIndexStatement) {
-            return new ShowIndexStatementContext((MySQLShowIndexStatement) sqlStatement);
+        if (sqlStatement instanceof ShowIndexStatement) {
+            return new ShowIndexStatementContext((ShowIndexStatement) sqlStatement);
         }
         if (sqlStatement instanceof AnalyzeTableStatement) {
             return new AnalyzeTableStatementContext((AnalyzeTableStatement) sqlStatement);
@@ -285,11 +285,11 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof FlushStatement) {
             return new FlushStatementContext((FlushStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLOptimizeTableStatement) {
-            return new OptimizeTableStatementContext((MySQLOptimizeTableStatement) sqlStatement);
+        if (sqlStatement instanceof OptimizeTableStatement) {
+            return new OptimizeTableStatementContext((OptimizeTableStatement) sqlStatement);
         }
-        if (sqlStatement instanceof MySQLKillStatement) {
-            return new KillStatementContext((MySQLKillStatement) sqlStatement);
+        if (sqlStatement instanceof KillStatement) {
+            return new KillStatementContext((KillStatement) sqlStatement);
         }
         return new UnknownSQLStatementContext(sqlStatement);
     }
