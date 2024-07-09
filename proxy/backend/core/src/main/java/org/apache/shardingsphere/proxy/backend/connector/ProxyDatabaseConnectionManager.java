@@ -170,19 +170,19 @@ public final class ProxyDatabaseConnectionManager implements DatabaseConnectionM
         if (connectionSession.isReadOnly()) {
             connection.setReadOnly(true);
         }
-        if (null != connectionSession.getIsolationLevel()) {
-            connection.setTransactionIsolation(TransactionUtils.getTransactionIsolationLevel(connectionSession.getIsolationLevel()));
+        if (connectionSession.getIsolationLevel().isPresent()) {
+            connection.setTransactionIsolation(TransactionUtils.getTransactionIsolationLevel(connectionSession.getIsolationLevel().get()));
         }
     }
     
     /**
      * Get used data source names.
-     * 
+     *
      * @return used data source names
      */
     public Collection<String> getUsedDataSourceNames() {
         Collection<String> result = new ArrayList<>(cachedConnections.size());
-        String databaseName = connectionSession.getDatabaseName().toLowerCase();
+        String databaseName = connectionSession.getUsedDatabaseName().toLowerCase();
         for (String each : cachedConnections.keySet()) {
             String[] split = each.split("\\.", 2);
             String cachedDatabaseName = split[0];
@@ -300,7 +300,7 @@ public final class ProxyDatabaseConnectionManager implements DatabaseConnectionM
     
     /**
      * Close connections.
-     * 
+     *
      * @param forceRollback is force rollback
      * @return SQL exception when connections close
      */

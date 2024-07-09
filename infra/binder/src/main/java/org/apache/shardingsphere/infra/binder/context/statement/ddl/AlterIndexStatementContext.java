@@ -22,11 +22,10 @@ import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContex
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.type.IndexAvailable;
 import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.AlterIndexStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.handler.ddl.AlterIndexStatementHandler;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.index.IndexSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterIndexStatement;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -40,10 +39,10 @@ public final class AlterIndexStatementContext extends CommonSQLStatementContext 
     
     private final TablesContext tablesContext;
     
-    public AlterIndexStatementContext(final AlterIndexStatement sqlStatement) {
+    public AlterIndexStatementContext(final AlterIndexStatement sqlStatement, final String currentDatabaseName) {
         super(sqlStatement);
-        SimpleTableSegment simpleTableSegment = AlterIndexStatementHandler.getSimpleTableSegment(sqlStatement).orElse(null);
-        tablesContext = new TablesContext(simpleTableSegment, getDatabaseType());
+        SimpleTableSegment simpleTableSegment = sqlStatement.getSimpleTable().orElse(null);
+        tablesContext = new TablesContext(simpleTableSegment, getDatabaseType(), currentDatabaseName);
     }
     
     @Override
@@ -57,7 +56,7 @@ public final class AlterIndexStatementContext extends CommonSQLStatementContext 
         if (getSqlStatement().getIndex().isPresent()) {
             result.add(getSqlStatement().getIndex().get());
         }
-        AlterIndexStatementHandler.getRenameIndexSegment(getSqlStatement()).ifPresent(result::add);
+        getSqlStatement().getRenameIndex().ifPresent(result::add);
         return result;
     }
     

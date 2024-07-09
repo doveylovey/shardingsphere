@@ -19,7 +19,7 @@ package org.apache.shardingsphere.test.it.sql.parser.internal.asserts.statement.
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.UseStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.UseStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.cases.parser.jaxb.statement.dal.UseStatementTestCase;
 
@@ -34,13 +34,13 @@ public final class UseStatementAssert {
     
     /**
      * Assert use statement is correct with expected parser result.
-     * 
+     *
      * @param assertContext assert context
      * @param actual actual use statement
      * @param expected expected use statement test case
      */
     public static void assertIs(final SQLCaseAssertContext assertContext, final UseStatement actual, final UseStatementTestCase expected) {
-        assertThat(assertContext.getText("Schema name assertion error: "), actual.getSchema(), is(expected.getSchema().getName()));
+        assertThat(assertContext.getText("Database name assertion error: "), actual.getDatabase(), is(expected.getDatabase().getName()));
         // TODO create a new assert class named `SchemaAssert`
         // TODO extract and assert start index, stop index, start delimiter and end delimiter
     }

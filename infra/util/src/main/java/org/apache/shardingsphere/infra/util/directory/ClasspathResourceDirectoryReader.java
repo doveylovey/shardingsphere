@@ -81,13 +81,9 @@ public final class ClasspathResourceDirectoryReader {
         }
         if (JAR_URL_PROTOCOLS.contains(resourceUrl.getProtocol())) {
             JarFile jarFile = getJarFile(resourceUrl);
-            if (null == jarFile) {
-                return false;
-            }
-            return jarFile.getJarEntry(name).isDirectory();
-        } else {
-            return Files.isDirectory(Paths.get(resourceUrl.toURI()));
+            return null != jarFile && jarFile.getJarEntry(name).isDirectory();
         }
+        return Paths.get(resourceUrl.toURI()).toFile().isDirectory();
     }
     
     /**
@@ -205,9 +201,9 @@ public final class ClasspathResourceDirectoryReader {
         }
     }
     
+    @SuppressWarnings("resource")
     private static Stream<String> loadFromDirectory(final String directory, final URL directoryUrl) throws URISyntaxException, IOException {
         Path directoryPath = Paths.get(directoryUrl.toURI());
-        // noinspection resource
         Stream<Path> walkStream = Files.find(directoryPath, Integer.MAX_VALUE, (path, basicFileAttributes) -> !basicFileAttributes.isDirectory(), FileVisitOption.FOLLOW_LINKS);
         return walkStream.map(path -> {
             StringBuilder stringBuilder = new StringBuilder();

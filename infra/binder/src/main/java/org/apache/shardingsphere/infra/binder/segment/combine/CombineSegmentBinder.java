@@ -23,9 +23,9 @@ import org.apache.shardingsphere.infra.binder.segment.from.TableSegmentBinderCon
 import org.apache.shardingsphere.infra.binder.statement.SQLStatementBinderContext;
 import org.apache.shardingsphere.infra.binder.statement.dml.SelectStatementBinder;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.combine.CombineSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.subquery.SubquerySegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.combine.CombineSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.expr.subquery.SubquerySegment;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectStatement;
 
 import java.util.Map;
 
@@ -44,10 +44,10 @@ public final class CombineSegmentBinder {
      */
     public static CombineSegment bind(final CombineSegment segment, final SQLStatementBinderContext statementBinderContext) {
         ShardingSphereMetaData metaData = statementBinderContext.getMetaData();
-        String defaultDatabaseName = statementBinderContext.getDefaultDatabaseName();
+        String currentDatabaseName = statementBinderContext.getCurrentDatabaseName();
         Map<String, TableSegmentBinderContext> externalTableBinderContexts = statementBinderContext.getExternalTableBinderContexts();
-        SelectStatement boundedLeftSelect = new SelectStatementBinder().bindWithExternalTableContexts(segment.getLeft().getSelect(), metaData, defaultDatabaseName, externalTableBinderContexts);
-        SelectStatement boundedRightSelect = new SelectStatementBinder().bindWithExternalTableContexts(segment.getRight().getSelect(), metaData, defaultDatabaseName, externalTableBinderContexts);
+        SelectStatement boundedLeftSelect = new SelectStatementBinder().bindWithExternalTableContexts(segment.getLeft().getSelect(), metaData, currentDatabaseName, externalTableBinderContexts);
+        SelectStatement boundedRightSelect = new SelectStatementBinder().bindWithExternalTableContexts(segment.getRight().getSelect(), metaData, currentDatabaseName, externalTableBinderContexts);
         SubquerySegment boundedLeft = new SubquerySegment(segment.getLeft().getStartIndex(), segment.getLeft().getStopIndex(), segment.getLeft().getText());
         boundedLeft.setSelect(boundedLeftSelect);
         boundedLeft.setSubqueryType(segment.getLeft().getSubqueryType());

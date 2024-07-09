@@ -19,7 +19,7 @@ package org.apache.shardingsphere.broadcast.rule;
 
 import com.cedarsoftware.util.CaseInsensitiveSet;
 import lombok.Getter;
-import org.apache.shardingsphere.broadcast.api.config.BroadcastRuleConfiguration;
+import org.apache.shardingsphere.broadcast.config.BroadcastRuleConfiguration;
 import org.apache.shardingsphere.broadcast.rule.attribute.BroadcastDataNodeRuleAttribute;
 import org.apache.shardingsphere.broadcast.rule.attribute.BroadcastTableNamesRuleAttribute;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
@@ -92,7 +92,7 @@ public final class BroadcastRule implements DatabaseRule {
     
     /**
      * Get broadcast rule table names.
-     * 
+     *
      * @param logicTableNames logic table names
      * @return broadcast rule table names.
      */

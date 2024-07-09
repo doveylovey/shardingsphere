@@ -34,7 +34,7 @@ import org.apache.shardingsphere.infra.util.regex.RegexUtils;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.handler.admin.executor.DatabaseAdminQueryExecutor;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dal.MySQLShowTablesStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dal.MySQLShowTablesStatement;
 
 import java.sql.Types;
 import java.util.Collection;
@@ -64,7 +64,7 @@ public final class ShowTablesExecutor implements DatabaseAdminQueryExecutor {
     
     @Override
     public void execute(final ConnectionSession connectionSession) {
-        String databaseName = showTablesStatement.getFromSchema().map(schema -> schema.getSchema().getIdentifier().getValue()).orElseGet(connectionSession::getDatabaseName);
+        String databaseName = showTablesStatement.getFromDatabase().map(schema -> schema.getDatabase().getIdentifier().getValue()).orElseGet(connectionSession::getUsedDatabaseName);
         queryResultMetaData = createQueryResultMetaData(databaseName);
         mergedResult = new TransparentMergedResult(getQueryResult(databaseName));
     }

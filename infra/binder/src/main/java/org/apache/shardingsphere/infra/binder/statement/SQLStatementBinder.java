@@ -18,7 +18,7 @@
 package org.apache.shardingsphere.infra.binder.statement;
 
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
 
 /**
  * SQL statement binder.
@@ -30,10 +30,10 @@ public interface SQLStatementBinder<T extends SQLStatement> {
     /**
      * Bind SQL statement with metadata.
      *
-     * @param sqlStatement sql statement
+     * @param sqlStatement SQL statement
      * @param metaData meta data
-     * @param defaultDatabaseName default database name
-     * @return bounded sql statement
+     * @param currentDatabaseName current database name
+     * @return bounded SQL statement
      */
-    T bind(T sqlStatement, ShardingSphereMetaData metaData, String defaultDatabaseName);
+    T bind(T sqlStatement, ShardingSphereMetaData metaData, String currentDatabaseName);
 }

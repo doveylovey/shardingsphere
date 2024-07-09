@@ -60,24 +60,24 @@ class ConnectionSessionTest {
     @BeforeEach
     void setup() {
         connectionSession = new ConnectionSession(mock(MySQLDatabaseType.class), null);
-        connectionSession.setGrantee(new Grantee("", ""));
+        connectionSession.setGrantee(mock(Grantee.class));
         when(databaseConnectionManager.getConnectionSession()).thenReturn(connectionSession);
     }
     
     @Test
     void assertSetCurrentSchema() {
-        connectionSession.setCurrentDatabase("currentDatabase");
-        assertThat(connectionSession.getDatabaseName(), is("currentDatabase"));
+        connectionSession.setCurrentDatabaseName("currentDatabase");
+        assertThat(connectionSession.getUsedDatabaseName(), is("currentDatabase"));
     }
     
     @Test
     void assertSwitchSchemaWhileBegin() {
-        connectionSession.setCurrentDatabase("db");
+        connectionSession.setCurrentDatabaseName("db");
         ContextManager contextManager = mockContextManager();
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
         new BackendTransactionManager(databaseConnectionManager).begin();
-        connectionSession.setCurrentDatabase("newDB");
-        assertThat(connectionSession.getDefaultDatabaseName(), is("newDB"));
+        connectionSession.setCurrentDatabaseName("newDB");
+        assertThat(connectionSession.getCurrentDatabaseName(), is("newDB"));
     }
     
     private ContextManager mockContextManager() {

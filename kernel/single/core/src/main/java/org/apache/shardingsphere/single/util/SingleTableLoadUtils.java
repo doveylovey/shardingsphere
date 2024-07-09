@@ -27,7 +27,7 @@ import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.attribute.datasource.DataSourceMapperRuleAttribute;
 import org.apache.shardingsphere.infra.rule.attribute.table.TableMapperRuleAttribute;
-import org.apache.shardingsphere.single.api.constant.SingleTableConstants;
+import org.apache.shardingsphere.single.constant.SingleTableConstants;
 
 import javax.sql.DataSource;
 import java.util.Collection;
@@ -48,7 +48,7 @@ public final class SingleTableLoadUtils {
     
     /**
      * Get aggregated data source map.
-     * 
+     *
      * @param dataSourceMap data source map
      * @param builtRules built rules
      * @return aggregated data source map

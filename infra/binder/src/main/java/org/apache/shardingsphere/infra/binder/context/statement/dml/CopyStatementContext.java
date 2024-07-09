@@ -21,7 +21,7 @@ import lombok.Getter;
 import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.CopyStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.CopyStatement;
 
 /**
  * Copy statement context.
@@ -31,9 +31,9 @@ public final class CopyStatementContext extends CommonSQLStatementContext implem
     
     private final TablesContext tablesContext;
     
-    public CopyStatementContext(final CopyStatement sqlStatement) {
+    public CopyStatementContext(final CopyStatement sqlStatement, final String currentDatabaseName) {
         super(sqlStatement);
-        tablesContext = new TablesContext(sqlStatement.getTableSegment(), getDatabaseType());
+        tablesContext = new TablesContext(sqlStatement.getTableSegment(), getDatabaseType(), currentDatabaseName);
     }
     
     @Override

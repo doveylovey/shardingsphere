@@ -24,9 +24,9 @@ import org.apache.shardingsphere.infra.executor.sql.context.ExecutionContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
 import org.apache.shardingsphere.infra.rule.scope.GlobalRule;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.DMLStatement;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.DMLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectStatement;
 import org.apache.shardingsphere.transaction.ConnectionTransaction;
 import org.apache.shardingsphere.transaction.ShardingSphereTransactionManagerEngine;
 import org.apache.shardingsphere.transaction.api.TransactionType;
@@ -87,7 +87,7 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
     
     /**
      * Get resource.
-     * 
+     *
      * @return got resource
      */
     public ShardingSphereTransactionManagerEngine getResource() {
@@ -96,7 +96,7 @@ public final class TransactionRule implements GlobalRule, AutoCloseable {
     
     /**
      * Judge whether to implicit commit transaction.
-     * 
+     *
      * @param executionContext execution context
      * @param connectionTransaction connection transaction
      * @param isAutoCommit is auto commit

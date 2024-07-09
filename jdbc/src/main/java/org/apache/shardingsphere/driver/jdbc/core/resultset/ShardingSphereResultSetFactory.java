@@ -53,7 +53,7 @@ public final class ShardingSphereResultSetFactory {
     
     /**
      * Create new instance of shardingSphere result set.
-     * 
+     *
      * @param database database
      * @param queryContext query context
      * @param queryResults query results
@@ -62,8 +62,8 @@ public final class ShardingSphereResultSetFactory {
      * @return created instance
      * @throws SQLException SQL exception
      */
-    public ShardingSphereResultSet newInstance(final ShardingSphereDatabase database, final QueryContext queryContext, final List<QueryResult> queryResults,
-                                               final Statement statement, final Map<String, Integer> columnLabelAndIndexMap) throws SQLException {
+    public ResultSet newInstance(final ShardingSphereDatabase database, final QueryContext queryContext, final List<QueryResult> queryResults,
+                                 final Statement statement, final Map<String, Integer> columnLabelAndIndexMap) throws SQLException {
         List<ResultSet> resultSets = getResultSets();
         MergedResult mergedResult = new MergeEngine(globalRuleMetaData, database, props, connectionContext).merge(queryResults, queryContext.getSqlStatementContext());
         return new ShardingSphereResultSet(resultSets, mergedResult, statement, queryContext.getSqlStatementContext(),

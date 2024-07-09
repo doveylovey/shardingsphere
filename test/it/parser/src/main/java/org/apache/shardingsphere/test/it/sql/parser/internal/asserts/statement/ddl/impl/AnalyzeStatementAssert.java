@@ -19,7 +19,7 @@ package org.apache.shardingsphere.test.it.sql.parser.internal.asserts.statement.
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.AnalyzeStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AnalyzeStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.index.IndexAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.table.TableAssert;
@@ -36,7 +36,7 @@ public final class AnalyzeStatementAssert {
     
     /**
      * Assert analyze statement is correct with expected parser result.
-     * 
+     *
      * @param assertContext assert context
      * @param actual actual analyze statement
      * @param expected expected analyze statement test case

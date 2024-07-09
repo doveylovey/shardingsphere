@@ -35,7 +35,7 @@ import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.DropRol
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.DropUserContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantIdentifierContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantLevelGlobalContext;
-import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantLevelSchemaGlobalContext;
+import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantLevelDatabaseGlobalContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantLevelTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantProxyContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.GrantRoleOrPrivilegeOnToContext;
@@ -87,30 +87,30 @@ import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.StaticP
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.TlsOptionContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.UsernameContext;
 import org.apache.shardingsphere.sql.parser.doris.visitor.statement.DorisStatementVisitor;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.ACLAttributeEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.SSLTypeEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.SSLTypeEnum.UserResourceSpecifiedLimitEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.PasswordOrLockOptionSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.PrivilegeSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.RoleOrPrivilegeSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.TLSOptionSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.UserResourceSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.UserSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.GrantLevelSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
-import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.NumberLiteralValue;
-import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.StringLiteralValue;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisAlterUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisCreateRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisCreateUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisDropRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisDropUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisGrantStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisRenameUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisRevokeStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisSetDefaultRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisSetPasswordStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.doris.dcl.DorisSetRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.ACLAttributeEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.SSLTypeEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.SSLTypeEnum.UserResourceSpecifiedLimitEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.PasswordOrLockOptionSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.PrivilegeSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.RoleOrPrivilegeSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.TLSOptionSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.UserResourceSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.UserSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.GrantLevelSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.core.value.literal.impl.NumberLiteralValue;
+import org.apache.shardingsphere.sql.parser.statement.core.value.literal.impl.StringLiteralValue;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisAlterUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisCreateRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisCreateUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisDropRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisDropUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisGrantStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisRenameUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisRevokeStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisSetDefaultRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisSetPasswordStatement;
+import org.apache.shardingsphere.sql.parser.statement.doris.dcl.DorisSetRoleStatement;
 
 import java.util.stream.Collectors;
 
@@ -175,17 +175,17 @@ public final class DorisDCLStatementVisitor extends DorisStatementVisitor implem
             return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), "*", "*");
             
         }
-        if (ctx instanceof GrantLevelSchemaGlobalContext) {
-            String schemaName = new IdentifierValue(((GrantLevelSchemaGlobalContext) ctx).schemaName().getText()).getValue();
-            return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), schemaName, "*");
+        if (ctx instanceof GrantLevelDatabaseGlobalContext) {
+            String databaseName = new IdentifierValue(((GrantLevelDatabaseGlobalContext) ctx).databaseName().getText()).getValue();
+            return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), databaseName, "*");
         }
-        String schemaName = null;
+        String databaseName = null;
         String tableName;
         if (null != ((GrantLevelTableContext) ctx).tableName().owner()) {
-            schemaName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().owner().getText()).getValue();
+            databaseName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().owner().getText()).getValue();
         }
         tableName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().name().getText()).getValue();
-        return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), schemaName, tableName);
+        return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), databaseName, tableName);
     }
     
     @Override

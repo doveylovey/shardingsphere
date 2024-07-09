@@ -43,7 +43,7 @@ import org.apache.shardingsphere.infra.merge.result.MergedResult;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.mode.metadata.refresher.MetaDataRefreshEngine;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.DALStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.DALStatement;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -70,7 +70,7 @@ public final class DriverJDBCPushDownExecuteExecutor {
     
     /**
      * Execute.
-     * 
+     *
      * @param database database
      * @param executionContext execution context
      * @param prepareEngine prepare engine

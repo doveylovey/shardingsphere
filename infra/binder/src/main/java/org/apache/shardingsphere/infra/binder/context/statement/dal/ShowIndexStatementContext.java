@@ -22,8 +22,8 @@ import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContex
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.type.RemoveAvailable;
 import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.SQLSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dal.ShowIndexStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.SQLSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.ShowIndexStatement;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -36,9 +36,9 @@ public final class ShowIndexStatementContext extends CommonSQLStatementContext i
     
     private final TablesContext tablesContext;
     
-    public ShowIndexStatementContext(final ShowIndexStatement sqlStatement) {
+    public ShowIndexStatementContext(final ShowIndexStatement sqlStatement, final String currentDatabaseName) {
         super(sqlStatement);
-        tablesContext = new TablesContext(sqlStatement.getTable(), getDatabaseType());
+        tablesContext = new TablesContext(sqlStatement.getTable(), getDatabaseType(), currentDatabaseName);
     }
     
     @Override
@@ -49,7 +49,7 @@ public final class ShowIndexStatementContext extends CommonSQLStatementContext i
     @Override
     public Collection<SQLSegment> getRemoveSegments() {
         Collection<SQLSegment> result = new LinkedList<>();
-        getSqlStatement().getFromSchema().ifPresent(result::add);
+        getSqlStatement().getFromDatabase().ifPresent(result::add);
         return result;
     }
 }

@@ -17,9 +17,9 @@
 
 package org.apache.shardingsphere.infra.instance;
 
+import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
 import org.apache.shardingsphere.infra.instance.metadata.InstanceMetaData;
 import org.apache.shardingsphere.infra.instance.metadata.InstanceType;
@@ -35,11 +35,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Compute node instance context.
  */
-@RequiredArgsConstructor
 @Getter
 @ThreadSafe
 public final class ComputeNodeInstanceContext {
@@ -47,16 +47,43 @@ public final class ComputeNodeInstanceContext {
     private final ComputeNodeInstance instance;
     
     @Getter(AccessLevel.NONE)
-    private final WorkerIdGenerator workerIdGenerator;
+    private final AtomicReference<WorkerIdGenerator> workerIdGenerator = new AtomicReference<>();
     
     private final ModeConfiguration modeConfiguration;
     
     @SuppressWarnings("rawtypes")
-    private final LockContext lockContext;
+    @Getter(AccessLevel.NONE)
+    private final AtomicReference<LockContext> lockContext = new AtomicReference<>();
     
     private final EventBusContext eventBusContext;
     
     private final Collection<ComputeNodeInstance> allClusterInstances = new CopyOnWriteArrayList<>();
+    
+    @SuppressWarnings("rawtypes")
+    public ComputeNodeInstanceContext(final ComputeNodeInstance instance, final WorkerIdGenerator workerIdGenerator, final ModeConfiguration modeConfiguration,
+                                      final LockContext lockContext, final EventBusContext eventBusContext) {
+        this.instance = instance;
+        this.workerIdGenerator.set(workerIdGenerator);
+        this.modeConfiguration = modeConfiguration;
+        this.lockContext.set(lockContext);
+        this.eventBusContext = eventBusContext;
+    }
+    
+    public ComputeNodeInstanceContext(final ComputeNodeInstance instance, final ModeConfiguration modeConfiguration, final EventBusContext eventBusContext) {
+        this(instance, null, modeConfiguration, null, eventBusContext);
+    }
+    
+    /**
+     * Initialize compute node instance context.
+     *
+     * @param workerIdGenerator worker id generator
+     * @param lockContext lock context
+     */
+    @SuppressWarnings("rawtypes")
+    public void init(final WorkerIdGenerator workerIdGenerator, final LockContext lockContext) {
+        this.workerIdGenerator.set(workerIdGenerator);
+        this.lockContext.set(lockContext);
+    }
     
     /**
      * Update instance status.
@@ -98,7 +125,7 @@ public final class ComputeNodeInstanceContext {
     
     /**
      * Update instance label.
-     * 
+     *
      * @param instanceId instance id
      * @param labels collection of label
      */
@@ -131,14 +158,15 @@ public final class ComputeNodeInstanceContext {
      * @return worker id
      */
     public int generateWorkerId(final Properties props) {
-        int result = workerIdGenerator.generate(props);
+        Preconditions.checkArgument(workerIdGenerator.get() != null, "Worker id generator is not initialized.");
+        int result = workerIdGenerator.get().generate(props);
         instance.setWorkerId(result);
         return result;
     }
     
     /**
      * Add compute node instance.
-     * 
+     *
      * @param instance compute node instance
      */
     public void addComputeNodeInstance(final ComputeNodeInstance instance) {
@@ -174,7 +202,7 @@ public final class ComputeNodeInstanceContext {
     
     /**
      * Get compute node instance by instance id.
-     * 
+     *
      * @param instanceId instance id
      * @return compute node instance
      */
@@ -184,10 +212,21 @@ public final class ComputeNodeInstanceContext {
     
     /**
      * Is cluster instance or not.
-     * 
+     *
      * @return true if is cluster, else false
      */
     public boolean isCluster() {
         return "Cluster".equals(modeConfiguration.getType());
+    }
+    
+    /**
+     *  Get lock context.
+     *
+     * @return lock context
+     * @throws IllegalStateException if lock context is not initialized
+     */
+    @SuppressWarnings("rawtypes")
+    public LockContext getLockContext() throws IllegalStateException {
+        return Optional.ofNullable(lockContext.get()).orElseThrow(() -> new IllegalStateException("Lock context is not initialized."));
     }
 }

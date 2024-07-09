@@ -47,7 +47,7 @@ import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
 import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
 import org.apache.shardingsphere.mode.metadata.manager.ConfigurationManager;
 import org.apache.shardingsphere.mode.metadata.manager.SwitchingResource;
-import org.apache.shardingsphere.mode.service.PersistServiceFacade;
+import org.apache.shardingsphere.mode.persist.PersistServiceFacade;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 import org.apache.shardingsphere.mode.state.StateContext;
 
@@ -76,15 +76,12 @@ public final class ContextManager implements AutoCloseable {
     
     private final MetaDataContextManager metaDataContextManager;
     
-    private final PersistRepository repository;
-    
     public ContextManager(final MetaDataContexts metaDataContexts, final ComputeNodeInstanceContext computeNodeInstanceContext, final PersistRepository repository) {
         this.metaDataContexts = new AtomicReference<>(metaDataContexts);
         this.computeNodeInstanceContext = computeNodeInstanceContext;
-        this.repository = repository;
-        persistServiceFacade = new PersistServiceFacade(repository, computeNodeInstanceContext.getModeConfiguration(), this);
+        metaDataContextManager = new MetaDataContextManager(this.metaDataContexts, computeNodeInstanceContext, repository);
+        persistServiceFacade = new PersistServiceFacade(repository, computeNodeInstanceContext.getModeConfiguration(), metaDataContextManager);
         stateContext = new StateContext(persistServiceFacade.getStatePersistService().loadClusterState().orElse(ClusterState.OK));
-        metaDataContextManager = new MetaDataContextManager(this.metaDataContexts, computeNodeInstanceContext, persistServiceFacade);
         executorEngine = ExecutorEngine.createExecutorEngineWithSize(metaDataContexts.getMetaData().getProps().<Integer>getValue(ConfigurationPropertyKey.KERNEL_EXECUTOR_SIZE));
         for (ContextManagerLifecycleListener each : ShardingSphereServiceLoader.getServiceInstances(ContextManagerLifecycleListener.class)) {
             each.onInitialized(this);
@@ -93,7 +90,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Get meta data contexts.
-     * 
+     *
      * @return meta data contexts
      */
     public MetaDataContexts getMetaDataContexts() {
@@ -102,7 +99,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Renew meta data contexts.
-     * 
+     *
      * @param metaDataContexts meta data contexts
      */
     public void renewMetaDataContexts(final MetaDataContexts metaDataContexts) {
@@ -159,7 +156,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Reload table meta data.
-     * 
+     *
      * @param database to be reloaded database
      */
     public void refreshTableMetaData(final ShardingSphereDatabase database) {
@@ -192,7 +189,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Delete schema names.
-     * 
+     *
      * @param databaseName database name
      * @param reloadDatabase reload database
      * @param currentDatabase current database
@@ -204,7 +201,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Reload schema.
-     * 
+     *
      * @param database database
      * @param schemaName to be reloaded schema name
      * @param dataSourceName data source name
@@ -239,7 +236,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Reload table.
-     * 
+     *
      * @param database database
      * @param schemaName schema name
      * @param tableName to be reloaded table name
@@ -256,7 +253,7 @@ public final class ContextManager implements AutoCloseable {
     
     /**
      * Reload table from single data source.
-     * 
+     *
      * @param database database
      * @param schemaName schema name
      * @param dataSourceName data source name
@@ -296,6 +293,6 @@ public final class ContextManager implements AutoCloseable {
         }
         executorEngine.close();
         metaDataContexts.get().close();
-        repository.close();
+        persistServiceFacade.getRepository().close();
     }
 }

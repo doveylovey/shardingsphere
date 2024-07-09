@@ -30,12 +30,12 @@ import org.apache.shardingsphere.infra.database.core.metadata.database.DialectDa
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.OwnerSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SubqueryTableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.OwnerSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SubqueryTableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -69,15 +69,16 @@ public final class TablesContext {
     
     private final Map<String, IdentifierValue> tableNameAliasMap = new HashMap<>();
     
-    public TablesContext(final SimpleTableSegment tableSegment, final DatabaseType databaseType) {
-        this(null == tableSegment ? Collections.emptyList() : Collections.singletonList(tableSegment), databaseType);
+    public TablesContext(final SimpleTableSegment tableSegment, final DatabaseType databaseType, final String currentDatabaseName) {
+        this(null == tableSegment ? Collections.emptyList() : Collections.singletonList(tableSegment), databaseType, currentDatabaseName);
     }
     
-    public TablesContext(final Collection<SimpleTableSegment> tables, final DatabaseType databaseType) {
-        this(tables, Collections.emptyMap(), databaseType);
+    public TablesContext(final Collection<SimpleTableSegment> tables, final DatabaseType databaseType, final String currentDatabaseName) {
+        this(tables, Collections.emptyMap(), databaseType, currentDatabaseName);
     }
     
-    public TablesContext(final Collection<? extends TableSegment> tables, final Map<Integer, SelectStatementContext> subqueryContexts, final DatabaseType databaseType) {
+    public TablesContext(final Collection<? extends TableSegment> tables, final Map<Integer, SelectStatementContext> subqueryContexts, final DatabaseType databaseType,
+                         final String currentDatabaseName) {
         if (tables.isEmpty()) {
             return;
         }
@@ -87,8 +88,9 @@ public final class TablesContext {
                 SimpleTableSegment simpleTableSegment = (SimpleTableSegment) each;
                 simpleTables.add(simpleTableSegment);
                 tableNames.add(simpleTableSegment.getTableName().getIdentifier().getValue());
+                // TODO use sql binder result when statement which contains tables support bind logic
                 simpleTableSegment.getOwner().ifPresent(optional -> schemaNames.add(optional.getIdentifier().getValue()));
-                findDatabaseName(simpleTableSegment, databaseType).ifPresent(databaseNames::add);
+                databaseNames.add(findDatabaseName(simpleTableSegment, databaseType).orElse(currentDatabaseName));
                 tableNameAliasMap.put(simpleTableSegment.getTableName().getIdentifier().getValue().toLowerCase(), each.getAlias().orElse(simpleTableSegment.getTableName().getIdentifier()));
             }
             if (each instanceof SubqueryTableSegment) {

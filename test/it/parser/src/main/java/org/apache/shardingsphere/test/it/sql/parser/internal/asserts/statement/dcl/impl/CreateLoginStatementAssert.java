@@ -19,7 +19,7 @@ package org.apache.shardingsphere.test.it.sql.parser.internal.asserts.statement.
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.sql.parser.sql.common.statement.dcl.CreateLoginStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.dcl.CreateLoginStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.SQLSegmentAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.cases.parser.jaxb.statement.dcl.CreateLoginStatementTestCase;
@@ -37,7 +37,7 @@ public final class CreateLoginStatementAssert {
     
     /**
      * Assert create login statement is correct with expected parser result.
-     * 
+     *
      * @param assertContext assert context
      * @param actual actual create login statement
      * @param expected expected create login statement test case

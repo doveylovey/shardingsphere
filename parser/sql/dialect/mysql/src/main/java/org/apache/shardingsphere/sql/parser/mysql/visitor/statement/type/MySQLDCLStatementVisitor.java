@@ -35,7 +35,7 @@ import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.DropRol
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.DropUserContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantIdentifierContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantLevelGlobalContext;
-import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantLevelSchemaGlobalContext;
+import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantLevelDatabaseGlobalContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantLevelTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantProxyContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.GrantRoleOrPrivilegeOnToContext;
@@ -87,30 +87,30 @@ import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.StaticP
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.TlsOptionContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.UsernameContext;
 import org.apache.shardingsphere.sql.parser.mysql.visitor.statement.MySQLStatementVisitor;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.ACLAttributeEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.SSLTypeEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.enums.SSLTypeEnum.UserResourceSpecifiedLimitEnum;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.PasswordOrLockOptionSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.PrivilegeSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.RoleOrPrivilegeSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.TLSOptionSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.UserResourceSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.dcl.UserSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.GrantLevelSegment;
-import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
-import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.NumberLiteralValue;
-import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.StringLiteralValue;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLAlterUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLCreateRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLCreateUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLDropRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLDropUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLGrantStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLRenameUserStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLRevokeStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLSetDefaultRoleStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLSetPasswordStatement;
-import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLSetRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.ACLAttributeEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.SSLTypeEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.enums.SSLTypeEnum.UserResourceSpecifiedLimitEnum;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.PasswordOrLockOptionSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.PrivilegeSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.RoleOrPrivilegeSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.TLSOptionSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.UserResourceSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.dcl.UserSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.GrantLevelSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
+import org.apache.shardingsphere.sql.parser.statement.core.value.literal.impl.NumberLiteralValue;
+import org.apache.shardingsphere.sql.parser.statement.core.value.literal.impl.StringLiteralValue;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLAlterUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLCreateRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLCreateUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLDropRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLDropUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLGrantStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLRenameUserStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLRevokeStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLSetDefaultRoleStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLSetPasswordStatement;
+import org.apache.shardingsphere.sql.parser.statement.mysql.dcl.MySQLSetRoleStatement;
 
 import java.util.stream.Collectors;
 
@@ -173,19 +173,18 @@ public final class MySQLDCLStatementVisitor extends MySQLStatementVisitor implem
     private GrantLevelSegment generateGrantLevel(final GrantIdentifierContext ctx) {
         if (ctx instanceof GrantLevelGlobalContext) {
             return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), "*", "*");
-            
         }
-        if (ctx instanceof GrantLevelSchemaGlobalContext) {
-            String schemaName = new IdentifierValue(((GrantLevelSchemaGlobalContext) ctx).schemaName().getText()).getValue();
-            return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), schemaName, "*");
+        if (ctx instanceof GrantLevelDatabaseGlobalContext) {
+            String databaseName = new IdentifierValue(((GrantLevelDatabaseGlobalContext) ctx).databaseName().getText()).getValue();
+            return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), databaseName, "*");
         }
-        String schemaName = null;
+        String databaseName = null;
         String tableName;
         if (null != ((GrantLevelTableContext) ctx).tableName().owner()) {
-            schemaName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().owner().getText()).getValue();
+            databaseName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().owner().getText()).getValue();
         }
         tableName = new IdentifierValue(((GrantLevelTableContext) ctx).tableName().name().getText()).getValue();
-        return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), schemaName, tableName);
+        return new GrantLevelSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), databaseName, tableName);
     }
     
     @Override

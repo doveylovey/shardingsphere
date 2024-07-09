@@ -21,8 +21,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.groovy.util.Maps;
-import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.algorithm.core.config.AlgorithmConfiguration;
+import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.h2.type.H2DatabaseType;
 import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
@@ -39,12 +39,12 @@ import org.apache.shardingsphere.sharding.route.engine.condition.ShardingConditi
 import org.apache.shardingsphere.sharding.route.engine.condition.value.ListShardingConditionValue;
 import org.apache.shardingsphere.sharding.route.engine.condition.value.ShardingConditionValue;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
-import org.apache.shardingsphere.single.api.config.SingleRuleConfiguration;
+import org.apache.shardingsphere.single.config.SingleRuleConfiguration;
 import org.apache.shardingsphere.single.rule.SingleRule;
 import org.apache.shardingsphere.test.fixture.jdbc.MockedDataSource;
 import org.apache.shardingsphere.test.util.PropertiesBuilder;
 import org.apache.shardingsphere.test.util.PropertiesBuilder.Property;
-import org.apache.shardingsphere.timeservice.api.config.TimestampServiceRuleConfiguration;
+import org.apache.shardingsphere.timeservice.config.TimestampServiceRuleConfiguration;
 import org.apache.shardingsphere.timeservice.core.rule.TimestampServiceRule;
 
 import javax.sql.DataSource;
@@ -70,7 +70,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create based sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createBasedShardingRule() {
@@ -84,7 +84,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create error sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createErrorShardingRule() {
@@ -98,7 +98,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create binding sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createBindingShardingRule() {
@@ -116,7 +116,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create broadcast sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createBroadcastShardingRule() {
@@ -133,7 +133,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create hint sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createHintShardingRule() {
@@ -145,7 +145,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create mixed sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createMixedShardingRule() {
@@ -163,7 +163,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create all sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createAllShardingRule() {
@@ -186,7 +186,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create interval table sharding rule.
-     * 
+     *
      * @return created sharding rule
      */
     public static ShardingRule createIntervalTableShardingRule() {
@@ -234,7 +234,7 @@ public final class ShardingRoutingEngineFixtureBuilder {
     
     /**
      * Create sharding conditions.
-     * 
+     *
      * @param tableName table name
      * @return created sharding conditions
      */
