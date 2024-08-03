@@ -18,7 +18,7 @@
 package org.apache.shardingsphere.proxy.backend.connector;
 
 import com.google.common.base.Preconditions;
-import org.apache.shardingsphere.infra.binder.context.aware.CursorDefinitionAware;
+import org.apache.shardingsphere.infra.binder.context.aware.CursorAware;
 import org.apache.shardingsphere.infra.binder.context.segment.insert.keygen.GeneratedKeyContext;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.CloseStatementContext;
@@ -167,6 +167,11 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
             ResultSet resultSet = doExecuteFederation(queryContext, metaDataContexts);
             return processExecuteFederation(resultSet, metaDataContexts);
         }
+        MetaDataRefreshEngine metaDataRefreshEngine = getMetaDataRefreshEngine();
+        if (proxySQLExecutor.getSqlFederationEngine().enabled() && metaDataRefreshEngine.isFederation(queryContext.getSqlStatementContext())) {
+            metaDataRefreshEngine.refresh(queryContext.getSqlStatementContext());
+            return new UpdateResponseHeader(queryContext.getSqlStatementContext().getSqlStatement());
+        }
         ExecutionContext executionContext = generateExecutionContext();
         return isNeedImplicitCommitTransaction(queryContext.getSqlStatementContext().getSqlStatement(), executionContext.getExecutionUnits().size() > 1)
                 ? doExecuteWithImplicitCommitTransaction(() -> doExecute(executionContext))
@@ -267,12 +272,12 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
     
     private void prepareCursorStatementContext(final CursorAvailable statementContext, final ConnectionSession connectionSession, final String cursorName) {
         if (statementContext instanceof CursorStatementContext) {
-            connectionSession.getConnectionContext().getCursorContext().getCursorDefinitions().put(cursorName, (CursorStatementContext) statementContext);
+            connectionSession.getConnectionContext().getCursorContext().getCursorStatementContexts().put(cursorName, (CursorStatementContext) statementContext);
         }
-        if (statementContext instanceof CursorDefinitionAware) {
-            CursorStatementContext cursorStatementContext = (CursorStatementContext) connectionSession.getConnectionContext().getCursorContext().getCursorDefinitions().get(cursorName);
+        if (statementContext instanceof CursorAware) {
+            CursorStatementContext cursorStatementContext = connectionSession.getConnectionContext().getCursorContext().getCursorStatementContexts().get(cursorName);
             Preconditions.checkArgument(null != cursorStatementContext, "Cursor %s does not exist.", cursorName);
-            ((CursorDefinitionAware) statementContext).setUpCursorDefinition(cursorStatementContext);
+            ((CursorAware) statementContext).setCursorStatementContext(cursorStatementContext);
         }
         if (statementContext instanceof CloseStatementContext) {
             connectionSession.getConnectionContext().getCursorContext().removeCursor(cursorName);
@@ -280,9 +285,13 @@ public final class DatabaseConnector implements DatabaseBackendHandler {
     }
     
     private void refreshMetaData(final ExecutionContext executionContext) throws SQLException {
+        getMetaDataRefreshEngine().refresh(queryContext.getSqlStatementContext(), executionContext.getRouteContext().getRouteUnits());
+    }
+    
+    private MetaDataRefreshEngine getMetaDataRefreshEngine() {
         ContextManager contextManager = ProxyContext.getInstance().getContextManager();
-        new MetaDataRefreshEngine(contextManager.getPersistServiceFacade().getMetaDataManagerPersistService(), queryContext.getUsedDatabase(),
-                contextManager.getMetaDataContexts().getMetaData().getProps()).refresh(queryContext.getSqlStatementContext(), executionContext.getRouteContext().getRouteUnits());
+        return new MetaDataRefreshEngine(contextManager.getPersistServiceFacade().getMetaDataManagerPersistService(), queryContext.getUsedDatabase(),
+                contextManager.getMetaDataContexts().getMetaData().getProps());
     }
     
     private QueryResponseHeader processExecuteQuery(final SQLStatementContext sqlStatementContext, final List<QueryResult> queryResults, final QueryResult queryResultSample) throws SQLException {

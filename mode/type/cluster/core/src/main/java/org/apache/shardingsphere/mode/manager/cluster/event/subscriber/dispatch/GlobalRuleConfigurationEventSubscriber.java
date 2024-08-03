@@ -19,9 +19,14 @@ package org.apache.shardingsphere.mode.manager.cluster.event.subscriber.dispatch
 
 import com.google.common.eventbus.Subscribe;
 import lombok.RequiredArgsConstructor;
+import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
+import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.infra.util.eventbus.EventSubscriber;
 import org.apache.shardingsphere.mode.event.dispatch.config.AlterGlobalRuleConfigurationEvent;
 import org.apache.shardingsphere.mode.manager.ContextManager;
+import org.apache.shardingsphere.mode.spi.RuleConfigurationPersistDecorator;
+
+import java.util.Optional;
 
 /**
  * Global rule configuration event subscriber.
@@ -36,14 +41,18 @@ public final class GlobalRuleConfigurationEventSubscriber implements EventSubscr
      *
      * @param event global rule alter event
      */
+    @SuppressWarnings("unchecked")
     @Subscribe
     public synchronized void renew(final AlterGlobalRuleConfigurationEvent event) {
         if (!event.getActiveVersion().equals(
                 contextManager.getPersistServiceFacade().getMetaDataPersistService().getMetaDataVersionPersistService().getActiveVersionByFullPath(event.getActiveVersionKey()))) {
             return;
         }
-        contextManager.getPersistServiceFacade().getMetaDataPersistService().getGlobalRuleService().load(event.getRuleSimpleName())
-                .ifPresent(optional -> contextManager.getMetaDataContextManager().getConfigurationManager().alterGlobalRuleConfiguration(optional));
-        
+        Optional<RuleConfiguration> ruleConfig = contextManager.getPersistServiceFacade().getMetaDataPersistService().getGlobalRuleService().load(event.getRuleSimpleName());
+        if (!ruleConfig.isPresent()) {
+            return;
+        }
+        contextManager.getMetaDataContextManager().getGlobalConfigurationManager().alterGlobalRuleConfiguration(
+                TypedSPILoader.findService(RuleConfigurationPersistDecorator.class, ruleConfig.getClass()).map(optional -> optional.restore(ruleConfig.get())).orElse(ruleConfig.get()));
     }
 }

@@ -23,7 +23,7 @@ import org.apache.shardingsphere.encrypt.rewrite.aware.DatabaseNameAware;
 import org.apache.shardingsphere.encrypt.rewrite.aware.EncryptRuleAware;
 import org.apache.shardingsphere.encrypt.rewrite.token.pojo.EncryptInsertValuesToken;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
-import org.apache.shardingsphere.encrypt.rule.EncryptTable;
+import org.apache.shardingsphere.encrypt.rule.table.EncryptTable;
 import org.apache.shardingsphere.encrypt.rule.column.EncryptColumn;
 import org.apache.shardingsphere.encrypt.rule.column.item.AssistedQueryColumnItem;
 import org.apache.shardingsphere.encrypt.rule.column.item.LikeQueryColumnItem;
@@ -200,8 +200,8 @@ public final class EncryptInsertValuesTokenGenerator implements OptionalSQLToken
         ColumnSegment result = new ColumnSegment(originalColumn.getStartIndex(), originalColumn.getStopIndex(), new IdentifierValue(columnName, originalColumn.getIdentifier().getQuoteCharacter()));
         result.setNestedObjectAttributes(originalColumn.getNestedObjectAttributes());
         originalColumn.getOwner().ifPresent(result::setOwner);
-        result.setColumnBoundedInfo(originalColumn.getColumnBoundedInfo());
-        result.setOtherUsingColumnBoundedInfo(originalColumn.getOtherUsingColumnBoundedInfo());
+        result.setColumnBoundInfo(originalColumn.getColumnBoundInfo());
+        result.setOtherUsingColumnBoundInfo(originalColumn.getOtherUsingColumnBoundInfo());
         result.setVariable(originalColumn.isVariable());
         return result;
     }

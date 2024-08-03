@@ -34,7 +34,6 @@ import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.Iden
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -50,33 +49,26 @@ public final class SubstitutableColumnNameToken extends SQLToken implements Subs
     
     private final Collection<Projection> projections;
     
-    private final boolean lastColumn;
-    
     private final QuoteCharacter quoteCharacter;
     
     public SubstitutableColumnNameToken(final int startIndex, final int stopIndex, final Collection<Projection> projections, final DatabaseType databaseType) {
         super(startIndex);
         this.stopIndex = stopIndex;
-        this.lastColumn = false;
-        this.quoteCharacter = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getQuoteCharacter();
+        quoteCharacter = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getQuoteCharacter();
         this.projections = projections;
     }
     
     @Override
     public String toString(final RouteUnit routeUnit) {
-        Map<String, String> logicAndActualTables = new HashMap<>();
-        if (null != routeUnit) {
-            logicAndActualTables.putAll(getLogicAndActualTables(routeUnit));
-        }
+        Map<String, String> logicAndActualTables = getLogicAndActualTables(routeUnit);
         StringBuilder result = new StringBuilder();
-        int count = 0;
+        int index = 0;
         for (Projection each : projections) {
-            if (0 == count && !lastColumn) {
-                result.append(getColumnExpression(each, logicAndActualTables));
-            } else {
-                result.append(COLUMN_NAME_SPLITTER).append(getColumnExpression(each, logicAndActualTables));
+            if (index > 0) {
+                result.append(COLUMN_NAME_SPLITTER);
             }
-            count++;
+            result.append(getColumnExpression(each, logicAndActualTables));
+            index++;
         }
         return result.toString();
     }
@@ -103,12 +95,14 @@ public final class SubstitutableColumnNameToken extends SQLToken implements Subs
     }
     
     private void appendColumnProjection(final ColumnProjection columnProjection, final Map<String, String> logicActualTableNames, final StringBuilder builder) {
+        columnProjection.getLeftParentheses().ifPresent(optional -> builder.append("("));
         if (columnProjection.getOwner().isPresent()) {
             IdentifierValue owner = columnProjection.getOwner().get();
             String actualTableOwner = logicActualTableNames.getOrDefault(owner.getValue(), owner.getValue());
             builder.append(getValueWithQuoteCharacters(new IdentifierValue(actualTableOwner, owner.getQuoteCharacter()))).append('.');
         }
         builder.append(getValueWithQuoteCharacters(columnProjection.getName()));
+        columnProjection.getRightParentheses().ifPresent(optional -> builder.append(")"));
         if (columnProjection.getAlias().isPresent()) {
             builder.append(" AS ").append(getValueWithQuoteCharacters(columnProjection.getAlias().get()));
         }

@@ -22,7 +22,6 @@ import lombok.NoArgsConstructor;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.AnalyzeTableStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.ExplainStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.FlushStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.dal.KillStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.OptimizeTableStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.ShowColumnsStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dal.ShowCreateTableStatementContext;
@@ -52,14 +51,11 @@ import org.apache.shardingsphere.infra.binder.context.statement.ddl.MoveStatemen
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.PrepareStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.RenameTableStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.TruncateStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.dml.CallStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.CopyStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.DeleteStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.dml.DoStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.InsertStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.LoadDataStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.LoadXMLStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.dml.MergeStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.UpdateStatementContext;
 import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
@@ -69,7 +65,6 @@ import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.Analyze
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.DALStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.ExplainStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.FlushStatement;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.KillStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.OptimizeTableStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.ShowColumnsStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.ShowCreateTableStatement;
@@ -160,14 +155,8 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof InsertStatement) {
             return new InsertStatementContext(metaData, params, (InsertStatement) sqlStatement, currentDatabaseName);
         }
-        if (sqlStatement instanceof CallStatement) {
-            return new CallStatementContext((CallStatement) sqlStatement);
-        }
         if (sqlStatement instanceof CopyStatement) {
             return new CopyStatementContext((CopyStatement) sqlStatement, currentDatabaseName);
-        }
-        if (sqlStatement instanceof DoStatement) {
-            return new DoStatementContext((DoStatement) sqlStatement);
         }
         if (sqlStatement instanceof LoadDataStatement) {
             return new LoadDataStatementContext((LoadDataStatement) sqlStatement, currentDatabaseName);
@@ -175,8 +164,8 @@ public final class SQLStatementContextFactory {
         if (sqlStatement instanceof LoadXMLStatement) {
             return new LoadXMLStatementContext((LoadXMLStatement) sqlStatement, currentDatabaseName);
         }
-        if (sqlStatement instanceof MergeStatement) {
-            return new MergeStatementContext((MergeStatement) sqlStatement);
+        if (sqlStatement instanceof CallStatement || sqlStatement instanceof DoStatement || sqlStatement instanceof MergeStatement) {
+            return new UnknownSQLStatementContext(sqlStatement);
         }
         throw new UnsupportedSQLOperationException(String.format("Unsupported SQL statement `%s`", sqlStatement.getClass().getSimpleName()));
     }
@@ -285,9 +274,6 @@ public final class SQLStatementContextFactory {
         }
         if (sqlStatement instanceof OptimizeTableStatement) {
             return new OptimizeTableStatementContext((OptimizeTableStatement) sqlStatement, currentDatabaseName);
-        }
-        if (sqlStatement instanceof KillStatement) {
-            return new KillStatementContext((KillStatement) sqlStatement);
         }
         return new UnknownSQLStatementContext(sqlStatement);
     }
