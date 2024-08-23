@@ -31,13 +31,12 @@ import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectS
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -105,20 +104,36 @@ public final class SelectInformationSchemataExecutor extends DefaultDatabaseMeta
         Map<String, String> defaultRowData = getTheDefaultRowData();
         SCHEMA_WITHOUT_DATA_SOURCE.forEach(each -> {
             Map<String, Object> row = new LinkedHashMap<>(defaultRowData);
-            row.replace(SCHEMA_NAME, each);
+            row.replace(schemaNameAlias, each);
             getRows().add(row);
         });
         SCHEMA_WITHOUT_DATA_SOURCE.clear();
     }
     
     private Map<String, String> getTheDefaultRowData() {
-        Map<String, String> result;
         Collection<ProjectionSegment> projections = sqlStatement.getProjections().getProjections();
         if (projections.stream().anyMatch(ShorthandProjectionSegment.class::isInstance)) {
-            result = Stream.of(CATALOG_NAME, SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME, SQL_PATH, DEFAULT_ENCRYPTION).collect(Collectors.toMap(each -> each, each -> ""));
-        } else {
-            result = projections.stream().map(each -> ((ColumnProjectionSegment) each).getColumn().getIdentifier())
-                    .map(each -> each.getValue().toUpperCase()).collect(Collectors.toMap(each -> each, each -> ""));
+            return Stream.of(CATALOG_NAME, SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME, SQL_PATH, DEFAULT_ENCRYPTION)
+                    .collect(Collectors.toMap(each -> each, each -> "", (oldValue, currentValue) -> oldValue, LinkedHashMap::new));
+        }
+        return getDefaultRowsFromProjections(projections);
+    }
+    
+    private Map<String, String> getDefaultRowsFromProjections(final Collection<ProjectionSegment> projections) {
+        Map<String, String> result = new LinkedHashMap<>(projections.size(), 1F);
+        for (ProjectionSegment each : projections) {
+            if (!each.getClass().isAssignableFrom(ColumnProjectionSegment.class)) {
+                continue;
+            }
+            if (((ColumnProjectionSegment) each).getAlias().isPresent()) {
+                String alias = ((ColumnProjectionSegment) each).getAlias().get().getValue();
+                if (((ColumnProjectionSegment) each).getColumn().getIdentifier().getValue().equalsIgnoreCase(SCHEMA_NAME)) {
+                    schemaNameAlias = alias;
+                }
+                result.put(alias, "");
+                continue;
+            }
+            result.put(((ColumnProjectionSegment) each).getColumn().getIdentifier().getValue().toUpperCase(), "");
         }
         return result;
     }
@@ -138,12 +153,12 @@ public final class SelectInformationSchemataExecutor extends DefaultDatabaseMeta
     }
     
     private Collection<String> getCatalogs(final ResourceMetaData resourceMetaData) throws SQLException {
-        Collection<String> result = new HashSet<>(resourceMetaData.getStorageUnits().size(), 1F);
-        for (Entry<String, StorageUnit> entry : resourceMetaData.getStorageUnits().entrySet()) {
-            try (Connection connection = entry.getValue().getDataSource().getConnection()) {
-                result.add(connection.getCatalog());
-            }
+        Optional<StorageUnit> storageUnit = resourceMetaData.getStorageUnits().values().stream().findFirst();
+        if (!storageUnit.isPresent()) {
+            return Collections.emptySet();
         }
-        return result;
+        try (Connection connection = storageUnit.get().getDataSource().getConnection()) {
+            return Collections.singleton(connection.getCatalog());
+        }
     }
 }

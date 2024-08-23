@@ -17,31 +17,32 @@
 
 package org.apache.shardingsphere.encrypt.rewrite.token.generator.projection;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.shardingsphere.encrypt.rewrite.aware.DatabaseTypeAware;
-import org.apache.shardingsphere.encrypt.rewrite.aware.EncryptRuleAware;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.InsertStatementContext;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.rewrite.sql.token.generator.CollectionSQLTokenGenerator;
-import org.apache.shardingsphere.infra.rewrite.sql.token.generator.aware.PreviousSQLTokensAware;
-import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
+import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.CollectionSQLTokenGenerator;
+import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.aware.PreviousSQLTokensAware;
+import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.SQLToken;
 
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Projection token generator for encrypt.
+ * Insert select projection token generator for encrypt.
  */
 @HighFrequencyInvocation
+@RequiredArgsConstructor
 @Setter
-public final class EncryptInsertSelectProjectionTokenGenerator implements CollectionSQLTokenGenerator<InsertStatementContext>, PreviousSQLTokensAware, EncryptRuleAware, DatabaseTypeAware {
+public final class EncryptInsertSelectProjectionTokenGenerator implements CollectionSQLTokenGenerator<InsertStatementContext>, PreviousSQLTokensAware, DatabaseTypeAware {
+    
+    private final EncryptRule encryptRule;
     
     private List<SQLToken> previousSQLTokens;
-    
-    private EncryptRule encryptRule;
     
     private DatabaseType databaseType;
     

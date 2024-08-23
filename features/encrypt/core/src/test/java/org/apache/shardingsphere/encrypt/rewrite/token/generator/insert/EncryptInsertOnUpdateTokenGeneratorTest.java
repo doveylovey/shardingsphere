@@ -23,7 +23,7 @@ import org.apache.shardingsphere.encrypt.rule.table.EncryptTable;
 import org.apache.shardingsphere.encrypt.rule.column.EncryptColumn;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.InsertStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.rewrite.sql.token.pojo.SQLToken;
+import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.SQLToken;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.assignment.ColumnAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.OnDuplicateKeyColumnsSegment;
@@ -52,11 +52,11 @@ import static org.mockito.Mockito.when;
 
 class EncryptInsertOnUpdateTokenGeneratorTest {
     
-    private final EncryptInsertOnUpdateTokenGenerator generator = new EncryptInsertOnUpdateTokenGenerator();
+    private EncryptInsertOnUpdateTokenGenerator generator;
     
     @BeforeEach
     void setup() {
-        generator.setEncryptRule(mockEncryptRule());
+        generator = new EncryptInsertOnUpdateTokenGenerator(mockEncryptRule());
     }
     
     private EncryptRule mockEncryptRule() {

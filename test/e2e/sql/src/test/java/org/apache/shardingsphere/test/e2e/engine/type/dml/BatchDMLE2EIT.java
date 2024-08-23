@@ -21,12 +21,9 @@ import org.apache.shardingsphere.test.e2e.cases.casse.assertion.E2ETestCaseAsser
 import org.apache.shardingsphere.test.e2e.cases.value.SQLValue;
 import org.apache.shardingsphere.test.e2e.engine.arg.E2ETestCaseArgumentsProvider;
 import org.apache.shardingsphere.test.e2e.engine.arg.E2ETestCaseSettings;
-import org.apache.shardingsphere.test.e2e.env.DataSetEnvironmentManager;
-import org.apache.shardingsphere.test.e2e.env.runtime.scenario.path.ScenarioDataPath;
 import org.apache.shardingsphere.test.e2e.framework.param.array.E2ETestParameterFactory;
 import org.apache.shardingsphere.test.e2e.framework.param.model.CaseTestParameter;
 import org.apache.shardingsphere.test.e2e.framework.type.SQLCommandType;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
@@ -43,15 +40,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @E2ETestCaseSettings(value = SQLCommandType.DML, batch = true)
 class BatchDMLE2EIT extends BaseDMLE2EIT {
     
-    private DataSetEnvironmentManager dataSetEnvironmentManager;
-    
-    @AfterEach
-    void tearDown() {
-        if (null != dataSetEnvironmentManager) {
-            dataSetEnvironmentManager.cleanData();
-        }
-    }
-    
     @ParameterizedTest(name = "{0}")
     @EnabledIf("isEnabled")
     @ArgumentsSource(E2ETestCaseArgumentsProvider.class)
@@ -60,14 +48,35 @@ class BatchDMLE2EIT extends BaseDMLE2EIT {
         if (null == testParam.getTestCaseContext()) {
             return;
         }
-        dataSetEnvironmentManager = new DataSetEnvironmentManager(new ScenarioDataPath(testParam.getScenario()).getDataSetFile(ScenarioDataPath.Type.ACTUAL),
-                getEnvironmentEngine().getActualDataSourceMap(), testParam.getDatabaseType());
-        dataSetEnvironmentManager.fillData();
+        init(testParam);
         int[] actualUpdateCounts;
         try (Connection connection = getEnvironmentEngine().getTargetDataSource().getConnection()) {
             actualUpdateCounts = executeBatchForPreparedStatement(testParam, connection);
         }
         assertDataSet(actualUpdateCounts, testParam);
+        tearDown(testParam);
+    }
+    
+    void init(final CaseTestParameter testParam) throws SQLException, IOException, JAXBException {
+        super.init(testParam);
+        executeInitSQLs(testParam);
+    }
+    
+    void tearDown(final CaseTestParameter testParam) throws SQLException {
+        super.tearDown();
+        executeDestroySQLs(testParam);
+    }
+    
+    private void executeInitSQLs(final CaseTestParameter testParam) throws SQLException {
+        for (E2ETestCaseAssertion each : testParam.getTestCaseContext().getTestCase().getAssertions()) {
+            executeInitSQLs(each);
+        }
+    }
+    
+    private void executeDestroySQLs(final CaseTestParameter testParam) throws SQLException {
+        for (E2ETestCaseAssertion each : testParam.getTestCaseContext().getTestCase().getAssertions()) {
+            executeDestroySQLs(each);
+        }
     }
     
     private int[] executeBatchForPreparedStatement(final CaseTestParameter testParam, final Connection connection) throws SQLException {
@@ -94,9 +103,7 @@ class BatchDMLE2EIT extends BaseDMLE2EIT {
         if (null == testParam.getTestCaseContext()) {
             return;
         }
-        dataSetEnvironmentManager = new DataSetEnvironmentManager(new ScenarioDataPath(testParam.getScenario()).getDataSetFile(ScenarioDataPath.Type.ACTUAL),
-                getEnvironmentEngine().getActualDataSourceMap(), testParam.getDatabaseType());
-        dataSetEnvironmentManager.fillData();
+        init(testParam);
         try (
                 Connection connection = getEnvironmentEngine().getTargetDataSource().getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(testParam.getTestCaseContext().getTestCase().getSql())) {
@@ -106,6 +113,7 @@ class BatchDMLE2EIT extends BaseDMLE2EIT {
             preparedStatement.clearBatch();
             assertThat(preparedStatement.executeBatch().length, is(0));
         }
+        tearDown(testParam);
     }
     
     private static boolean isEnabled() {

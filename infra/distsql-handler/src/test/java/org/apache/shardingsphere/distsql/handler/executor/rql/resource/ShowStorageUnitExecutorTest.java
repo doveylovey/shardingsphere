@@ -76,48 +76,66 @@ class ShowStorageUnitExecutorTest {
         nameMap.put(0, "ds_2");
         nameMap.put(1, "ds_1");
         nameMap.put(2, "ds_0");
-        Collection<LocalDataQueryResultRow> actual = executor.getRows(new ShowStorageUnitsStatement(mock(DatabaseSegment.class), null), mock(ContextManager.class));
+        Collection<LocalDataQueryResultRow> actual = executor.getRows(new ShowStorageUnitsStatement(mock(DatabaseSegment.class), null, null), mock(ContextManager.class));
         assertThat(actual.size(), is(3));
-        Iterator<LocalDataQueryResultRow> rowData = actual.iterator();
+        Iterator<LocalDataQueryResultRow> iterator = actual.iterator();
         int index = 0;
-        while (rowData.hasNext()) {
-            LocalDataQueryResultRow data = rowData.next();
-            assertThat(data.getCell(1), is(nameMap.get(index)));
-            assertThat(data.getCell(2), is("MySQL"));
-            assertThat(data.getCell(3), is("localhost"));
-            assertThat(data.getCell(4), is("3307"));
-            assertThat(data.getCell(5), is(nameMap.get(index)));
-            assertThat(data.getCell(6), is(""));
-            assertThat(data.getCell(7), is(""));
-            assertThat(data.getCell(8), is(""));
-            assertThat(data.getCell(9), is("100"));
-            assertThat(data.getCell(10), is("10"));
-            assertThat(data.getCell(11), is(""));
-            assertThat(data.getCell(12), is("{\"openedConnections\":[],\"closed\":false}"));
+        while (iterator.hasNext()) {
+            LocalDataQueryResultRow row = iterator.next();
+            assertThat(row.getCell(1), is(nameMap.get(index)));
+            assertThat(row.getCell(2), is("MySQL"));
+            assertThat(row.getCell(3), is("localhost"));
+            assertThat(row.getCell(4), is("3307"));
+            assertThat(row.getCell(5), is(nameMap.get(index)));
+            assertThat(row.getCell(6), is(""));
+            assertThat(row.getCell(7), is(""));
+            assertThat(row.getCell(8), is(""));
+            assertThat(row.getCell(9), is("100"));
+            assertThat(row.getCell(10), is("10"));
+            assertThat(row.getCell(11), is(""));
+            assertThat(row.getCell(12), is("{\"openedConnections\":[],\"closed\":false}"));
             index++;
         }
+    }
+    
+    @Test
+    void assertGetRowsWithLikePattern() {
+        Collection<LocalDataQueryResultRow> actual = executor.getRows(new ShowStorageUnitsStatement(mock(DatabaseSegment.class), "_0", null), mock(ContextManager.class));
+        assertThat(actual.size(), is(1));
+        LocalDataQueryResultRow row = actual.iterator().next();
+        assertThat(row.getCell(1), is("ds_0"));
+        assertThat(row.getCell(2), is("MySQL"));
+        assertThat(row.getCell(3), is("localhost"));
+        assertThat(row.getCell(4), is("3307"));
+        assertThat(row.getCell(5), is("ds_0"));
+        assertThat(row.getCell(6), is(""));
+        assertThat(row.getCell(7), is(""));
+        assertThat(row.getCell(8), is(""));
+        assertThat(row.getCell(9), is("100"));
+        assertThat(row.getCell(10), is("10"));
+        assertThat(row.getCell(11), is(""));
+        assertThat(row.getCell(12), is("{\"openedConnections\":[],\"closed\":false}"));
     }
     
     @Test
     void assertGetRowsWithUnusedStorageUnits() {
         RuleMetaData metaData = mockUnusedStorageUnitsRuleMetaData();
         when(database.getRuleMetaData()).thenReturn(metaData);
-        Collection<LocalDataQueryResultRow> actual = executor.getRows(new ShowStorageUnitsStatement(mock(DatabaseSegment.class), 0), mock(ContextManager.class));
+        Collection<LocalDataQueryResultRow> actual = executor.getRows(new ShowStorageUnitsStatement(mock(DatabaseSegment.class), null, 0), mock(ContextManager.class));
         assertThat(actual.size(), is(1));
-        Iterator<LocalDataQueryResultRow> rowData = actual.iterator();
-        LocalDataQueryResultRow data = rowData.next();
-        assertThat(data.getCell(1), is("ds_2"));
-        assertThat(data.getCell(2), is("MySQL"));
-        assertThat(data.getCell(3), is("localhost"));
-        assertThat(data.getCell(4), is("3307"));
-        assertThat(data.getCell(5), is("ds_2"));
-        assertThat(data.getCell(6), is(""));
-        assertThat(data.getCell(7), is(""));
-        assertThat(data.getCell(8), is(""));
-        assertThat(data.getCell(9), is("100"));
-        assertThat(data.getCell(10), is("10"));
-        assertThat(data.getCell(11), is(""));
-        assertThat(data.getCell(12), is("{\"openedConnections\":[],\"closed\":false}"));
+        LocalDataQueryResultRow row = actual.iterator().next();
+        assertThat(row.getCell(1), is("ds_2"));
+        assertThat(row.getCell(2), is("MySQL"));
+        assertThat(row.getCell(3), is("localhost"));
+        assertThat(row.getCell(4), is("3307"));
+        assertThat(row.getCell(5), is("ds_2"));
+        assertThat(row.getCell(6), is(""));
+        assertThat(row.getCell(7), is(""));
+        assertThat(row.getCell(8), is(""));
+        assertThat(row.getCell(9), is("100"));
+        assertThat(row.getCell(10), is("10"));
+        assertThat(row.getCell(11), is(""));
+        assertThat(row.getCell(12), is("{\"openedConnections\":[],\"closed\":false}"));
     }
     
     private RuleMetaData mockUnusedStorageUnitsRuleMetaData() {

@@ -26,13 +26,6 @@ GraalVM CE only supports AWT for GraalVM CE For JDK22 and higher versions.
 ```shell
 com.sun.beans.introspect.ClassInfo was unintentionally initialized at build time. To see why com.sun.beans.introspect.ClassInfo got initialized use --trace-class-initialization=com.sun.beans.introspect.ClassInfo
 java.beans.Introspector was unintentionally initialized at build time. To see why java.beans.Introspector got initialized use --trace-class-initialization=java.beans.Introspector
-com.sun.beans.util.Cache$Kind$2 was unintentionally initialized at build time. To see why com.sun.beans.util.Cache$Kind$2 got initialized use --trace-class-initialization=com.sun.beans.util.Cache$Kind$2
-com.sun.beans.TypeResolver was unintentionally initialized at build time. To see why com.sun.beans.TypeResolver got initialized use --trace-class-initialization=com.sun.beans.TypeResolver
-java.beans.ThreadGroupContext was unintentionally initialized at build time. To see why java.beans.ThreadGroupContext got initialized use --trace-class-initialization=java.beans.ThreadGroupContext
-com.sun.beans.util.Cache$Kind was unintentionally initialized at build time. To see why com.sun.beans.util.Cache$Kind got initialized use --trace-class-initialization=com.sun.beans.util.Cache$Kind
-com.sun.beans.introspect.MethodInfo was unintentionally initialized at build time. To see why com.sun.beans.introspect.MethodInfo got initialized use --trace-class-initialization=com.sun.beans.introspect.MethodInfo
-com.sun.beans.util.Cache$Kind$1 was unintentionally initialized at build time. To see why com.sun.beans.util.Cache$Kind$1 got initialized use --trace-class-initialization=com.sun.beans.util.Cache$Kind$1
-com.sun.beans.util.Cache$Kind$3 was unintentionally initialized at build time. To see why com.sun.beans.util.Cache$Kind$3 got initialized use --trace-class-initialization=com.sun.beans.util.Cache$Kind$3
 ```
 
 ### Maven Ecology
@@ -90,7 +83,7 @@ and the documentation of GraalVM Native Build Tools shall prevail.
 Users need to actively use the GraalVM Reachability Metadata central repository.
 The following configuration is for reference to configure additional Gradle Tasks for the project,
 and the documentation of GraalVM Native Build Tools shall prevail.
-Due to the limitations of Gradle 8.6, 
+Due to the limitations of https://github.com/gradle/gradle/issues/17559 , 
 users need to introduce the JSON file of Metadata Repository through Maven dependency. 
 Reference https://github.com/graalvm/native-build-tools/issues/572 .
 
@@ -349,6 +342,167 @@ Possible configuration examples are as follows,
 ClickHouse does not support local transactions, XA transactions, and Seata AT mode transactions at the ShardingSphere integration level. 
 More discussion is at https://github.com/ClickHouse/clickhouse-docs/issues/2300 .
 
+7. When using the Hive dialect through ShardingSphere JDBC, affected by https://issues.apache.org/jira/browse/HIVE-28308 ,
+   users should not use `org.apache.hive:hive-jdbc:4.0.0` with `classifier` as `standalone` to avoid dependency conflicts.
+   Possible configuration examples are as follows,
+
+```xml
+<project>
+   <dependencies>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-jdbc</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-infra-database-hive</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-parser-sql-hive</artifactId>
+         <version>${shardingsphere.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.hive</groupId>
+         <artifactId>hive-jdbc</artifactId>
+         <version>4.0.0</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.hive</groupId>
+         <artifactId>hive-service</artifactId>
+         <version>4.0.0</version>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-client-api</artifactId>
+         <version>3.3.6</version>
+      </dependency>
+   </dependencies>
+</project>
+```
+
+This can lead to a large number of dependency conflicts.
+If the user does not want to manually resolve potentially thousands of lines of dependency conflicts, 
+a third-party build of the HiveServer2 JDBC Driver `Thin JAR` can be used.
+An example of a possible configuration is as follows,
+
+```xml
+<project>
+    <dependencies>
+       <dependency>
+         <groupId>org.apache.shardingsphere</groupId>
+         <artifactId>shardingsphere-jdbc</artifactId>
+         <version>${shardingsphere.version}</version>
+       </dependency>
+       <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-database-hive</artifactId>
+            <version>${shardingsphere.version}</version>
+       </dependency>
+       <dependency>
+          <groupId>org.apache.shardingsphere</groupId>
+          <artifactId>shardingsphere-parser-sql-hive</artifactId>
+          <version>${shardingsphere.version}</version>
+       </dependency>
+       <dependency>
+          <groupId>io.github.linghengqian</groupId>
+          <artifactId>hive-server2-jdbc-driver-thin</artifactId>
+          <version>1.2.0</version>
+          <exclusions>
+             <exclusion>
+                <groupId>com.fasterxml.woodstox</groupId>
+                <artifactId>woodstox-core</artifactId>
+             </exclusion>
+          </exclusions>
+       </dependency>
+    </dependencies>
+</project>
+```
+
+Affected by https://github.com/grpc/grpc-java/issues/10601 , should users incorporate `org.apache.hive:hive-service` into their project,
+it is imperative to create a file named `native-image.properties` within the directory `META-INF/native-image/io.grpc/grpc-netty-shaded` of the classpath,
+containing the following content,
+```properties
+Args=--initialize-at-run-time=\
+    io.grpc.netty.shaded.io.netty.channel.ChannelHandlerMask,\
+    io.grpc.netty.shaded.io.netty.channel.nio.AbstractNioChannel,\
+    io.grpc.netty.shaded.io.netty.channel.socket.nio.SelectorProviderUtil,\
+    io.grpc.netty.shaded.io.netty.util.concurrent.DefaultPromise,\
+    io.grpc.netty.shaded.io.netty.util.internal.MacAddressUtil,\
+    io.grpc.netty.shaded.io.netty.util.internal.SystemPropertyUtil,\
+    io.grpc.netty.shaded.io.netty.util.NetUtilInitializations,\
+    io.grpc.netty.shaded.io.netty.channel.AbstractChannel,\
+    io.grpc.netty.shaded.io.netty.util.NetUtil,\
+    io.grpc.netty.shaded.io.netty.util.internal.PlatformDependent,\
+    io.grpc.netty.shaded.io.netty.util.internal.PlatformDependent0,\
+    io.grpc.netty.shaded.io.netty.channel.DefaultChannelPipeline,\
+    io.grpc.netty.shaded.io.netty.channel.DefaultChannelId,\
+    io.grpc.netty.shaded.io.netty.util.ResourceLeakDetector,\
+    io.grpc.netty.shaded.io.netty.channel.AbstractChannelHandlerContext,\
+    io.grpc.netty.shaded.io.netty.channel.ChannelOutboundBuffer,\
+    io.grpc.netty.shaded.io.netty.util.internal.InternalThreadLocalMap,\
+    io.grpc.netty.shaded.io.netty.util.internal.CleanerJava9,\
+    io.grpc.netty.shaded.io.netty.util.internal.StringUtil,\
+    io.grpc.netty.shaded.io.netty.util.internal.CleanerJava6,\
+    io.grpc.netty.shaded.io.netty.buffer.ByteBufUtil$HexUtil,\
+    io.grpc.netty.shaded.io.netty.buffer.AbstractByteBufAllocator,\
+    io.grpc.netty.shaded.io.netty.util.concurrent.FastThreadLocalThread,\
+    io.grpc.netty.shaded.io.netty.buffer.PoolArena,\
+    io.grpc.netty.shaded.io.netty.buffer.EmptyByteBuf,\
+    io.grpc.netty.shaded.io.netty.buffer.PoolThreadCache,\
+    io.grpc.netty.shaded.io.netty.util.AttributeKey
+```
+
+In order to be able to use DML SQL statements such as `delete`, when connecting to HiveServer2,
+users should consider using only ACID-supported tables in ShardingSphere JDBC. `apache/hive` provides a variety of transaction solutions.
+
+The first option is to use ACID tables, and the possible table creation process is as follows.
+Due to its outdated catalog-based table format, 
+users may have to wait before and after DML statement execution to let HiveServer2 complete the inefficient DML operations.
+
+```sql
+set metastore.compactor.initiator.on=true;
+set metastore.compactor.cleaner.on=true;
+set metastore.compactor.worker.threads=5;
+
+set hive.support.concurrency=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.txn.manager=org.apache.hadoop.hive.ql.lockmgr.DbTxnManager;
+
+CREATE TABLE IF NOT EXISTS t_order
+(
+    order_id   BIGINT,
+    order_type INT,
+    user_id    INT    NOT NULL,
+    address_id BIGINT NOT NULL,
+    status     VARCHAR(50),
+    PRIMARY KEY (order_id) disable novalidate
+) CLUSTERED BY (order_id) INTO 2 BUCKETS STORED AS ORC TBLPROPERTIES ('transactional' = 'true');
+```
+
+The second option is to use Iceberg table. The possible table creation process is as follows.
+Apache Iceberg table format is poised to replace the traditional Hive table format in the coming years, 
+see https://blog.cloudera.com/from-hive-tables-to-iceberg-tables-hassle-free/ .
+
+```sql
+set iceberg.mr.schema.auto.conversion=true;
+
+CREATE TABLE IF NOT EXISTS t_order
+(
+    order_id   BIGINT,
+    order_type INT,
+    user_id    INT    NOT NULL,
+    address_id BIGINT NOT NULL,
+    status     VARCHAR(50),
+    PRIMARY KEY (order_id) disable novalidate
+) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2');
+```
+
+HiveServer2 does not support local transactions, XA transactions, and Seata AT mode transactions at the ShardingSphere integration level. 
+More discussion is available at https://cwiki.apache.org/confluence/display/Hive/Hive+Transactions .
+
 ## Contribute GraalVM Reachability Metadata
 
 The verification of ShardingSphere's availability under GraalVM Native Image is completed through the Maven Plugin subproject 
@@ -362,7 +516,7 @@ This subset of unit tests avoids the use of third-party libraries such as Mockit
 
 ShardingSphere defines the Maven Profile of `nativeTestInShardingSphere` for executing nativeTest for the `shardingsphere-test-native` module.
 
-Assuming that the contributor is under a new Ubuntu 22.04.3 LTS instance, Contributors can manage the JDK and tool chain through 
+Assuming that the contributor is under a new Ubuntu 22.04.4 LTS instance, Contributors can manage the JDK and tool chain through 
 `SDKMAN!` through the following bash command, and execute nativeTest for the `shardingsphere-test-native` submodule.
 
 You must install Docker Engine to execute `testcontainers-java` related unit tests.
@@ -377,7 +531,7 @@ sudo apt-get install build-essential zlib1g-dev -y
 
 git clone git@github.com:apache/shardingsphere.git
 cd ./shardingsphere/
-./mvnw -PnativeTestInShardingSphere -T1C -e clean test
+./mvnw -PnativeTestInShardingSphere -e clean test
 ```
 
 When contributors discover that GraalVM Reachability Metadata is missing for a third-party library not related to ShardingSphere, 
@@ -386,7 +540,7 @@ on https://github.com/oracle/graalvm-reachability-metadata . ShardingSphere acti
 some third-party libraries in the `shardingsphere-infra-reachability-metadata` submodule.
 
 If nativeTest execution fails, preliminary GraalVM Reachability Metadata should be generated for unit tests,
-and manually adjust the contents of the `META-INF/native-image/org.apache.shardingsphere/shardingsphere-infra-reachability-metadata` folder on the classpath of the `shardingsphere-infra-reachability-metadata` submodule to fix nativeTest.
+and manually adjust the contents of the `META-INF/native-image/org.apache.shardingsphere/shardingsphere-infra-reachability-metadata/` folder on the classpath of the `shardingsphere-infra-reachability-metadata` submodule to fix nativeTest.
 If necessary, 
 use the `org.junit.jupiter.api.condition.DisabledInNativeImage` annotation or the `org.graalvm.nativeimage.imagecode` System Property blocks some unit tests from running under GraalVM Native Image.
 
@@ -407,5 +561,8 @@ contributors should place it on the classpath of the `shardingsphere-test-native
 ```bash
 git clone git@github.com:apache/shardingsphere.git
 cd ./shardingsphere/
-./mvnw -PgenerateMetadata -DskipNativeTests -e -T1C clean test native:metadata-copy
+./mvnw -PgenerateMetadata -DskipNativeTests -e clean test native:metadata-copy
 ```
+
+Contributors should avoid using Maven's parallel builds feature when using the Maven Plugin for GraalVM Native Build Tools. 
+The Maven Plugin for GraalVM Native Build Tools is not thread-safe and is incompatible with https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3 .

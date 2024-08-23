@@ -220,8 +220,9 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     @Override
     public ASTNode visitShowStorageUnits(final ShowStorageUnitsContext ctx) {
         DatabaseSegment database = null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName());
+        String likePattern = null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern());
         Integer usageCount = null == ctx.usageCount() ? null : Integer.parseInt(ctx.usageCount().getText());
-        return new ShowStorageUnitsStatement(database, usageCount);
+        return new ShowStorageUnitsStatement(database, likePattern, usageCount);
     }
     
     @Override
@@ -236,8 +237,9 @@ public final class KernelDistSQLStatementVisitor extends KernelDistSQLStatementB
     
     @Override
     public ASTNode visitShowLogicalTables(final ShowLogicalTablesContext ctx) {
-        return new ShowLogicalTablesStatement(null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern()),
-                null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName()));
+        return new ShowLogicalTablesStatement(null != ctx.FULL(),
+                null == ctx.databaseName() ? null : (DatabaseSegment) visit(ctx.databaseName()),
+                null == ctx.showLike() ? null : getIdentifierValue(ctx.showLike().likePattern()));
     }
     
     @Override

@@ -36,7 +36,7 @@ literals
     ;
 
 intervalLiterals
-    : INTERVAL stringLiterals intervalUnit (intervalPrecision)? (TO intervalUnit (intervalPrecision)?)?
+    : INTERVAL simpleExpr intervalUnit (intervalPrecision)? (TO intervalUnit (intervalPrecision)?)?
     ;
 
 bindLiterals
@@ -639,7 +639,7 @@ alias
     ;
 
 dataTypeLength
-    : LP_ (INTEGER_ (COMMA_ (MINUS_)? INTEGER_)? (CHAR | BYTE)?)? RP_
+    : LP_ (length=INTEGER_ (COMMA_ (MINUS_)? INTEGER_)? type=(CHAR | BYTE)?)? RP_
     ;
 
 primaryKey

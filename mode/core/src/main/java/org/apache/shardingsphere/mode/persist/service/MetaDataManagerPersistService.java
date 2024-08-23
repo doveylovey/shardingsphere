@@ -19,6 +19,7 @@ package org.apache.shardingsphere.mode.persist.service;
 
 import org.apache.shardingsphere.infra.config.rule.RuleConfiguration;
 import org.apache.shardingsphere.infra.datasource.pool.props.domain.DataSourcePoolProperties;
+import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 import org.apache.shardingsphere.infra.metadata.database.schema.pojo.AlterSchemaMetaDataPOJO;
 import org.apache.shardingsphere.infra.metadata.database.schema.pojo.AlterSchemaPOJO;
 
@@ -36,15 +37,17 @@ public interface MetaDataManagerPersistService {
      * Create database.
      *
      * @param databaseName database name
+     * @throws SQLException SQL exception
      */
-    void createDatabase(String databaseName);
+    void createDatabase(String databaseName) throws SQLException;
     
     /**
      * Drop database.
      *
      * @param databaseName database name
+     * @throws SQLException SQL exception
      */
-    void dropDatabase(String databaseName);
+    void dropDatabase(String databaseName) throws SQLException;
     
     /**
      * Create schema.
@@ -58,8 +61,9 @@ public interface MetaDataManagerPersistService {
      * Alter schema.
      *
      * @param alterSchemaPOJO alter schema pojo
+     * @throws SQLException SQL exception
      */
-    void alterSchema(AlterSchemaPOJO alterSchemaPOJO);
+    void alterSchema(AlterSchemaPOJO alterSchemaPOJO) throws SQLException;
     
     /**
      * Drop schema.
@@ -134,8 +138,9 @@ public interface MetaDataManagerPersistService {
      *
      * @param databaseName database name
      * @param ruleName rule name
+     * @throws SQLException SQL exception
      */
-    void removeRuleConfiguration(String databaseName, String ruleName);
+    void removeRuleConfiguration(String databaseName, String ruleName) throws SQLException;
     
     /**
      * Alter global rule configuration.
@@ -150,4 +155,23 @@ public interface MetaDataManagerPersistService {
      * @param props pros
      */
     void alterProperties(Properties props);
+    
+    /**
+     * Create table.
+     *
+     * @param databaseName database name
+     * @param schemaName schema name
+     * @param table table
+     * @param logicDataSourceName logic data source name
+     */
+    void createTable(String databaseName, String schemaName, ShardingSphereTable table, String logicDataSourceName);
+    
+    /**
+     * Drop tables.
+     *
+     * @param databaseName database name
+     * @param schemaName schema name
+     * @param tableNames table names
+     */
+    void dropTables(String databaseName, String schemaName, Collection<String> tableNames);
 }

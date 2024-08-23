@@ -53,11 +53,22 @@ class GeneralDMLE2EIT extends BaseDMLE2EIT {
         init(testParam);
         int actualUpdateCount;
         try (Connection connection = getEnvironmentEngine().getTargetDataSource().getConnection()) {
-            actualUpdateCount = SQLExecuteType.Literal == context.getSqlExecuteType()
+            actualUpdateCount = SQLExecuteType.LITERAL == context.getSqlExecuteType()
                     ? executeUpdateForStatement(context, connection)
                     : executeUpdateForPreparedStatement(context, connection);
         }
         assertDataSet(context, actualUpdateCount, testParam);
+        tearDown(context);
+    }
+    
+    void init(final AssertionTestParameter testParam) throws SQLException, IOException, JAXBException {
+        super.init(testParam);
+        executeInitSQLs(testParam.getAssertion());
+    }
+    
+    void tearDown(final E2ETestContext context) throws SQLException {
+        super.tearDown();
+        executeDestroySQLs(context.getAssertion());
     }
     
     private int executeUpdateForStatement(final E2ETestContext context, final Connection connection) throws SQLException {
@@ -87,11 +98,12 @@ class GeneralDMLE2EIT extends BaseDMLE2EIT {
         init(testParam);
         int actualUpdateCount;
         try (Connection connection = getEnvironmentEngine().getTargetDataSource().getConnection()) {
-            actualUpdateCount = SQLExecuteType.Literal == context.getSqlExecuteType()
+            actualUpdateCount = SQLExecuteType.LITERAL == context.getSqlExecuteType()
                     ? executeForStatement(context, connection)
                     : executeForPreparedStatement(context, connection);
         }
         assertDataSet(context, actualUpdateCount, testParam);
+        tearDown(context);
     }
     
     private int executeForStatement(final E2ETestContext context, final Connection connection) throws SQLException {

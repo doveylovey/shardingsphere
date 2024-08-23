@@ -18,10 +18,12 @@
 package org.apache.shardingsphere.sqlfederation.resultset.converter;
 
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPI;
+import org.apache.shardingsphere.infra.spi.annotation.SingletonSPI;
 
 /**
  * SQL federation column type converter.
  */
+@SingletonSPI
 public interface SQLFederationColumnTypeConverter extends DatabaseTypedSPI {
     
     /**
