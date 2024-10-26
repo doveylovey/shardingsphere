@@ -25,10 +25,10 @@ import org.apache.commons.lang3.concurrent.LazyInitializer;
 import org.apache.shardingsphere.data.pipeline.core.context.TransmissionJobItemContext;
 import org.apache.shardingsphere.data.pipeline.core.context.TransmissionProcessContext;
 import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceManager;
-import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceWrapper;
+import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSource;
 import org.apache.shardingsphere.data.pipeline.core.job.JobStatus;
 import org.apache.shardingsphere.data.pipeline.core.job.progress.TransmissionJobItemProgress;
-import org.apache.shardingsphere.data.pipeline.core.job.progress.listener.PipelineJobProgressUpdatedParameter;
+import org.apache.shardingsphere.data.pipeline.core.job.progress.listener.PipelineJobUpdateProgress;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.PipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.core.metadata.loader.StandardPipelineTableMetaDataLoader;
 import org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink;
@@ -77,10 +77,10 @@ public final class MigrationJobItemContext implements TransmissionJobItemContext
     
     private final PipelineDataSourceManager dataSourceManager;
     
-    private final LazyInitializer<PipelineDataSourceWrapper> sourceDataSourceLazyInitializer = new LazyInitializer<PipelineDataSourceWrapper>() {
+    private final LazyInitializer<PipelineDataSource> sourceDataSourceLazyInitializer = new LazyInitializer<PipelineDataSource>() {
         
         @Override
-        protected PipelineDataSourceWrapper initialize() {
+        protected PipelineDataSource initialize() {
             return dataSourceManager.getDataSource(taskConfig.getDumperContext().getCommonContext().getDataSourceConfig());
         }
     };
@@ -115,7 +115,7 @@ public final class MigrationJobItemContext implements TransmissionJobItemContext
      * @return source data source
      */
     @SneakyThrows(ConcurrentException.class)
-    public PipelineDataSourceWrapper getSourceDataSource() {
+    public PipelineDataSource getSourceDataSource() {
         return sourceDataSourceLazyInitializer.get();
     }
     
@@ -140,8 +140,8 @@ public final class MigrationJobItemContext implements TransmissionJobItemContext
     }
     
     @Override
-    public void onProgressUpdated(final PipelineJobProgressUpdatedParameter param) {
-        processedRecordsCount.addAndGet(param.getProcessedRecordsCount());
+    public void onProgressUpdated(final PipelineJobUpdateProgress updateProgress) {
+        processedRecordsCount.addAndGet(updateProgress.getProcessedRecordsCount());
         PipelineJobProgressPersistService.notifyPersist(jobId, shardingItem);
     }
     

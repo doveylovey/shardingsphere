@@ -17,27 +17,40 @@
 
 package org.apache.shardingsphere.data.pipeline.scenario.migration.metadata.processor;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.shardingsphere.data.pipeline.api.PipelineDataSourceConfiguration;
 import org.apache.shardingsphere.data.pipeline.core.job.PipelineJob;
 import org.apache.shardingsphere.data.pipeline.core.metadata.node.config.processor.JobConfigurationChangedProcessor;
+import org.apache.shardingsphere.data.pipeline.core.preparer.incremental.IncrementalTaskPositionManager;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.config.MigrationJobConfiguration;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.config.yaml.swapper.YamlMigrationJobConfigurationSwapper;
-import org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer;
 import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
+
+import java.sql.SQLException;
+import java.util.Map.Entry;
 
 /**
  * Migration job configuration changed processor.
  */
+@Slf4j
 public final class MigrationJobConfigurationChangedProcessor implements JobConfigurationChangedProcessor<MigrationJobConfiguration> {
     
     @Override
     public PipelineJob createJob(final MigrationJobConfiguration jobConfig) {
-        return new MigrationJob(jobConfig.getJobId());
+        return new MigrationJob();
     }
     
     @Override
     public void clean(final JobConfiguration jobConfig) {
-        new MigrationJobPreparer().cleanup(new YamlMigrationJobConfigurationSwapper().swapToObject(jobConfig.getJobParameter()));
+        MigrationJobConfiguration migrationJobConfig = new YamlMigrationJobConfigurationSwapper().swapToObject(jobConfig.getJobParameter());
+        for (Entry<String, PipelineDataSourceConfiguration> entry : migrationJobConfig.getSources().entrySet()) {
+            try {
+                new IncrementalTaskPositionManager(entry.getValue().getDatabaseType()).destroyPosition(migrationJobConfig.getJobId(), entry.getValue());
+            } catch (final SQLException ex) {
+                log.warn("Job destroying failed, jobId={}, dataSourceName={}", migrationJobConfig.getJobId(), entry.getKey(), ex);
+            }
+        }
     }
     
     @Override

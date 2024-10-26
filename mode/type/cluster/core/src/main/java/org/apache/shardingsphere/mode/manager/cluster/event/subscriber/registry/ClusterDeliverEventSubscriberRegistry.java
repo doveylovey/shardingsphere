@@ -17,17 +17,24 @@
 
 package org.apache.shardingsphere.mode.manager.cluster.event.subscriber.registry;
 
+import lombok.Getter;
+import org.apache.shardingsphere.infra.util.eventbus.EventSubscriber;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.manager.cluster.event.subscriber.deliver.DeliverQualifiedDataSourceSubscriber;
 import org.apache.shardingsphere.mode.repository.cluster.ClusterPersistRepository;
-import org.apache.shardingsphere.mode.event.subsciber.DeliverEventSubscriberRegistry;
+
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Cluster deliver event subscriber registry.
  */
-public class ClusterDeliverEventSubscriberRegistry extends DeliverEventSubscriberRegistry {
+@Getter
+public final class ClusterDeliverEventSubscriberRegistry {
+    
+    private final Collection<EventSubscriber> subscribers;
     
     public ClusterDeliverEventSubscriberRegistry(final ContextManager contextManager) {
-        super(contextManager, new DeliverQualifiedDataSourceSubscriber((ClusterPersistRepository) contextManager.getPersistServiceFacade().getRepository()));
+        subscribers = Collections.singleton(new DeliverQualifiedDataSourceSubscriber((ClusterPersistRepository) contextManager.getPersistServiceFacade().getRepository()));
     }
 }

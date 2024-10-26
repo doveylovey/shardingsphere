@@ -30,6 +30,8 @@ import java.math.RoundingMode;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.sql.SQLXML;
+import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -83,6 +85,13 @@ public final class DataConsistencyCheckUtils {
         }
         if (thisColumnValue instanceof SQLXML && thatColumnValue instanceof SQLXML) {
             return ((SQLXML) thisColumnValue).getString().equals(((SQLXML) thatColumnValue).getString());
+        }
+        /*
+         * TODO To avoid precision inconsistency issues, the current comparison of Timestamp columns across heterogeneous databases ignores `milliseconds` precision. In the future, different
+         * strategies with different database types could be considered.
+         */
+        if (thisColumnValue instanceof Timestamp && thatColumnValue instanceof Timestamp) {
+            return ((Timestamp) thisColumnValue).getTime() / 1000L * 1000L == ((Timestamp) thatColumnValue).getTime() / 1000L * 1000L;
         }
         if (thisColumnValue instanceof Array && thatColumnValue instanceof Array) {
             return Objects.deepEquals(((Array) thisColumnValue).getArray(), ((Array) thatColumnValue).getArray());
@@ -148,6 +157,33 @@ public final class DataConsistencyCheckUtils {
             }
         }
         return 0 == decimalOne.compareTo(decimalTwo);
+    }
+    
+    /**
+     * Compare lists.
+     *
+     * @param thisList this list
+     * @param thatList that list
+     * @return true if lists equals, otherwise false
+     */
+    public static boolean compareLists(final @Nullable Collection<?> thisList, final @Nullable Collection<?> thatList) {
+        if (null == thisList && null == thatList) {
+            return true;
+        }
+        if (null == thisList || null == thatList) {
+            return false;
+        }
+        if (thisList.size() != thatList.size()) {
+            return false;
+        }
+        Iterator<?> thisIterator = thisList.iterator();
+        Iterator<?> thatIterator = thatList.iterator();
+        while (thisIterator.hasNext() && thatIterator.hasNext()) {
+            if (!Objects.deepEquals(thisIterator.next(), thatIterator.next())) {
+                return false;
+            }
+        }
+        return true;
     }
     
     /**

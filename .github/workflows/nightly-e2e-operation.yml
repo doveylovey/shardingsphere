@@ -19,11 +19,11 @@ name: Nightly - E2E Operation
 
 on:
   schedule:
-    - cron: '0 21 */1 * *'  # once a day. UTC time
+    - cron: '0 14 */1 * *' # UTC time
   workflow_dispatch:
 
 concurrency:
-  group: e2e-pipeline-${{ github.workflow }}-${{ github.ref }}
+  group: nightly-e2e-operation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -36,29 +36,38 @@ jobs:
 
   e2e-operation-job:
     if: ${{ needs.global-environment.outputs.GLOBAL_IS_NIGHTLY_JOB_EXECUTABLE == 'true' }}
-    name: E2E - ${{ matrix.operation }} on ${{ matrix.image.version }}
+    name: E2E - ${{ matrix.operation }} on ${{ matrix.image.version }} with JDK ${{ matrix.java-version }}
     needs: global-environment
     runs-on: ${{ needs.global-environment.outputs.GLOBAL_RUNS_ON }}
-    timeout-minutes: 40
+    timeout-minutes: 150
     strategy:
       max-parallel: 20
       fail-fast: false
       matrix:
         java-version: [ 11, 21 ]
         operation: [ transaction, pipeline, showprocesslist ]
-        image: [ { type: "it.docker.mysql.version", version: "mysql:5.7,mysql:8.0" }, { type: "it.docker.postgresql.version", version: "postgres:10-alpine,postgres:11-alpine,postgres:12-alpine,postgres:13-alpine,postgres:14-alpine" }, { type: "it.docker.opengauss.version", version: "enmotech/opengauss:2.1.0,enmotech/opengauss:3.0.0" } ]
+        image: [
+          { type: "it.docker.mysql.version", version: "mysql:5.7" },
+          { type: "it.docker.mysql.version", version: "mysql:8.0" },
+          { type: "it.docker.mariadb.version", version: "mariadb:11" },
+          { type: "it.docker.postgresql.version", version: "postgres:11-alpine" },
+          { type: "it.docker.postgresql.version", version: "postgres:12-alpine" },
+          { type: "it.docker.postgresql.version", version: "postgres:13-alpine" },
+          { type: "it.docker.postgresql.version", version: "postgres:14-alpine" },
+          { type: "it.docker.opengauss.version", version: "enmotech/opengauss:2.1.0" },
+          { type: "it.docker.opengauss.version", version: "enmotech/opengauss:3.0.0" }
+        ]
         exclude:
           - operation: transaction
+            image: { type: "it.docker.mariadb.version", version: "mariadb:11" }
+          - operation: showprocesslist
             image: { type: "it.docker.mariadb.version", version: "mariadb:11" }
           - operation: showprocesslist
             image: { type: "it.docker.postgresql.version", version: "postgres:10-alpine,postgres:11-alpine,postgres:12-alpine,postgres:13-alpine,postgres:14-alpine" }
           - operation: showprocesslist
             image: { type: "it.docker.opengauss.version", version: "enmotech/opengauss:2.1.0,enmotech/opengauss:3.0.0" }
-          - operation: showprocesslist
-            image: { type: "it.docker.mariadb.version", version: "mariadb:11" }
     steps:
-      - name: Checkout Project
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - name: Retrieve Maven Caches
         uses: actions/cache@v4
         with:

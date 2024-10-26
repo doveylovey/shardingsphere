@@ -32,6 +32,7 @@ import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.Assignm
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.AssignmentValuesContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BitExprContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BitValueLiteralsContext;
+import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BitwiseFunctionContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BlobValueContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BooleanLiteralsContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.BooleanPrimaryContext;
@@ -73,6 +74,7 @@ import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.InsertC
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.InsertIdentifierContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.InsertSelectClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.InsertValuesClauseContext;
+import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.InstrFunctionContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.IntervalExpressionContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.JoinSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.DorisStatementParser.JoinedTableContext;
@@ -994,12 +996,22 @@ public abstract class DorisStatementVisitor extends DorisStatementBaseVisitor<AS
         if (null != ctx.windowFunction()) {
             return visit(ctx.windowFunction());
         }
+        // DORIS ADDED BEGIN
+        if (null != ctx.bitwiseFunction()) {
+            return visit(ctx.bitwiseFunction());
+        }
+        // DORIS ADDED END
         if (null != ctx.castFunction()) {
             return visit(ctx.castFunction());
         }
         if (null != ctx.convertFunction()) {
             return visit(ctx.convertFunction());
         }
+        // DORIS ADDED BEGIN
+        if (null != ctx.instrFunction()) {
+            return visit(ctx.instrFunction());
+        }
+        // DORIS ADDED END
         if (null != ctx.positionFunction()) {
             return visit(ctx.positionFunction());
         }
@@ -1039,6 +1051,28 @@ public abstract class DorisStatementVisitor extends DorisStatementBaseVisitor<AS
         }
         return result;
     }
+    
+    // DORIS ADDED BEGIN
+    @Override
+    public final ASTNode visitBitwiseFunction(final BitwiseFunctionContext ctx) {
+        FunctionSegment result = new FunctionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), ctx.bitwiseBinaryFunctionName().getText(), getOriginalText(ctx));
+        for (ExprContext each : ctx.expr()) {
+            result.getParameters().add(new LiteralExpressionSegment(each.getStart().getStartIndex(), each.getStop().getStopIndex(), each.getText()));
+        }
+        return result;
+    }
+    // DORIS ADDED END
+    
+    // DORIS ADDED BEGIN
+    @Override
+    public final ASTNode visitInstrFunction(final InstrFunctionContext ctx) {
+        FunctionSegment result = new FunctionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), ctx.INSTR().getText(), getOriginalText(ctx));
+        for (ExprContext each : ctx.expr()) {
+            result.getParameters().add(new LiteralExpressionSegment(each.getStart().getStartIndex(), each.getStop().getStopIndex(), each.getText()));
+        }
+        return result;
+    }
+    // DORIS ADDED END
     
     @Override
     public final ASTNode visitCastFunction(final CastFunctionContext ctx) {

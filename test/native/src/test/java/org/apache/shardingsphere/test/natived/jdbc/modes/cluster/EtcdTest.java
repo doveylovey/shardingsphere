@@ -20,7 +20,7 @@ package org.apache.shardingsphere.test.natived.jdbc.modes.cluster;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.etcd.jetcd.test.EtcdClusterExtension;
-import org.apache.shardingsphere.test.natived.jdbc.commons.TestShardingService;
+import org.apache.shardingsphere.test.natived.commons.TestShardingService;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -73,10 +73,7 @@ class EtcdTest {
         DataSource dataSource = createDataSource(CLUSTER.clientEndpoints());
         testShardingService = new TestShardingService(dataSource);
         initEnvironment();
-        Awaitility.await().atMost(Duration.ofSeconds(30L)).ignoreExceptions().until(() -> {
-            dataSource.getConnection().close();
-            return true;
-        });
+        Awaitility.await().pollDelay(Duration.ofSeconds(5L)).until(() -> true);
         testShardingService.processSuccess();
         testShardingService.cleanEnvironment();
     }
@@ -94,7 +91,7 @@ class EtcdTest {
         URI clientEndpoint = clientEndpoints.get(0);
         HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.apache.shardingsphere.driver.ShardingSphereDriver");
-        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/modes/cluster/etcd.yaml?placeholder-type=system_props");
+        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/jdbc/modes/cluster/etcd.yaml?placeholder-type=system_props");
         System.setProperty(SYSTEM_PROP_KEY_PREFIX + "server-lists", clientEndpoint.toString());
         return new HikariDataSource(config);
     }

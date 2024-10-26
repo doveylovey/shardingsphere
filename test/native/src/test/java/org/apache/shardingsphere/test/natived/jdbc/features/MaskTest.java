@@ -19,12 +19,12 @@ package org.apache.shardingsphere.test.natived.jdbc.features;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Address;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Order;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.OrderItem;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.AddressRepository;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.OrderItemRepository;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.OrderRepository;
+import org.apache.shardingsphere.test.natived.commons.entity.Address;
+import org.apache.shardingsphere.test.natived.commons.entity.Order;
+import org.apache.shardingsphere.test.natived.commons.entity.OrderItem;
+import org.apache.shardingsphere.test.natived.commons.repository.AddressRepository;
+import org.apache.shardingsphere.test.natived.commons.repository.OrderItemRepository;
+import org.apache.shardingsphere.test.natived.commons.repository.OrderRepository;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
@@ -51,7 +51,7 @@ class MaskTest {
     void assertMaskInLocalTransactions() throws SQLException {
         HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.apache.shardingsphere.driver.ShardingSphereDriver");
-        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/features/mask.yaml");
+        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/jdbc/features/mask.yaml");
         DataSource dataSource = new HikariDataSource(config);
         orderRepository = new OrderRepository(dataSource);
         orderItemRepository = new OrderItemRepository(dataSource);

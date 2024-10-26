@@ -20,14 +20,11 @@ package org.apache.shardingsphere.data.pipeline.core.preparer.inventory.calculat
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.inventory.InventoryDumperContext;
-import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSourceWrapper;
-import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql.PipelinePrepareSQLBuilder;
+import org.apache.shardingsphere.data.pipeline.api.type.StandardPipelineDataSourceConfiguration;
+import org.apache.shardingsphere.data.pipeline.core.datasource.PipelineDataSource;
 import org.apache.shardingsphere.data.pipeline.core.exception.job.SplitPipelineJobByUniqueKeyException;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.mariadb.type.MariaDBDatabaseType;
-import org.apache.shardingsphere.infra.database.mysql.type.MySQLDatabaseType;
-import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
+import org.apache.shardingsphere.data.pipeline.core.ingest.dumper.inventory.InventoryDumperContext;
+import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql.PipelinePrepareSQLBuilder;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -51,31 +48,37 @@ public final class InventoryRecordsCountCalculator {
      * @return table records count
      * @throws SplitPipelineJobByUniqueKeyException if there's exception from database
      */
-    public static long getTableRecordsCount(final InventoryDumperContext dumperContext, final PipelineDataSourceWrapper dataSource) {
+    public static long getTableRecordsCount(final InventoryDumperContext dumperContext, final PipelineDataSource dataSource) {
+        String catalogName = getCatalog(dataSource);
         String schemaName = dumperContext.getCommonContext().getTableAndSchemaNameMapper().getSchemaName(dumperContext.getLogicTableName());
         String actualTableName = dumperContext.getActualTableName();
-        PipelinePrepareSQLBuilder pipelineSQLBuilder = new PipelinePrepareSQLBuilder(dataSource.getDatabaseType());
-        Optional<String> sql = pipelineSQLBuilder.buildEstimatedCountSQL(schemaName, actualTableName);
+        PipelinePrepareSQLBuilder sqlBuilder = new PipelinePrepareSQLBuilder(dataSource.getDatabaseType());
+        Optional<String> sql = sqlBuilder.buildEstimatedCountSQL(catalogName, schemaName, actualTableName);
         try {
-            if (sql.isPresent()) {
-                DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, dataSource.getDatabaseType().getType());
-                long result = getEstimatedCount(databaseType, dataSource, sql.get());
-                return result > 0L ? result : getCount(dataSource, pipelineSQLBuilder.buildCountSQL(schemaName, actualTableName));
+            // TODO Get estimate count from meta table, native DataSource is ok, but ShardingSphereDataSource has problem
+            if (sql.isPresent() && dumperContext.getCommonContext().getDataSourceConfig() instanceof StandardPipelineDataSourceConfiguration) {
+                long result = getEstimatedCount(dataSource, sql.get());
+                return result > 0L ? result : getCount(dataSource, sqlBuilder.buildCountSQL(schemaName, actualTableName));
             }
-            return getCount(dataSource, pipelineSQLBuilder.buildCountSQL(schemaName, actualTableName));
+            return getCount(dataSource, sqlBuilder.buildCountSQL(schemaName, actualTableName));
         } catch (final SQLException ex) {
             String uniqueKey = dumperContext.hasUniqueKey() ? dumperContext.getUniqueKeyColumns().get(0).getName() : "";
             throw new SplitPipelineJobByUniqueKeyException(dumperContext.getActualTableName(), uniqueKey, ex);
         }
     }
     
-    private static long getEstimatedCount(final DatabaseType databaseType, final DataSource dataSource, final String estimatedCountSQL) throws SQLException {
+    private static String getCatalog(final DataSource dataSource) {
+        try (Connection connection = dataSource.getConnection()) {
+            return connection.getCatalog();
+        } catch (final SQLException ex) {
+            return null;
+        }
+    }
+    
+    private static long getEstimatedCount(final DataSource dataSource, final String estimatedCountSQL) throws SQLException {
         try (
                 Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(estimatedCountSQL)) {
-            if (databaseType instanceof MySQLDatabaseType || databaseType instanceof MariaDBDatabaseType) {
-                preparedStatement.setString(1, connection.getCatalog());
-            }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1);

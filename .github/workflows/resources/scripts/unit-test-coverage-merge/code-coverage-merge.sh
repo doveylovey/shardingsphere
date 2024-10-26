@@ -86,14 +86,18 @@ for classFolder in "${classFolderArray[@]}"; do
   let counter++
 done
 
-echo "Copy Success, the compilation merge output folder is located at: $classOutPutDir"
+# delete useless packages or files to avoid useless packages analysis
+# delete the build/libs/groovy.jar file, this will include useless packages
+find . -type f -regex '.*/groovy.jar' -exec rm -f {} +
+find . -type d -regex '.*/autogen/*' -exec rm -rf {} +
 
+echo "Copy Success, the compilation merge output folder is located at: $classOutPutDir"
 echo "Start generating overall coverage reports"
 mergeReportDir="$target/mergeReport"
 # Make sure the folder is empty
 rm -rf "$mergeReportDir"/*
-# Use jacococli to generate HTML1
-java -jar $jacococli report $execMergePath --classfiles $classOutPutDir --sourcefiles $project --html $mergeReportDir
+# Use jacococli to generate HTML for Github
+java -jar $jacococli report $execMergePath --classfiles $classOutPutDir --sourcefiles $project --html $mergeReportDir/jacoco
 # Use jacococli to generate XML
 java -jar $jacococli report $execMergePath --classfiles $classOutPutDir --sourcefiles $project --xml $mergeReportDir/jacoco.xml
 

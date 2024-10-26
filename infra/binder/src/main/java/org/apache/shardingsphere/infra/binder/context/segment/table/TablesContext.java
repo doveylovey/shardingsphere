@@ -69,22 +69,22 @@ public final class TablesContext {
     
     private final Map<String, IdentifierValue> tableNameAliasMap = new HashMap<>();
     
-    public TablesContext(final SimpleTableSegment tableSegment, final DatabaseType databaseType, final String currentDatabaseName) {
-        this(null == tableSegment ? Collections.emptyList() : Collections.singletonList(tableSegment), databaseType, currentDatabaseName);
+    public TablesContext(final SimpleTableSegment table, final DatabaseType databaseType, final String currentDatabaseName) {
+        this(null == table ? Collections.emptyList() : Collections.singletonList(table), databaseType, currentDatabaseName);
     }
     
     public TablesContext(final Collection<SimpleTableSegment> tables, final DatabaseType databaseType, final String currentDatabaseName) {
         this(tables, Collections.emptyMap(), databaseType, currentDatabaseName);
     }
     
-    public TablesContext(final Collection<? extends TableSegment> tables, final Map<Integer, SelectStatementContext> subqueryContexts, final DatabaseType databaseType,
-                         final String currentDatabaseName) {
+    public TablesContext(final Collection<? extends TableSegment> tables, final Map<Integer, SelectStatementContext> subqueryContexts,
+                         final DatabaseType databaseType, final String currentDatabaseName) {
         if (tables.isEmpty()) {
             return;
         }
         this.tables.addAll(tables);
         for (TableSegment each : tables) {
-            if (each instanceof SimpleTableSegment) {
+            if (each instanceof SimpleTableSegment && !"DUAL".equalsIgnoreCase(((SimpleTableSegment) each).getTableName().getIdentifier().getValue())) {
                 SimpleTableSegment simpleTableSegment = (SimpleTableSegment) each;
                 simpleTables.add(simpleTableSegment);
                 tableNames.add(simpleTableSegment.getTableName().getIdentifier().getValue());
@@ -106,6 +106,9 @@ public final class TablesContext {
     }
     
     private Map<String, Collection<SubqueryTableContext>> createSubqueryTables(final Map<Integer, SelectStatementContext> subqueryContexts, final SubqueryTableSegment subqueryTable) {
+        if (!subqueryContexts.containsKey(subqueryTable.getSubquery().getStartIndex())) {
+            return Collections.emptyMap();
+        }
         SelectStatementContext subqueryContext = subqueryContexts.get(subqueryTable.getSubquery().getStartIndex());
         Map<String, SubqueryTableContext> subqueryTableContexts = new SubqueryTableContextEngine().createSubqueryTableContexts(subqueryContext, subqueryTable.getAliasName().orElse(null));
         Map<String, Collection<SubqueryTableContext>> result = new HashMap<>(subqueryTableContexts.size(), 1F);

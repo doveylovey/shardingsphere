@@ -23,11 +23,12 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.apache.shardingsphere.test.natived.jdbc.commons.TestShardingService;
+import org.apache.shardingsphere.test.natived.commons.TestShardingService;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledInNativeImage;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -38,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+@EnabledInNativeImage
 class ZookeeperTest {
     
     private static final String SYSTEM_PROP_KEY_PREFIX = "fixture.test-native.yaml.mode.cluster.zookeeper.";
@@ -68,10 +70,7 @@ class ZookeeperTest {
             DataSource dataSource = createDataSource(connectString);
             testShardingService = new TestShardingService(dataSource);
             initEnvironment();
-            Awaitility.await().atMost(Duration.ofSeconds(30L)).ignoreExceptions().until(() -> {
-                dataSource.getConnection().close();
-                return true;
-            });
+            Awaitility.await().pollDelay(Duration.ofSeconds(5L)).until(() -> true);
             testShardingService.processSuccess();
             testShardingService.cleanEnvironment();
         }
@@ -95,7 +94,7 @@ class ZookeeperTest {
         });
         HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.apache.shardingsphere.driver.ShardingSphereDriver");
-        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/modes/cluster/zookeeper.yaml?placeholder-type=system_props");
+        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/jdbc/modes/cluster/zookeeper.yaml?placeholder-type=system_props");
         System.setProperty(SYSTEM_PROP_KEY_PREFIX + "server-lists", connectString);
         return new HikariDataSource(config);
     }

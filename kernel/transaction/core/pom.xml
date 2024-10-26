@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-transaction</artifactId>
-        <version>5.5.1-SNAPSHOT</version>
+        <version>5.5.2-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-transaction-core</artifactId>
     <name>${project.artifactId}</name>
@@ -38,6 +38,12 @@
             <version>${project.parent.version}</version>
         </dependency>
         
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-test-util</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-test-fixture-database</artifactId>

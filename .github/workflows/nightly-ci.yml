@@ -19,7 +19,7 @@ name: Nightly - CI
 
 on:
   schedule:
-    - cron: '0 18 */1 * *'  # once a day. UTC time
+    - cron: '0 13 */1 * *'  # UTC time
   workflow_dispatch:
 
 env:
@@ -31,7 +31,7 @@ jobs:
     uses: ./.github/workflows/required-reusable.yml
 
   ci:
-    if: github.repository == 'apache/shardingsphere'
+    if: ${{ needs.global-environment.outputs.GLOBAL_JOB_ENABLED == 'true' }}
     name: CI - JDK ${{ matrix.java-version }} on ${{ matrix.os }}
     needs: global-environment
     runs-on: ${{ matrix.os }}
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        java-version: [ 11, 17, 21, 22 ]
+        java-version: [ 11, 17, 21, 23 ]
     steps:
       - name: Support Long Paths in Windows
         if: matrix.os == 'windows-latest'
@@ -64,11 +64,11 @@ jobs:
         run: ./mvnw clean package -B -f examples/pom.xml -T1C
   
   ci-jdk8:
-    if: github.repository == 'apache/shardingsphere'
+    if: ${{ needs.global-environment.outputs.GLOBAL_JOB_ENABLED == 'true' }}
     name: CI - JDK 8 on ${{ matrix.os }}
     needs: global-environment
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 150
     strategy:
       max-parallel: 20
       fail-fast: false

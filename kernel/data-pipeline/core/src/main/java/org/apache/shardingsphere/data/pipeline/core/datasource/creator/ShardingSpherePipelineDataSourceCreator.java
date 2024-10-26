@@ -38,10 +38,11 @@ import org.apache.shardingsphere.mode.repository.standalone.jdbc.props.JDBCRepos
 import org.apache.shardingsphere.sharding.yaml.config.YamlShardingRuleConfiguration;
 import org.apache.shardingsphere.sharding.yaml.swapper.ShardingRuleConfigurationConverter;
 import org.apache.shardingsphere.single.constant.SingleTableConstants;
-import org.apache.shardingsphere.single.yaml.config.pojo.YamlSingleRuleConfiguration;
+import org.apache.shardingsphere.single.yaml.config.YamlSingleRuleConfiguration;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -72,16 +73,24 @@ public final class ShardingSpherePipelineDataSourceCreator implements PipelineDa
     }
     
     private void updateSingleRuleConfiguration(final YamlRootConfiguration yamlRootConfig) {
+        Optional<YamlSingleRuleConfiguration> originalSingleRuleConfig =
+                yamlRootConfig.getRules().stream().filter(YamlSingleRuleConfiguration.class::isInstance).map(YamlSingleRuleConfiguration.class::cast).findFirst();
         yamlRootConfig.getRules().removeIf(YamlSingleRuleConfiguration.class::isInstance);
         YamlSingleRuleConfiguration singleRuleConfig = new YamlSingleRuleConfiguration();
         singleRuleConfig.setTables(Collections.singletonList(SingleTableConstants.ALL_TABLES));
+        originalSingleRuleConfig.ifPresent(optional -> singleRuleConfig.setDefaultDataSource(optional.getDefaultDataSource()));
         yamlRootConfig.getRules().add(singleRuleConfig);
     }
     
     private void updateConfigurationProperties(final YamlRootConfiguration yamlRootConfig) {
         Properties newProps = new Properties();
+        for (String each : Arrays.asList(ConfigurationPropertyKey.KERNEL_EXECUTOR_SIZE.getKey(), ConfigurationPropertyKey.SYSTEM_LOG_LEVEL.getKey(), ConfigurationPropertyKey.SQL_SHOW.getKey())) {
+            Object value = yamlRootConfig.getProps().get(each);
+            if (null != value) {
+                newProps.put(each, value);
+            }
+        }
         newProps.put(TemporaryConfigurationPropertyKey.SYSTEM_SCHEMA_METADATA_ASSEMBLY_ENABLED.getKey(), String.valueOf(Boolean.FALSE));
-        // TODO Another way is improving ExecuteQueryCallback.executeSQL to enable streaming query, then remove it
         // Set a large enough value to enable ConnectionMode.MEMORY_STRICTLY, make sure streaming query work.
         newProps.put(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY.getKey(), 100000);
         yamlRootConfig.setProps(newProps);

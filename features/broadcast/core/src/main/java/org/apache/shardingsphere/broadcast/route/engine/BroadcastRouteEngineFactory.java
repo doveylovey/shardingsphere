@@ -62,21 +62,18 @@ public final class BroadcastRouteEngineFactory {
      * @param broadcastRule broadcast rule
      * @param database database
      * @param queryContext query context
-     * @param connectionContext connection context
      * @return broadcast route engine
      */
-    public static BroadcastRouteEngine newInstance(final BroadcastRule broadcastRule, final ShardingSphereDatabase database, final QueryContext queryContext,
-                                                   final ConnectionContext connectionContext) {
+    public static BroadcastRouteEngine newInstance(final BroadcastRule broadcastRule, final ShardingSphereDatabase database, final QueryContext queryContext) {
         SQLStatementContext sqlStatementContext = queryContext.getSqlStatementContext();
         SQLStatement sqlStatement = sqlStatementContext.getSqlStatement();
         if (sqlStatement instanceof TCLStatement) {
             return new BroadcastDatabaseBroadcastRoutingEngine();
         }
         if (sqlStatement instanceof DDLStatement) {
-            if (sqlStatementContext instanceof CursorAvailable) {
-                return getCursorRouteEngine(broadcastRule, sqlStatementContext, connectionContext);
-            }
-            return getDDLRoutingEngine(broadcastRule, database, queryContext);
+            return sqlStatementContext instanceof CursorAvailable
+                    ? getCursorRouteEngine(broadcastRule, sqlStatementContext, queryContext.getConnectionContext())
+                    : getDDLRoutingEngine(broadcastRule, database, queryContext);
         }
         if (sqlStatement instanceof DALStatement) {
             return getDALRoutingEngine(broadcastRule, queryContext);
@@ -84,7 +81,7 @@ public final class BroadcastRouteEngineFactory {
         if (sqlStatement instanceof DCLStatement) {
             return getDCLRoutingEngine(broadcastRule, queryContext);
         }
-        return getDQLRoutingEngine(broadcastRule, queryContext, connectionContext);
+        return getDQLRoutingEngine(broadcastRule, queryContext);
     }
     
     private static BroadcastRouteEngine getCursorRouteEngine(final BroadcastRule broadcastRule, final SQLStatementContext sqlStatementContext, final ConnectionContext connectionContext) {
@@ -159,12 +156,12 @@ public final class BroadcastRouteEngineFactory {
         return false;
     }
     
-    private static BroadcastRouteEngine getDQLRoutingEngine(final BroadcastRule broadcastRule, final QueryContext queryContext, final ConnectionContext connectionContext) {
+    private static BroadcastRouteEngine getDQLRoutingEngine(final BroadcastRule broadcastRule, final QueryContext queryContext) {
         SQLStatementContext sqlStatementContext = queryContext.getSqlStatementContext();
         Collection<String> tableNames = sqlStatementContext instanceof TableAvailable ? ((TableAvailable) sqlStatementContext).getTablesContext().getTableNames() : Collections.emptyList();
         if (broadcastRule.isAllBroadcastTables(tableNames)) {
             return sqlStatementContext.getSqlStatement() instanceof SelectStatement
-                    ? new BroadcastUnicastRoutingEngine(sqlStatementContext, tableNames, connectionContext)
+                    ? new BroadcastUnicastRoutingEngine(sqlStatementContext, tableNames, queryContext.getConnectionContext())
                     : new BroadcastDatabaseBroadcastRoutingEngine();
         }
         return new BroadcastIgnoreRoutingEngine();

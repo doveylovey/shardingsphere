@@ -63,10 +63,11 @@ public interface DialectPipelineSQLBuilder extends DatabaseTypedSPI {
     /**
      * Build estimated count SQL.
      *
+     * @param catalogName catalog name
      * @param qualifiedTableName qualified table name
      * @return built SQL
      */
-    default Optional<String> buildEstimatedCountSQL(final String qualifiedTableName) {
+    default Optional<String> buildEstimatedCountSQL(final String catalogName, final String qualifiedTableName) {
         return Optional.empty();
     }
     
@@ -107,7 +108,5 @@ public interface DialectPipelineSQLBuilder extends DatabaseTypedSPI {
      * @param sql SQL
      * @return wrapped SQL
      */
-    default String wrapWithPageQuery(String sql) {
-        return sql + " LIMIT ?";
-    }
+    String wrapWithPageQuery(String sql);
 }

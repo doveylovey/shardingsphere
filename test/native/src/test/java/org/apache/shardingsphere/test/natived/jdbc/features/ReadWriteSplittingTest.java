@@ -19,12 +19,12 @@ package org.apache.shardingsphere.test.natived.jdbc.features;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Address;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.Order;
-import org.apache.shardingsphere.test.natived.jdbc.commons.entity.OrderItem;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.AddressRepository;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.OrderItemRepository;
-import org.apache.shardingsphere.test.natived.jdbc.commons.repository.OrderRepository;
+import org.apache.shardingsphere.test.natived.commons.entity.Address;
+import org.apache.shardingsphere.test.natived.commons.entity.Order;
+import org.apache.shardingsphere.test.natived.commons.entity.OrderItem;
+import org.apache.shardingsphere.test.natived.commons.repository.AddressRepository;
+import org.apache.shardingsphere.test.natived.commons.repository.OrderItemRepository;
+import org.apache.shardingsphere.test.natived.commons.repository.OrderRepository;
 import org.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +47,7 @@ class ReadWriteSplittingTest {
     void assertReadWriteSplittingInLocalTransactions() throws SQLException {
         HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.apache.shardingsphere.driver.ShardingSphereDriver");
-        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/features/readwrite-splitting.yaml");
+        config.setJdbcUrl("jdbc:shardingsphere:classpath:test-native/yaml/jdbc/features/readwrite-splitting.yaml");
         DataSource dataSource = new HikariDataSource(config);
         orderRepository = new OrderRepository(dataSource);
         orderItemRepository = new OrderItemRepository(dataSource);
