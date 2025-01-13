@@ -18,13 +18,12 @@
 package org.apache.shardingsphere.infra.metadata.database.schema.builder;
 
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.metadata.data.loader.MetaDataLoader;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.SchemaMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.TableMetaData;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.infra.metadata.database.resource.unit.StorageUnit;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
-import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereTable;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
 import org.apache.shardingsphere.infra.rule.attribute.table.TableMapperRuleAttribute;
@@ -59,39 +58,41 @@ import static org.mockito.Mockito.when;
 @StaticMockSettings(MetaDataLoader.class)
 class GenericSchemaBuilderTest {
     
+    private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
+    
     private GenericSchemaBuilderMaterial material;
     
     @BeforeEach
     void setUp() {
-        DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
         ShardingSphereRule rule = mock(ShardingSphereRule.class);
         when(rule.getAttributes()).thenReturn(new RuleAttributes(mock(TableMapperRuleAttribute.class)));
-        material = new GenericSchemaBuilderMaterial(databaseType, Collections.singletonMap(DefaultDatabase.LOGIC_NAME, databaseType),
-                Collections.singletonMap(DefaultDatabase.LOGIC_NAME, new MockedDataSource()),
-                Collections.singleton(rule), new ConfigurationProperties(new Properties()), DefaultDatabase.LOGIC_NAME);
+        StorageUnit storageUnit = mock(StorageUnit.class);
+        when(storageUnit.getStorageType()).thenReturn(databaseType);
+        when(storageUnit.getDataSource()).thenReturn(new MockedDataSource());
+        material = new GenericSchemaBuilderMaterial(Collections.singletonMap("foo_schema", storageUnit), Collections.singleton(rule), new ConfigurationProperties(new Properties()), "foo_schema");
     }
     
     @Test
     void assertLoadWithExistedTableName() throws SQLException {
         Collection<String> tableNames = Collections.singletonList("data_node_routed_table1");
         when(MetaDataLoader.load(any())).thenReturn(createSchemaMetaDataMap(tableNames, material));
-        assertFalse(GenericSchemaBuilder.build(tableNames, material).get(DefaultDatabase.LOGIC_NAME).getTables().isEmpty());
+        assertFalse(GenericSchemaBuilder.build(tableNames, databaseType, material).get("foo_schema").getAllTables().isEmpty());
     }
     
     @Test
     void assertLoadWithNotExistedTableName() throws SQLException {
         Collection<String> tableNames = Collections.singletonList("invalid_table");
         when(MetaDataLoader.load(any())).thenReturn(createSchemaMetaDataMap(tableNames, material));
-        assertTrue(GenericSchemaBuilder.build(tableNames, material).get(DefaultDatabase.LOGIC_NAME).getTables().isEmpty());
+        assertTrue(GenericSchemaBuilder.build(tableNames, databaseType, material).get("foo_schema").getAllTables().isEmpty());
     }
     
     @Test
     void assertLoadAllTables() throws SQLException {
         Collection<String> tableNames = Arrays.asList("data_node_routed_table1", "data_node_routed_table2");
         when(MetaDataLoader.load(any())).thenReturn(createSchemaMetaDataMap(tableNames, material));
-        Map<String, ShardingSphereSchema> actual = GenericSchemaBuilder.build(tableNames, material);
+        Map<String, ShardingSphereSchema> actual = GenericSchemaBuilder.build(tableNames, databaseType, material);
         assertThat(actual.size(), is(1));
-        assertTables(new ShardingSphereSchema(DefaultDatabase.LOGIC_NAME, actual.values().iterator().next().getTables(), Collections.emptyMap()).getTables());
+        assertTables(new ShardingSphereSchema("foo_schema", actual.values().iterator().next().getAllTables(), Collections.emptyList()));
     }
     
     private Map<String, SchemaMetaData> createSchemaMetaDataMap(final Collection<String> tableNames, final GenericSchemaBuilderMaterial material) {
@@ -103,9 +104,9 @@ class GenericSchemaBuilderTest {
         return Collections.emptyMap();
     }
     
-    private void assertTables(final Map<String, ShardingSphereTable> actual) {
-        assertThat(actual.size(), is(2));
-        assertTrue(actual.get("data_node_routed_table1").getColumnValues().isEmpty());
-        assertTrue(actual.get("data_node_routed_table2").getColumnValues().isEmpty());
+    private void assertTables(final ShardingSphereSchema actual) {
+        assertThat(actual.getAllTables().size(), is(2));
+        assertTrue(actual.getTable("data_node_routed_table1").getAllColumns().isEmpty());
+        assertTrue(actual.getTable("data_node_routed_table2").getAllColumns().isEmpty());
     }
 }

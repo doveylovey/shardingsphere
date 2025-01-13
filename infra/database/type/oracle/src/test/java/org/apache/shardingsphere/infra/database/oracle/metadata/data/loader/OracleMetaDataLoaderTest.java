@@ -23,6 +23,7 @@ import org.apache.shardingsphere.infra.database.core.metadata.data.model.ColumnM
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.IndexMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.SchemaMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.TableMetaData;
+import org.apache.shardingsphere.infra.database.core.metadata.database.datatype.DataTypeRegistry;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.oracle.type.OracleDatabaseType;
@@ -88,13 +89,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITHOUT_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -108,13 +110,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITHOUT_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(1);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, false, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, false, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -128,13 +131,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITHOUT_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(11);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, false, false, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, false, false, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -149,13 +153,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITH_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -170,13 +175,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITH_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(1);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, true, false, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, true, true, false, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -191,13 +197,14 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITH_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(11);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, false, false, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, true, false, false, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -212,14 +219,15 @@ class OracleMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(ALL_CONSTRAINTS_SQL_WITH_TABLES).executeQuery()).thenReturn(primaryKeys);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(12);
         when(dataSource.getConnection().getMetaData().getDatabaseMinorVersion()).thenReturn(2);
+        DataTypeRegistry.load(dataSource, "Oracle");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singleton("tbl"), "foo_ds", dataSource, new OracleDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("address", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("address", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     private DataSource mockDataSource() throws SQLException {
@@ -294,6 +302,23 @@ class OracleMetaDataLoaderTest {
         Iterator<IndexMetaData> indexesIterator = actualTableMetaData.getIndexes().iterator();
         IndexMetaData indexMetaData = new IndexMetaData("id");
         indexMetaData.setUnique(true);
-        assertThat(indexesIterator.next(), is(indexMetaData));
+        assertIndexMetaData(indexesIterator.next(), indexMetaData);
+    }
+    
+    private void assertColumnMetaData(final ColumnMetaData actual, final ColumnMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getDataType(), is(expected.getDataType()));
+        assertThat(actual.isPrimaryKey(), is(expected.isPrimaryKey()));
+        assertThat(actual.isGenerated(), is(expected.isGenerated()));
+        assertThat(actual.isCaseSensitive(), is(expected.isCaseSensitive()));
+        assertThat(actual.isVisible(), is(expected.isVisible()));
+        assertThat(actual.isUnsigned(), is(expected.isUnsigned()));
+        assertThat(actual.isNullable(), is(expected.isNullable()));
+    }
+    
+    private void assertIndexMetaData(final IndexMetaData actual, final IndexMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getColumns(), is(expected.getColumns()));
+        assertThat(actual.isUnique(), is(expected.isUnique()));
     }
 }

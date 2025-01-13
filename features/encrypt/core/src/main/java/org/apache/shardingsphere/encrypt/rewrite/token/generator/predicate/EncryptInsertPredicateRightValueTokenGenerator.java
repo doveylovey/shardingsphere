@@ -19,14 +19,15 @@ package org.apache.shardingsphere.encrypt.rewrite.token.generator.predicate;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.shardingsphere.encrypt.rewrite.aware.DatabaseNameAware;
 import org.apache.shardingsphere.encrypt.rewrite.aware.EncryptConditionsAware;
 import org.apache.shardingsphere.encrypt.rewrite.condition.EncryptCondition;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.InsertStatementContext;
+import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.CollectionSQLTokenGenerator;
+import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.aware.DatabaseAware;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.aware.ParametersAware;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.SQLToken;
 
@@ -39,15 +40,15 @@ import java.util.List;
 @HighFrequencyInvocation
 @RequiredArgsConstructor
 @Setter
-public final class EncryptInsertPredicateRightValueTokenGenerator implements CollectionSQLTokenGenerator<SQLStatementContext>, ParametersAware, EncryptConditionsAware, DatabaseNameAware {
+public final class EncryptInsertPredicateRightValueTokenGenerator implements CollectionSQLTokenGenerator<SQLStatementContext>, ParametersAware, EncryptConditionsAware, DatabaseAware {
     
-    private final EncryptRule encryptRule;
+    private final EncryptRule rule;
     
     private List<Object> parameters;
     
     private Collection<EncryptCondition> encryptConditions;
     
-    private String databaseName;
+    private ShardingSphereDatabase database;
     
     @Override
     public boolean isGenerateSQLToken(final SQLStatementContext sqlStatementContext) {
@@ -57,10 +58,10 @@ public final class EncryptInsertPredicateRightValueTokenGenerator implements Col
     
     @Override
     public Collection<SQLToken> generateSQLTokens(final SQLStatementContext sqlStatementContext) {
-        EncryptPredicateRightValueTokenGenerator generator = new EncryptPredicateRightValueTokenGenerator(encryptRule);
+        EncryptPredicateRightValueTokenGenerator generator = new EncryptPredicateRightValueTokenGenerator(rule);
         generator.setParameters(parameters);
         generator.setEncryptConditions(encryptConditions);
-        generator.setDatabaseName(databaseName);
+        generator.setDatabase(database);
         return generator.generateSQLTokens(((InsertStatementContext) sqlStatementContext).getInsertSelectContext().getSelectStatementContext());
     }
 }

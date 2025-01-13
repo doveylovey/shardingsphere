@@ -19,7 +19,7 @@ name: Nightly - SQL parser loading from external cases
 
 on:
   schedule:
-    - cron: '0 18 */1 * *'  # once a day. UTC time
+    - cron: '0 18 * * 1-5' # Once a day between Monday and Friday. UTC time
   workflow_dispatch:
 
 env:
@@ -62,5 +62,5 @@ jobs:
         run: ./mvnw -nsu -B install -f parser/sql/dialect/${{ matrix.database }}/pom.xml -Dsql.parser.external.it.enabled=true
       - uses: actions/upload-artifact@v4
         with:
-          name: sql-report
+          name: sql-report-${{ matrix.database }}
           path: /tmp/*.csv

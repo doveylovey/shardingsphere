@@ -31,7 +31,7 @@ import org.apache.shardingsphere.infra.exception.kernel.metadata.rule.MissingReq
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.persist.service.MetaDataManagerPersistService;
+import org.apache.shardingsphere.mode.persist.service.divided.MetaDataManagerPersistService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
@@ -107,11 +107,8 @@ class AlterEncryptRuleExecutorTest {
     }
     
     private ContextManager mockContextManager(final EncryptRule rule) {
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(database.getName()).thenReturn("foo_db");
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
-        when(result.getDatabase("foo_db")).thenReturn(database);
+        when(result.getDatabase("foo_db")).thenReturn(new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList()));
         return result;
     }
     

@@ -25,7 +25,7 @@ import org.apache.shardingsphere.infra.exception.kernel.metadata.TableNotFoundEx
 import org.apache.shardingsphere.infra.exception.kernel.metadata.datanode.InvalidDataNodeFormatException;
 import org.apache.shardingsphere.infra.exception.kernel.metadata.resource.storageunit.MissingRequiredStorageUnitsException;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
-import org.apache.shardingsphere.infra.metadata.database.resource.PhysicalResourceAggregator;
+import org.apache.shardingsphere.infra.metadata.database.resource.PhysicalDataSourceAggregator;
 import org.apache.shardingsphere.infra.metadata.database.resource.unit.StorageUnit;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
@@ -33,7 +33,7 @@ import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
 import org.apache.shardingsphere.infra.rule.attribute.datasource.DataSourceMapperRuleAttribute;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.persist.service.MetaDataManagerPersistService;
+import org.apache.shardingsphere.mode.persist.service.divided.MetaDataManagerPersistService;
 import org.apache.shardingsphere.single.config.SingleRuleConfiguration;
 import org.apache.shardingsphere.single.datanode.SingleTableDataNodeLoader;
 import org.apache.shardingsphere.single.distsql.segment.SingleTableSegment;
@@ -66,7 +66,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(AutoMockExtension.class)
-@StaticMockSettings({SingleTableDataNodeLoader.class, SingleTableLoadUtils.class, PhysicalResourceAggregator.class})
+@StaticMockSettings({SingleTableDataNodeLoader.class, SingleTableLoadUtils.class, PhysicalDataSourceAggregator.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
 class LoadSingleTableExecutorTest {
     
@@ -125,7 +125,7 @@ class LoadSingleTableExecutorTest {
         StorageUnit storageUnit = mock(StorageUnit.class);
         when(storageUnit.getDataSource()).thenReturn(new MockedDataSource());
         when(database.getResourceMetaData().getStorageUnits()).thenReturn(Collections.singletonMap("foo_ds", storageUnit));
-        when(PhysicalResourceAggregator.getAggregatedResources(any(), any())).thenReturn(Collections.singletonMap("foo_ds", new MockedDataSource()));
+        when(PhysicalDataSourceAggregator.getAggregatedDataSources(any(), any())).thenReturn(Collections.singletonMap("foo_ds", new MockedDataSource()));
         LoadSingleTableStatement sqlStatement = new LoadSingleTableStatement(Collections.singleton(new SingleTableSegment("foo_ds", "foo_tbl")));
         assertThrows(TableNotFoundException.class, () -> new DistSQLUpdateExecuteEngine(sqlStatement, "foo_db", mockContextManager(mock(SingleRule.class))).executeUpdate());
     }

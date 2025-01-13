@@ -17,28 +17,30 @@
 
 package org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 
 /**
  * Column segment bound info.
  */
-@RequiredArgsConstructor
 public final class ColumnSegmentBoundInfo {
     
-    private final IdentifierValue originalDatabase;
+    private final TableSegmentBoundInfo tableBoundInfo;
     
-    private final IdentifierValue originalSchema;
-    
+    @Getter
     private final IdentifierValue originalTable;
     
+    @Getter
     private final IdentifierValue originalColumn;
     
     public ColumnSegmentBoundInfo(final IdentifierValue originalColumn) {
-        originalDatabase = new IdentifierValue("");
-        originalSchema = new IdentifierValue("");
-        originalTable = new IdentifierValue("");
-        this.originalColumn = originalColumn;
+        this(null, null, originalColumn);
+    }
+    
+    public ColumnSegmentBoundInfo(final TableSegmentBoundInfo tableBoundInfo, final IdentifierValue originalTable, final IdentifierValue originalColumn) {
+        this.tableBoundInfo = null == tableBoundInfo ? new TableSegmentBoundInfo(null, null) : tableBoundInfo;
+        this.originalTable = null == originalTable ? new IdentifierValue("") : originalTable;
+        this.originalColumn = null == originalColumn ? new IdentifierValue("") : originalColumn;
     }
     
     /**
@@ -47,7 +49,7 @@ public final class ColumnSegmentBoundInfo {
      * @return original database
      */
     public IdentifierValue getOriginalDatabase() {
-        return null == originalDatabase ? new IdentifierValue("") : originalDatabase;
+        return tableBoundInfo.getOriginalDatabase();
     }
     
     /**
@@ -56,24 +58,6 @@ public final class ColumnSegmentBoundInfo {
      * @return original schema
      */
     public IdentifierValue getOriginalSchema() {
-        return null == originalSchema ? new IdentifierValue("") : originalSchema;
-    }
-    
-    /**
-     * Get original table.
-     *
-     * @return original table
-     */
-    public IdentifierValue getOriginalTable() {
-        return null == originalTable ? new IdentifierValue("") : originalTable;
-    }
-    
-    /**
-     * Get original column.
-     *
-     * @return original column
-     */
-    public IdentifierValue getOriginalColumn() {
-        return null == originalColumn ? new IdentifierValue("") : originalColumn;
+        return tableBoundInfo.getOriginalSchema();
     }
 }

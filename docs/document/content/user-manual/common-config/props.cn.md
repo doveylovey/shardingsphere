@@ -17,6 +17,7 @@ Apache ShardingSphere 提供属性配置的方式配置系统级配置。
 | kernel-executor-size (?)           | int     | 用于设置任务处理线程池的大小<br />每个 ShardingSphereDataSource 使用一个独立的线程池，同一个 JVM 的不同数据源不共享线程池                                                     | infinite |
 | max-connections-size-per-query (?) | int     | 一次查询请求在每个数据库实例中所能使用的最大连接数                                                                                                           | 1        |
 | check-table-metadata-enabled (?)   | boolean | 在程序启动和更新时，是否检查分片元数据的结构一致性                                                                                                           | false    |
+| load-table-metadata-batch-size (?) | int     | 在程序启动或刷新元数据时，单个批次加载表元数据的数量                                                                                                          | 1000     |
 
 ## 操作步骤
 
@@ -26,6 +27,10 @@ Apache ShardingSphere 提供属性配置的方式配置系统级配置。
 props:
     sql-show: true
 ```
+
+## 注意事项
+
+`max-connections-size-per-query` 配置项的默认值为 1，这意味着每次查询请求在每个数据库实例中只能使用一个连接。如果您调整此参数以启用内存限制模式（详情参见 [内存限制模式](/cn/reference/sharding/execute/#内存限制模式)），请确保您使用的数据库 JDBC 实现支持流式查询或能够启用流式查询。例如，在 MySQL 中，需要设置 `statement.setFetchSize(Integer.MIN_VALUE)` 才能实现流式查询。
 
 ## 配置示例
 

@@ -27,7 +27,7 @@ import org.apache.shardingsphere.mask.config.rule.MaskTableRuleConfiguration;
 import org.apache.shardingsphere.mask.distsql.statement.DropMaskRuleStatement;
 import org.apache.shardingsphere.mask.rule.MaskRule;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.persist.service.MetaDataManagerPersistService;
+import org.apache.shardingsphere.mode.persist.service.divided.MetaDataManagerPersistService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
@@ -99,9 +99,7 @@ class DropMaskRuleExecutorTest {
     }
     
     private ContextManager mockContextManager(final MaskRule rule) {
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(database.getName()).thenReturn("foo_db");
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList());
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         when(result.getDatabase("foo_db")).thenReturn(database);
         return result;

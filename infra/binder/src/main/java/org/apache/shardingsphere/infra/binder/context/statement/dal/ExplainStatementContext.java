@@ -21,7 +21,7 @@ import lombok.Getter;
 import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
-import org.apache.shardingsphere.sql.parser.statement.core.util.TableExtractor;
+import org.apache.shardingsphere.sql.parser.statement.core.extractor.TableExtractor;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.dal.ExplainStatement;
@@ -37,9 +37,9 @@ public final class ExplainStatementContext extends CommonSQLStatementContext imp
     
     private final TablesContext tablesContext;
     
-    public ExplainStatementContext(final ExplainStatement sqlStatement, final String currentDatabaseName) {
+    public ExplainStatementContext(final ExplainStatement sqlStatement) {
         super(sqlStatement);
-        tablesContext = new TablesContext(extractTablesFromExplain(sqlStatement), getDatabaseType(), currentDatabaseName);
+        tablesContext = new TablesContext(extractTablesFromExplain(sqlStatement));
     }
     
     private Collection<SimpleTableSegment> extractTablesFromExplain(final ExplainStatement sqlStatement) {

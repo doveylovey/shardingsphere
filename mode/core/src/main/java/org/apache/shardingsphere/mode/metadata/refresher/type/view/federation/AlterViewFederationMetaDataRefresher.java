@@ -23,7 +23,7 @@ import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSp
 import org.apache.shardingsphere.infra.metadata.database.schema.pojo.AlterSchemaMetaDataPOJO;
 import org.apache.shardingsphere.mode.metadata.refresher.FederationMetaDataRefresher;
 import org.apache.shardingsphere.mode.metadata.refresher.util.TableRefreshUtils;
-import org.apache.shardingsphere.mode.persist.service.MetaDataManagerPersistService;
+import org.apache.shardingsphere.mode.persist.service.divided.MetaDataManagerPersistService;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterViewStatement;
 
@@ -46,10 +46,7 @@ public final class AlterViewFederationMetaDataRefresher implements FederationMet
             alterSchemaMetaDataPOJO.getAlteredViews().add(new ShardingSphereView(renameViewName, originalView));
             alterSchemaMetaDataPOJO.getDroppedViews().add(viewName);
         }
-        Optional<String> viewDefinition = sqlStatement.getViewDefinition();
-        if (viewDefinition.isPresent()) {
-            alterSchemaMetaDataPOJO.getAlteredViews().add(new ShardingSphereView(viewName, viewDefinition.get()));
-        }
+        sqlStatement.getViewDefinition().ifPresent(optional -> alterSchemaMetaDataPOJO.getAlteredViews().add(new ShardingSphereView(viewName, optional)));
         metaDataManagerPersistService.alterSchemaMetaData(alterSchemaMetaDataPOJO);
     }
     

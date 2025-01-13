@@ -21,7 +21,7 @@ import org.apache.shardingsphere.encrypt.rewrite.condition.EncryptCondition;
 import org.apache.shardingsphere.encrypt.rewrite.condition.EncryptConditionEngine;
 import org.apache.shardingsphere.encrypt.rewrite.token.generator.fixture.EncryptGeneratorFixtureBuilder;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.UpdateStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
+import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.SQLToken;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,14 +46,14 @@ class EncryptPredicateRightValueTokenGeneratorTest {
     
     @Test
     void assertIsGenerateSQLToken() {
-        generator.setDatabaseName(DefaultDatabase.LOGIC_NAME);
+        generator.setDatabase(new ShardingSphereDatabase("foo_db", mock(), mock(), mock(), Collections.emptyList()));
         assertTrue(generator.isGenerateSQLToken(EncryptGeneratorFixtureBuilder.createUpdateStatementContext()));
     }
     
     @Test
     void assertGenerateSQLTokenFromGenerateNewSQLToken() {
         UpdateStatementContext updateStatementContext = EncryptGeneratorFixtureBuilder.createUpdateStatementContext();
-        generator.setDatabaseName(DefaultDatabase.LOGIC_NAME);
+        generator.setDatabase(new ShardingSphereDatabase("foo_db", mock(), mock(), mock(), Collections.emptyList()));
         generator.setEncryptConditions(getEncryptConditions(updateStatementContext));
         Collection<SQLToken> sqlTokens = generator.generateSQLTokens(updateStatementContext);
         assertThat(sqlTokens.size(), is(1));
@@ -61,7 +61,8 @@ class EncryptPredicateRightValueTokenGeneratorTest {
     }
     
     private Collection<EncryptCondition> getEncryptConditions(final UpdateStatementContext updateStatementContext) {
-        return new EncryptConditionEngine(EncryptGeneratorFixtureBuilder.createEncryptRule(), Collections.singletonMap(DefaultDatabase.LOGIC_NAME, mock(ShardingSphereSchema.class)))
-                .createEncryptConditions(updateStatementContext.getWhereSegments(), updateStatementContext.getColumnSegments(), updateStatementContext, DefaultDatabase.LOGIC_NAME);
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), mock(), Collections.singleton(new ShardingSphereSchema("foo_db")));
+        return new EncryptConditionEngine(EncryptGeneratorFixtureBuilder.createEncryptRule(), database)
+                .createEncryptConditions(updateStatementContext.getWhereSegments());
     }
 }

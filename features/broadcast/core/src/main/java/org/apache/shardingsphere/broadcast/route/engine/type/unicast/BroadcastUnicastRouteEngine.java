@@ -20,6 +20,7 @@ package org.apache.shardingsphere.broadcast.route.engine.type.unicast;
 import lombok.RequiredArgsConstructor;
 import org.apache.shardingsphere.broadcast.route.engine.type.BroadcastRouteEngine;
 import org.apache.shardingsphere.broadcast.rule.BroadcastRule;
+import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.AlterViewStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.ddl.CreateViewStatementContext;
@@ -39,6 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Broadcast unicast route engine.
  */
+@HighFrequencyInvocation
 @RequiredArgsConstructor
 public final class BroadcastUnicastRouteEngine implements BroadcastRouteEngine {
     
@@ -49,13 +51,13 @@ public final class BroadcastUnicastRouteEngine implements BroadcastRouteEngine {
     private final ConnectionContext connectionContext;
     
     @Override
-    public RouteContext route(final RouteContext routeContext, final BroadcastRule rule) {
-        RouteMapper dataSourceMapper = getDataSourceRouteMapper(rule.getDataSourceNames());
-        routeContext.getRouteUnits().add(new RouteUnit(dataSourceMapper, createTableRouteMappers()));
-        return routeContext;
+    public RouteContext route(final BroadcastRule rule) {
+        RouteContext result = new RouteContext();
+        result.getRouteUnits().add(new RouteUnit(createDataSourceRouteMapper(rule.getDataSourceNames()), createTableRouteMappers()));
+        return result;
     }
     
-    private RouteMapper getDataSourceRouteMapper(final Collection<String> dataSourceNames) {
+    private RouteMapper createDataSourceRouteMapper(final Collection<String> dataSourceNames) {
         String dataSourceName = getDataSourceName(dataSourceNames);
         return new RouteMapper(dataSourceName, dataSourceName);
     }

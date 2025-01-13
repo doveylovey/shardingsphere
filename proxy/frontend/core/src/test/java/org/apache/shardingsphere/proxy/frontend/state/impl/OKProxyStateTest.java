@@ -22,17 +22,16 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
-import org.apache.shardingsphere.mode.spi.PersistRepository;
+import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.frontend.command.CommandExecutorTask;
@@ -89,15 +88,15 @@ class OKProxyStateTest {
     
     private ContextManager mockContextManager() {
         ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class, RETURNS_DEEP_STUBS);
-        when(metaData.getDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS));
-        when(metaData.getDatabases().values().iterator().next().getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "FIXTURE"));
+        when(metaData.getDatabase("foo_db")).thenReturn(mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS));
+        when(metaData.getAllDatabases().iterator().next().getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "FIXTURE"));
         when(metaData.getProps().<Integer>getValue(ConfigurationPropertyKey.KERNEL_EXECUTOR_SIZE)).thenReturn(0);
         TransactionRule transactionRule = mock(TransactionRule.class);
         when(transactionRule.getDefaultType()).thenReturn(TransactionType.XA);
         when(metaData.getGlobalRuleMetaData()).thenReturn(new RuleMetaData(Collections.singletonList(transactionRule)));
         ComputeNodeInstanceContext computeNodeInstanceContext = mock(ComputeNodeInstanceContext.class);
         when(computeNodeInstanceContext.getModeConfiguration()).thenReturn(mock(ModeConfiguration.class));
-        return new ContextManager(MetaDataContextsFactory.create(mock(MetaDataPersistService.class), metaData), computeNodeInstanceContext, mock(PersistRepository.class));
+        return new ContextManager(new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(mock(MetaDataPersistService.class), metaData)), computeNodeInstanceContext, mock());
     }
     
     @SuppressWarnings({"unchecked", "SameParameterValue"})

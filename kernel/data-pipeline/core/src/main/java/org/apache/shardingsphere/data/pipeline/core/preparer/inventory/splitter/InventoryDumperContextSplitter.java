@@ -36,7 +36,7 @@ import org.apache.shardingsphere.data.pipeline.core.preparer.inventory.calculato
 import org.apache.shardingsphere.data.pipeline.core.ratelimit.JobRateLimitAlgorithm;
 import org.apache.shardingsphere.data.pipeline.core.sqlbuilder.sql.PipelinePrepareSQLBuilder;
 import org.apache.shardingsphere.data.pipeline.core.util.PipelineJdbcUtils;
-import org.apache.shardingsphere.infra.metadata.caseinsensitive.CaseInsensitiveIdentifier;
+import org.apache.shardingsphere.infra.metadata.identifier.ShardingSphereIdentifier;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -73,7 +73,7 @@ public final class InventoryDumperContextSplitter {
                 .stream().map(entry -> createTableSpLitDumperContext(entry.getKey(), entry.getValue())).collect(Collectors.toList());
     }
     
-    private InventoryDumperContext createTableSpLitDumperContext(final CaseInsensitiveIdentifier actualTableName, final CaseInsensitiveIdentifier logicTableName) {
+    private InventoryDumperContext createTableSpLitDumperContext(final ShardingSphereIdentifier actualTableName, final ShardingSphereIdentifier logicTableName) {
         InventoryDumperContext result = new InventoryDumperContext(dumperContext.getCommonContext());
         result.setActualTableName(actualTableName.toString());
         result.setLogicTableName(logicTableName.toString());
@@ -93,7 +93,7 @@ public final class InventoryDumperContextSplitter {
         JobRateLimitAlgorithm rateLimitAlgorithm = jobProcessContext.getReadRateLimitAlgorithm();
         int i = 0;
         for (IngestPosition each : getInventoryPositions(dumperContext, jobItemContext)) {
-            result.add(createPrimaryKeySplitDumperContext(dumperContext, each, i++, batchSize, rateLimitAlgorithm));
+            result.add(createPrimaryKeySplitDumperContext(dumperContext, each, i++, batchSize, rateLimitAlgorithm, jobItemContext));
         }
         return result;
     }
@@ -149,7 +149,8 @@ public final class InventoryDumperContextSplitter {
     }
     
     private InventoryDumperContext createPrimaryKeySplitDumperContext(final InventoryDumperContext dumperContext, final IngestPosition position,
-                                                                      final int shardingItem, final int batchSize, final JobRateLimitAlgorithm rateLimitAlgorithm) {
+                                                                      final int shardingItem, final int batchSize, final JobRateLimitAlgorithm rateLimitAlgorithm,
+                                                                      final TransmissionJobItemContext jobItemContext) {
         InventoryDumperContext result = new InventoryDumperContext(dumperContext.getCommonContext());
         result.getCommonContext().setPosition(position);
         result.setShardingItem(shardingItem);
@@ -159,6 +160,11 @@ public final class InventoryDumperContextSplitter {
         result.setInsertColumnNames(dumperContext.getInsertColumnNames());
         result.setBatchSize(batchSize);
         result.setRateLimitAlgorithm(rateLimitAlgorithm);
+        result.setFirstDump(isFirstDump(jobItemContext));
         return result;
+    }
+    
+    private boolean isFirstDump(final TransmissionJobItemContext jobItemContext) {
+        return null == jobItemContext.getInitProgress() && jobItemContext.getProcessedRecordsCount() == 0;
     }
 }

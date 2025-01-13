@@ -29,11 +29,11 @@ import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaDa
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
-import org.apache.shardingsphere.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
+import org.apache.shardingsphere.mode.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.parser.rule.SQLParserRule;
 import org.apache.shardingsphere.parser.rule.builder.DefaultSQLParserRuleConfigurationBuilder;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
@@ -79,6 +79,8 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class SelectInformationSchemataExecutorTest {
     
+    private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "MySQL");
+    
     private final Grantee grantee = new Grantee("root", "127.0.0.1");
     
     private final String sql = "SELECT SCHEMA_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA";
@@ -92,7 +94,7 @@ class SelectInformationSchemataExecutorTest {
     void setUp() {
         when(connectionSession.getConnectionContext().getGrantee()).thenReturn(grantee);
         statement = (SelectStatement) new SQLParserRule(
-                new DefaultSQLParserRuleConfigurationBuilder().build()).getSQLParserEngine(TypedSPILoader.getService(DatabaseType.class, "MySQL")).parse(sql, false);
+                new DefaultSQLParserRuleConfigurationBuilder().build()).getSQLParserEngine(databaseType).parse(sql, false);
     }
     
     @Test
@@ -163,9 +165,10 @@ class SelectInformationSchemataExecutorTest {
         ShardingSphereDataPersistService shardingSphereDataPersistService = mock(ShardingSphereDataPersistService.class);
         when(shardingSphereDataPersistService.load(any())).thenReturn(Optional.empty());
         when(metaDataPersistService.getShardingSphereDataPersistService()).thenReturn(shardingSphereDataPersistService);
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(metaDataPersistService, new ShardingSphereMetaData(
-                Arrays.stream(databases).collect(Collectors.toMap(ShardingSphereDatabase::getName, each -> each)),
-                mock(ResourceMetaData.class), new RuleMetaData(Collections.singleton(authorityRule)), new ConfigurationProperties(new Properties())));
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(
+                Arrays.stream(databases).collect(Collectors.toList()), mock(ResourceMetaData.class), new RuleMetaData(Collections.singleton(authorityRule)),
+                new ConfigurationProperties(new Properties()));
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(metaDataPersistService, metaData));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         for (ShardingSphereDatabase each : databases) {
             when(result.getDatabase(each.getName())).thenReturn(each);
@@ -174,7 +177,7 @@ class SelectInformationSchemataExecutorTest {
     }
     
     private ShardingSphereDatabase createDatabase(final String databaseName, final ResourceMetaData resourceMetaData) {
-        return new ShardingSphereDatabase(databaseName, TypedSPILoader.getService(DatabaseType.class, "MySQL"), resourceMetaData, mock(RuleMetaData.class), Collections.emptyMap());
+        return new ShardingSphereDatabase(databaseName, databaseType, resourceMetaData, mock(RuleMetaData.class), Collections.emptyList());
     }
     
     private ShardingSphereDatabase createDatabase(final String databaseName) {

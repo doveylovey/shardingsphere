@@ -24,7 +24,6 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.text.que
 import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLOKPacket;
 import org.apache.shardingsphere.db.protocol.packet.DatabasePacket;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
@@ -43,6 +42,7 @@ import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.handler.ProxyBackendHandler;
 import org.apache.shardingsphere.proxy.backend.response.header.query.QueryHeader;
 import org.apache.shardingsphere.proxy.backend.response.header.query.QueryResponseHeader;
+import org.apache.shardingsphere.proxy.backend.response.header.update.MultiStatementsUpdateResponseHeader;
 import org.apache.shardingsphere.proxy.backend.response.header.update.UpdateResponseHeader;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.proxy.frontend.command.executor.ResponseType;
@@ -58,6 +58,7 @@ import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.internal.configuration.plugins.Plugins;
 import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.plugins.MemberAccessor;
 import org.mockito.quality.Strictness;
 
 import java.sql.SQLException;
@@ -65,6 +66,7 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -80,6 +82,8 @@ import static org.mockito.Mockito.when;
 @StaticMockSettings(ProxyContext.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MySQLComQueryPacketExecutorTest {
+    
+    private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "MySQL");
     
     @Mock
     private ProxyBackendHandler proxyBackendHandler;
@@ -120,7 +124,7 @@ class MySQLComQueryPacketExecutorTest {
     void assertExecuteMultiUpdateStatements() throws SQLException, NoSuchFieldException, IllegalAccessException {
         when(connectionSession.getAttributeMap().hasAttr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY)).thenReturn(true);
         when(connectionSession.getAttributeMap().attr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY).get()).thenReturn(0);
-        when(connectionSession.getUsedDatabaseName()).thenReturn("foo_db");
+        when(connectionSession.getCurrentDatabaseName()).thenReturn("foo_db");
         when(packet.getSQL()).thenReturn("update t set v=v+1 where id=1;update t set v=v+1 where id=2;update t set v=v+1 where id=3");
         ContextManager contextManager = mock(ContextManager.class);
         MetaDataContexts metaDataContexts = mockMetaDataContexts();
@@ -134,8 +138,29 @@ class MySQLComQueryPacketExecutorTest {
         assertThat(actualPackets.iterator().next(), instanceOf(MySQLOKPacket.class));
     }
     
+    @Test
+    void assertExecuteMultiInsertOnDuplicateKeyStatements() throws SQLException, NoSuchFieldException, IllegalAccessException {
+        when(connectionSession.getAttributeMap().hasAttr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY)).thenReturn(true);
+        when(connectionSession.getAttributeMap().attr(MySQLConstants.OPTION_MULTI_STATEMENTS_ATTRIBUTE_KEY).get()).thenReturn(0);
+        when(connectionSession.getCurrentDatabaseName()).thenReturn("foo_db");
+        when(packet.getSQL()).thenReturn("insert into t (id, v) values(1,1) on duplicate key update v=2;insert into t (id, v) values(2,1) on duplicate key update v=3");
+        ContextManager contextManager = mock(ContextManager.class, RETURNS_DEEP_STUBS);
+        MetaDataContexts metaDataContexts = mockMetaDataContexts();
+        when(contextManager.getMetaDataContexts()).thenReturn(metaDataContexts);
+        when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
+        MySQLComQueryPacketExecutor actual = new MySQLComQueryPacketExecutor(packet, connectionSession);
+        MemberAccessor accessor = Plugins.getMemberAccessor();
+        accessor.set(MySQLComQueryPacketExecutor.class.getDeclaredField("proxyBackendHandler"), actual, proxyBackendHandler);
+        when(proxyBackendHandler.execute())
+                .thenReturn(new MultiStatementsUpdateResponseHeader(Arrays.asList(new UpdateResponseHeader(mock(SQLStatement.class)), new UpdateResponseHeader(mock(SQLStatement.class)))));
+        Collection<DatabasePacket> actualPackets = actual.execute();
+        assertThat(actualPackets.size(), is(2));
+        Iterator<DatabasePacket> iterator = actualPackets.iterator();
+        assertThat(iterator.next(), instanceOf(MySQLOKPacket.class));
+        assertThat(iterator.next(), instanceOf(MySQLOKPacket.class));
+    }
+    
     private MetaDataContexts mockMetaDataContexts() {
-        DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "MySQL");
         MetaDataContexts result = mock(MetaDataContexts.class, RETURNS_DEEP_STUBS);
         when(result.getMetaData().getDatabase("foo_db").getProtocolType()).thenReturn(databaseType);
         RuleMetaData globalRuleMetaData = new RuleMetaData(
@@ -146,14 +171,12 @@ class MySQLComQueryPacketExecutorTest {
         when(result.getMetaData().getProps().<Boolean>getValue(ConfigurationPropertyKey.SQL_SHOW)).thenReturn(false);
         ShardingSphereTable table = new ShardingSphereTable("t", Arrays.asList(new ShardingSphereColumn("id", Types.BIGINT, true, false, false, false, true, false),
                 new ShardingSphereColumn("v", Types.INTEGER, false, false, false, false, true, false)), Collections.emptyList(), Collections.emptyList());
-        ShardingSphereSchema schema = new ShardingSphereSchema(DefaultDatabase.LOGIC_NAME);
-        schema.getTables().put("t", table);
-        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", TypedSPILoader.getService(DatabaseType.class, "MySQL"),
-                new ResourceMetaData(Collections.emptyMap()), new RuleMetaData(Collections.emptyList()), Collections.singletonMap("foo_db", schema));
+        ShardingSphereSchema schema = new ShardingSphereSchema("foo_db", Collections.singleton(table), Collections.emptyList());
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db",
+                databaseType, new ResourceMetaData(Collections.emptyMap()), new RuleMetaData(Collections.emptyList()), Collections.singleton(schema));
         when(result.getMetaData().getDatabase("foo_db")).thenReturn(database);
         when(result.getMetaData().containsDatabase("foo_db")).thenReturn(true);
         return result;
-        
     }
     
     @Test

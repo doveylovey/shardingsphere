@@ -18,9 +18,9 @@
 package org.apache.shardingsphere.infra.binder.context.statement.dal;
 
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dal.FromDatabaseSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.DatabaseSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
@@ -39,17 +39,16 @@ class ShowColumnsStatementContextTest {
     @Test
     void assertNewInstance() {
         MySQLShowColumnsStatement sqlStatement = new MySQLShowColumnsStatement();
-        String tableName = "tbl_1";
-        String databaseName = "sharding_db";
-        SimpleTableSegment table = new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue(tableName)));
-        FromDatabaseSegment fromDatabase = new FromDatabaseSegment(0, 0, new DatabaseSegment(0, 0, new IdentifierValue(databaseName)));
-        sqlStatement.setTable(table);
+        TableNameSegment tableNameSegment = new TableNameSegment(0, 0, new IdentifierValue("foo_tbl"));
+        tableNameSegment.setTableBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")));
+        sqlStatement.setTable(new SimpleTableSegment(tableNameSegment));
+        FromDatabaseSegment fromDatabase = new FromDatabaseSegment(0, 0, new DatabaseSegment(0, 0, new IdentifierValue("foo_db")));
         sqlStatement.setFromDatabase(fromDatabase);
-        ShowColumnsStatementContext actual = new ShowColumnsStatementContext(sqlStatement, DefaultDatabase.LOGIC_NAME);
+        ShowColumnsStatementContext actual = new ShowColumnsStatementContext(sqlStatement);
         assertThat(actual, instanceOf(CommonSQLStatementContext.class));
         assertThat(actual.getSqlStatement(), is(sqlStatement));
         assertThat(actual.getTablesContext().getSimpleTables().stream().map(each -> each.getTableName().getIdentifier().getValue()).collect(Collectors.toList()),
-                is(Collections.singletonList(tableName)));
+                is(Collections.singletonList("foo_tbl")));
         assertThat(actual.getRemoveSegments(), is(Collections.singletonList(fromDatabase)));
     }
 }

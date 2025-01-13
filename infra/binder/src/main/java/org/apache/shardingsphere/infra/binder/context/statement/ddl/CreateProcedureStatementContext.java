@@ -20,7 +20,7 @@ package org.apache.shardingsphere.infra.binder.context.statement.ddl;
 import lombok.Getter;
 import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStatementContext;
-import org.apache.shardingsphere.sql.parser.statement.core.util.TableExtractor;
+import org.apache.shardingsphere.sql.parser.statement.core.extractor.TableExtractor;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.routine.RoutineBodySegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateProcedureStatement;
@@ -37,11 +37,11 @@ public final class CreateProcedureStatementContext extends CommonSQLStatementCon
     
     private final TablesContext tablesContext;
     
-    public CreateProcedureStatementContext(final CreateProcedureStatement sqlStatement, final String currentDatabaseName) {
+    public CreateProcedureStatementContext(final CreateProcedureStatement sqlStatement) {
         super(sqlStatement);
         Optional<RoutineBodySegment> routineBodySegment = sqlStatement.getRoutineBody();
         Collection<SimpleTableSegment> tables = routineBodySegment.map(optional -> new TableExtractor().extractExistTableFromRoutineBody(optional)).orElseGet(Collections::emptyList);
-        tablesContext = new TablesContext(tables, getDatabaseType(), currentDatabaseName);
+        tablesContext = new TablesContext(tables);
     }
     
     @Override

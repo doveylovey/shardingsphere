@@ -28,9 +28,9 @@ import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSp
 import org.apache.shardingsphere.infra.rule.attribute.datanode.MutableDataNodeRuleAttribute;
 import org.apache.shardingsphere.infra.rule.scope.GlobalRule;
 import org.apache.shardingsphere.infra.rule.scope.GlobalRule.GlobalRuleChangedType;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.metadata.refresher.util.TableRefreshUtils;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 
@@ -63,7 +63,8 @@ public final class SchemaMetaDataManager {
         }
         DatabaseType protocolType = DatabaseTypeEngine.getProtocolType(Collections.emptyMap(), metaDataContexts.get().getMetaData().getProps());
         metaDataContexts.get().getMetaData().addDatabase(databaseName, protocolType, metaDataContexts.get().getMetaData().getProps());
-        metaDataContexts.set(MetaDataContextsFactory.create(metaDataPersistService, metaDataContexts.get().getMetaData()));
+        ShardingSphereMetaData metaData = metaDataContexts.get().getMetaData();
+        metaDataContexts.set(new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(metaDataPersistService, metaData)));
     }
     
     /**
@@ -90,8 +91,8 @@ public final class SchemaMetaDataManager {
         if (database.containsSchema(schemaName)) {
             return;
         }
-        database.addSchema(schemaName, new ShardingSphereSchema(schemaName));
-        metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
+        database.addSchema(new ShardingSphereSchema(schemaName));
+        metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getAllDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
     }
     
     /**
@@ -107,7 +108,7 @@ public final class SchemaMetaDataManager {
             return;
         }
         database.dropSchema(schemaName);
-        metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
+        metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getAllDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
     }
     
     /**
@@ -126,7 +127,7 @@ public final class SchemaMetaDataManager {
         Optional.ofNullable(toBeChangedTable).ifPresent(optional -> alterTable(databaseName, schemaName, optional));
         Optional.ofNullable(toBeChangedView).ifPresent(optional -> alterView(databaseName, schemaName, optional));
         if (null != toBeChangedTable || null != toBeChangedView) {
-            metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
+            metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getAllDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
         }
     }
     
@@ -146,7 +147,7 @@ public final class SchemaMetaDataManager {
         Optional.ofNullable(toBeDeletedTableName).ifPresent(optional -> dropTable(databaseName, schemaName, optional));
         Optional.ofNullable(toBeDeletedViewName).ifPresent(optional -> dropView(databaseName, schemaName, optional));
         if (!Strings.isNullOrEmpty(toBeDeletedTableName) || !Strings.isNullOrEmpty(toBeDeletedViewName)) {
-            metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
+            metaData.getGlobalRuleMetaData().getRules().forEach(each -> ((GlobalRule) each).refresh(metaData.getAllDatabases(), GlobalRuleChangedType.SCHEMA_CHANGED));
         }
     }
     
@@ -155,7 +156,7 @@ public final class SchemaMetaDataManager {
         if (TableRefreshUtils.isSingleTable(beBoChangedTable.getName(), database)) {
             database.reloadRules();
         }
-        database.getSchema(schemaName).putTable(beBoChangedTable.getName(), beBoChangedTable);
+        database.getSchema(schemaName).putTable(beBoChangedTable);
     }
     
     private void alterView(final String databaseName, final String schemaName, final ShardingSphereView beBoChangedView) {
@@ -163,7 +164,7 @@ public final class SchemaMetaDataManager {
         if (TableRefreshUtils.isSingleTable(beBoChangedView.getName(), database)) {
             database.reloadRules();
         }
-        database.getSchema(schemaName).putView(beBoChangedView.getName(), beBoChangedView);
+        database.getSchema(schemaName).putView(beBoChangedView);
     }
     
     private void dropTable(final String databaseName, final String schemaName, final String toBeDeletedTableName) {

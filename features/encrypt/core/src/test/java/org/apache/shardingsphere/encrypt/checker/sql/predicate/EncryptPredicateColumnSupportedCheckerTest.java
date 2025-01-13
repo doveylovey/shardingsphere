@@ -21,12 +21,12 @@ import org.apache.shardingsphere.encrypt.exception.metadata.MissingMatchedEncryp
 import org.apache.shardingsphere.encrypt.rewrite.token.generator.fixture.EncryptGeneratorFixtureBuilder;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.expr.BinaryOperationExpression;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.predicate.WhereSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.ColumnSegmentBoundInfo;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 
@@ -62,16 +62,16 @@ class EncryptPredicateColumnSupportedCheckerTest {
     @Test
     void assertCheckWithDifferentEncryptorsInJoinCondition() {
         assertThrows(UnsupportedSQLOperationException.class, () -> new EncryptPredicateColumnSupportedChecker()
-                .check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, mockSelectStatementContextWithDifferentEncryptorsInJoinCondition()));
+                .check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, null, mockSelectStatementContextWithDifferentEncryptorsInJoinCondition()));
     }
     
     private SQLStatementContext mockSelectStatementContextWithDifferentEncryptorsInJoinCondition() {
         ColumnSegment leftColumn = new ColumnSegment(0, 0, new IdentifierValue("user_name"));
-        leftColumn.setColumnBoundInfo(new ColumnSegmentBoundInfo(
-                new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue("t_user"), new IdentifierValue("user_name")));
+        leftColumn.setColumnBoundInfo(new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("t_user"),
+                new IdentifierValue("user_name")));
         ColumnSegment rightColumn = new ColumnSegment(0, 0, new IdentifierValue("user_id"));
-        rightColumn.setColumnBoundInfo(new ColumnSegmentBoundInfo(
-                new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue("t_user"), new IdentifierValue("user_id")));
+        rightColumn.setColumnBoundInfo(
+                new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("t_user"), new IdentifierValue("user_id")));
         SelectStatementContext result = mock(SelectStatementContext.class);
         when(result.getJoinConditions()).thenReturn(Collections.singleton(new BinaryOperationExpression(0, 0, leftColumn, rightColumn, "=", "")));
         return result;
@@ -80,15 +80,14 @@ class EncryptPredicateColumnSupportedCheckerTest {
     @Test
     void assertCheckWithNotMatchedLikeQueryEncryptor() {
         assertThrows(MissingMatchedEncryptQueryAlgorithmException.class, () -> new EncryptPredicateColumnSupportedChecker()
-                .check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, mockSelectStatementContextWithLike()));
+                .check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, null, mockSelectStatementContextWithLike()));
     }
     
     private SQLStatementContext mockSelectStatementContextWithLike() {
         ColumnSegment columnSegment = new ColumnSegment(0, 0, new IdentifierValue("user_name"));
-        columnSegment.setColumnBoundInfo(new ColumnSegmentBoundInfo(
-                new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue("t_user"), new IdentifierValue("user_name")));
+        columnSegment.setColumnBoundInfo(new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("t_user"),
+                new IdentifierValue("user_name")));
         SelectStatementContext result = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
-        when(result.getTablesContext().findTableNames(Collections.singleton(columnSegment), null)).thenReturn(Collections.singletonMap("user_name", "t_user"));
         when(result.getColumnSegments()).thenReturn(Collections.singleton(columnSegment));
         when(result.getWhereSegments()).thenReturn(Collections.singleton(new WhereSegment(0, 0, new BinaryOperationExpression(0, 0, columnSegment, columnSegment, "LIKE", ""))));
         when(result.getSubqueryContexts()).thenReturn(Collections.emptyMap());
@@ -98,15 +97,14 @@ class EncryptPredicateColumnSupportedCheckerTest {
     
     @Test
     void assertCheckSuccess() {
-        assertDoesNotThrow(() -> new EncryptPredicateColumnSupportedChecker().check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, mockSelectStatementContextWithEqual()));
+        assertDoesNotThrow(() -> new EncryptPredicateColumnSupportedChecker().check(EncryptGeneratorFixtureBuilder.createEncryptRule(), null, null, mockSelectStatementContextWithEqual()));
     }
     
     private SQLStatementContext mockSelectStatementContextWithEqual() {
         ColumnSegment columnSegment = new ColumnSegment(0, 0, new IdentifierValue("user_name"));
-        columnSegment.setColumnBoundInfo(new ColumnSegmentBoundInfo(
-                new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue(DefaultDatabase.LOGIC_NAME), new IdentifierValue("t_user"), new IdentifierValue("user_name")));
+        columnSegment.setColumnBoundInfo(new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("t_user"),
+                new IdentifierValue("user_name")));
         SelectStatementContext result = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
-        when(result.getTablesContext().findTableNames(Collections.singleton(columnSegment), null)).thenReturn(Collections.singletonMap("user_name", "t_user"));
         when(result.getColumnSegments()).thenReturn(Collections.singleton(columnSegment));
         when(result.getWhereSegments()).thenReturn(Collections.singleton(new WhereSegment(0, 0, new BinaryOperationExpression(0, 0, columnSegment, columnSegment, "=", ""))));
         when(result.getSubqueryContexts()).thenReturn(Collections.emptyMap());

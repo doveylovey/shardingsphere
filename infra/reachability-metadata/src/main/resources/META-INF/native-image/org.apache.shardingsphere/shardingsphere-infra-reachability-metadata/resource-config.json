@@ -13,5 +13,14 @@
     "condition":{"typeReachable":"javax.xml.parsers.FactoryFinder"},
     "pattern":"\\QMETA-INF/services/javax.xml.parsers.SAXParserFactory\\E"
   }]},
-  "bundles":[]
+  "bundles":[{
+    "name":"com.microsoft.sqlserver.jdbc.SQLServerResource",
+    "locales":["en"]
+  }, {
+    "name":"org.postgresql.translation.messages",
+    "locales":["en"]
+  }, {
+    "name":"org.opengauss.translation.messages",
+    "locales":["en", "zh"]
+  }]
 }

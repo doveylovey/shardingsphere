@@ -53,7 +53,6 @@ import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSp
 import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereStatistics;
 import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereTableData;
 import org.apache.shardingsphere.infra.parser.sql.SQLStatementParserEngine;
-import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
 import org.apache.shardingsphere.sqlfederation.executor.constant.EnumerableConstants;
@@ -105,7 +104,7 @@ public final class EnumerableScanExecutor implements ScanExecutor {
     
     @Override
     public Enumerable<Object> execute(final ShardingSphereTable table, final ScanExecutorContext scanContext) {
-        String databaseName = executorContext.getDatabaseName();
+        String databaseName = executorContext.getCurrentDatabaseName();
         String schemaName = executorContext.getSchemaName();
         DatabaseType databaseType = optimizerContext.getParserContext(databaseName).getDatabaseType();
         if (new SystemDatabase(databaseType).getSystemSchemas().contains(schemaName)) {
@@ -135,7 +134,7 @@ public final class EnumerableScanExecutor implements ScanExecutor {
                 ShardingSpherePreconditions.checkState(!ProcessRegistry.getInstance().get(federationContext.getProcessId()).isInterrupted(), SQLExecutionInterruptedException::new);
                 processEngine.executeSQL(executionGroupContext, federationContext.getQueryContext());
                 List<QueryResult> queryResults = jdbcExecutor.execute(executionGroupContext, callback).stream().map(QueryResult.class::cast).collect(Collectors.toList());
-                MergeEngine mergeEngine = new MergeEngine(federationContext.getMetaData(), database, executorContext.getProps(), new ConnectionContext(Collections::emptySet));
+                MergeEngine mergeEngine = new MergeEngine(federationContext.getMetaData(), database, executorContext.getProps(), federationContext.getQueryContext().getConnectionContext());
                 MergedResult mergedResult = mergeEngine.merge(queryResults, queryContext.getSqlStatementContext());
                 Collection<Statement> statements = getStatements(executionGroupContext.getInputGroups());
                 return new JDBCRowEnumerator(mergedResult, queryResults.get(0).getMetaData(), statements);
@@ -168,7 +167,7 @@ public final class EnumerableScanExecutor implements ScanExecutor {
             
             @Override
             public Enumerator<Object> enumerator() {
-                return new MemoryRowEnumerator(tableData.getRows(), table.getColumns().values(), databaseType);
+                return new MemoryRowEnumerator(tableData.getRows(), table.getAllColumns(), databaseType);
             }
         };
     }
@@ -207,8 +206,8 @@ public final class EnumerableScanExecutor implements ScanExecutor {
                 optimizerContext.getSqlParserRule().getSqlStatementCache(), optimizerContext.getSqlParserRule().getParseTreeCache()).parse(sql, useCache);
         List<Object> params = getParameters(sqlString.getParamIndexes());
         HintValueContext hintValueContext = new HintValueContext();
-        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaData, executorContext.getDatabaseName(), hintValueContext).bind(sqlStatement, params);
-        return new QueryContext(sqlStatementContext, sql, params, hintValueContext, new ConnectionContext(Collections::emptySet), metaData, useCache);
+        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaData, executorContext.getCurrentDatabaseName(), hintValueContext).bind(sqlStatement, params);
+        return new QueryContext(sqlStatementContext, sql, params, hintValueContext, federationContext.getQueryContext().getConnectionContext(), metaData, useCache);
     }
     
     private List<Object> getParameters(final int[] paramIndexes) {

@@ -18,7 +18,7 @@
 package org.apache.shardingsphere.infra.binder.engine.statement.dml;
 
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinderContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
+import org.apache.shardingsphere.infra.hint.HintValueContext;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereColumn;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
@@ -67,7 +67,7 @@ class SelectStatementBinderTest {
         SimpleTableSegment simpleTableSegment = new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order")));
         selectStatement.setFrom(simpleTableSegment);
         selectStatement.setWhere(mockWhereSegment());
-        SelectStatement actual = new SelectStatementBinder().bind(selectStatement, new SQLStatementBinderContext(selectStatement, createMetaData(), DefaultDatabase.LOGIC_NAME));
+        SelectStatement actual = new SelectStatementBinder().bind(selectStatement, new SQLStatementBinderContext(createMetaData(), "foo_db", new HintValueContext(), selectStatement));
         assertThat(actual, not(selectStatement));
         assertTrue(actual.getFrom().isPresent());
         assertThat(actual.getFrom().get(), not(simpleTableSegment));
@@ -106,15 +106,15 @@ class SelectStatementBinderTest {
     
     private ShardingSphereMetaData createMetaData() {
         ShardingSphereSchema schema = mock(ShardingSphereSchema.class, RETURNS_DEEP_STUBS);
-        when(schema.getTable("t_order").getColumnValues()).thenReturn(Arrays.asList(
+        when(schema.getTable("t_order").getAllColumns()).thenReturn(Arrays.asList(
                 new ShardingSphereColumn("order_id", Types.INTEGER, true, false, false, true, false, false),
                 new ShardingSphereColumn("user_id", Types.INTEGER, false, false, false, true, false, false),
                 new ShardingSphereColumn("status", Types.INTEGER, false, false, false, true, false, false)));
         ShardingSphereMetaData result = mock(ShardingSphereMetaData.class, RETURNS_DEEP_STUBS);
-        when(result.getDatabase(DefaultDatabase.LOGIC_NAME).getSchema(DefaultDatabase.LOGIC_NAME)).thenReturn(schema);
-        when(result.containsDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(true);
-        when(result.getDatabase(DefaultDatabase.LOGIC_NAME).containsSchema(DefaultDatabase.LOGIC_NAME)).thenReturn(true);
-        when(result.getDatabase(DefaultDatabase.LOGIC_NAME).getSchema(DefaultDatabase.LOGIC_NAME).containsTable("t_order")).thenReturn(true);
+        when(result.getDatabase("foo_db").getSchema("foo_db")).thenReturn(schema);
+        when(result.containsDatabase("foo_db")).thenReturn(true);
+        when(result.getDatabase("foo_db").containsSchema("foo_db")).thenReturn(true);
+        when(result.getDatabase("foo_db").getSchema("foo_db").containsTable("t_order")).thenReturn(true);
         return result;
     }
 }

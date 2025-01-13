@@ -19,7 +19,6 @@ package org.apache.shardingsphere.encrypt.rewrite.token.generator.select;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.shardingsphere.encrypt.rewrite.aware.DatabaseTypeAware;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.encrypt.rule.column.EncryptColumn;
 import org.apache.shardingsphere.encrypt.rule.table.EncryptTable;
@@ -31,9 +30,7 @@ import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementCont
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
 import org.apache.shardingsphere.infra.database.core.metadata.database.enums.QuoteCharacter;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.CollectionSQLTokenGenerator;
-import org.apache.shardingsphere.infra.rewrite.sql.token.common.generator.aware.SchemaMetaDataAware;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.SQLToken;
 import org.apache.shardingsphere.infra.rewrite.sql.token.common.pojo.generic.SubstitutableColumnNameToken;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
@@ -43,7 +40,6 @@ import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.Iden
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -52,15 +48,9 @@ import java.util.Optional;
 @HighFrequencyInvocation
 @RequiredArgsConstructor
 @Setter
-public final class EncryptGroupByItemTokenGenerator implements CollectionSQLTokenGenerator<SelectStatementContext>, SchemaMetaDataAware, DatabaseTypeAware {
+public final class EncryptGroupByItemTokenGenerator implements CollectionSQLTokenGenerator<SelectStatementContext> {
     
-    private final EncryptRule encryptRule;
-    
-    private Map<String, ShardingSphereSchema> schemas;
-    
-    private ShardingSphereSchema defaultSchema;
-    
-    private DatabaseType databaseType;
+    private final EncryptRule rule;
     
     @Override
     public boolean isGenerateSQLToken(final SQLStatementContext sqlStatementContext) {
@@ -82,21 +72,18 @@ public final class EncryptGroupByItemTokenGenerator implements CollectionSQLToke
     @Override
     public Collection<SQLToken> generateSQLTokens(final SelectStatementContext sqlStatementContext) {
         Collection<SQLToken> result = new LinkedList<>();
-        ShardingSphereSchema schema = sqlStatementContext.getTablesContext().getSchemaName().map(schemas::get).orElseGet(() -> defaultSchema);
         for (OrderByItem each : getGroupByItems(sqlStatementContext)) {
             if (each.getSegment() instanceof ColumnOrderByItemSegment) {
                 ColumnSegment columnSegment = ((ColumnOrderByItemSegment) each.getSegment()).getColumn();
-                Map<String, String> columnTableNames = sqlStatementContext.getTablesContext().findTableNames(Collections.singleton(columnSegment), schema);
-                generateSQLToken(columnSegment, columnTableNames).ifPresent(result::add);
+                generateSQLToken(columnSegment, sqlStatementContext.getDatabaseType()).ifPresent(result::add);
             }
         }
         return result;
     }
     
-    private Optional<SubstitutableColumnNameToken> generateSQLToken(final ColumnSegment columnSegment, final Map<String, String> columnTableNames) {
-        String tableName = columnTableNames.getOrDefault(columnSegment.getExpression(), "");
-        Optional<EncryptTable> encryptTable = encryptRule.findEncryptTable(tableName);
-        String columnName = columnSegment.getIdentifier().getValue();
+    private Optional<SubstitutableColumnNameToken> generateSQLToken(final ColumnSegment columnSegment, final DatabaseType databaseType) {
+        Optional<EncryptTable> encryptTable = rule.findEncryptTable(columnSegment.getColumnBoundInfo().getOriginalTable().getValue());
+        String columnName = columnSegment.getColumnBoundInfo().getOriginalColumn().getValue();
         if (!encryptTable.isPresent() || !encryptTable.get().isEncryptColumn(columnName)) {
             return Optional.empty();
         }
@@ -104,9 +91,10 @@ public final class EncryptGroupByItemTokenGenerator implements CollectionSQLToke
         int startIndex = columnSegment.getOwner().isPresent() ? columnSegment.getOwner().get().getStopIndex() + 2 : columnSegment.getStartIndex();
         int stopIndex = columnSegment.getStopIndex();
         return Optional.of(encryptColumn.getAssistedQuery()
-                .map(optional -> new SubstitutableColumnNameToken(startIndex, stopIndex, createColumnProjections(optional.getName(), columnSegment.getIdentifier().getQuoteCharacter()), databaseType))
+                .map(optional -> new SubstitutableColumnNameToken(
+                        startIndex, stopIndex, createColumnProjections(optional.getName(), columnSegment.getIdentifier().getQuoteCharacter(), databaseType), databaseType))
                 .orElseGet(() -> new SubstitutableColumnNameToken(startIndex, stopIndex,
-                        createColumnProjections(encryptColumn.getCipher().getName(), columnSegment.getIdentifier().getQuoteCharacter()), databaseType)));
+                        createColumnProjections(encryptColumn.getCipher().getName(), columnSegment.getIdentifier().getQuoteCharacter(), databaseType), databaseType)));
     }
     
     private Collection<OrderByItem> getGroupByItems(final SelectStatementContext sqlStatementContext) {
@@ -117,7 +105,7 @@ public final class EncryptGroupByItemTokenGenerator implements CollectionSQLToke
         return result;
     }
     
-    private Collection<Projection> createColumnProjections(final String columnName, final QuoteCharacter quoteCharacter) {
+    private Collection<Projection> createColumnProjections(final String columnName, final QuoteCharacter quoteCharacter, final DatabaseType databaseType) {
         return Collections.singleton(new ColumnProjection(null, new IdentifierValue(columnName, quoteCharacter), null, databaseType));
     }
 }

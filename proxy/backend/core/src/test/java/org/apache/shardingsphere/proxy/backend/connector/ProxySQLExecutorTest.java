@@ -26,7 +26,6 @@ import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.exception.dialect.exception.transaction.TableModifyInTransactionException;
 import org.apache.shardingsphere.infra.executor.sql.context.ExecutionContext;
@@ -37,14 +36,14 @@ import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
-import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
 import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
@@ -101,17 +100,17 @@ class ProxySQLExecutorTest {
         when(connectionSession.getTransactionStatus().isInTransaction()).thenReturn(true);
         when(connectionSession.getDatabaseConnectionManager()).thenReturn(databaseConnectionManager);
         when(databaseConnectionManager.getConnectionSession()).thenReturn(connectionSession);
-        when(databaseConnectionManager.getConnectionSession().getUsedDatabaseName()).thenReturn(DefaultDatabase.LOGIC_NAME);
+        when(databaseConnectionManager.getConnectionSession().getUsedDatabaseName()).thenReturn("foo_db");
         ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class, RETURNS_DEEP_STUBS);
-        when(metaData.getDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS));
-        when(metaData.getDatabases().values().iterator().next().getProtocolType()).thenReturn(databaseType);
+        when(metaData.getDatabase("foo_db")).thenReturn(mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS));
+        when(metaData.getAllDatabases().iterator().next().getProtocolType()).thenReturn(databaseType);
         when(metaData.getProps().<Integer>getValue(ConfigurationPropertyKey.KERNEL_EXECUTOR_SIZE)).thenReturn(0);
         when(transactionRule.getDefaultType()).thenReturn(TransactionType.XA);
         when(metaData.getGlobalRuleMetaData()).thenReturn(new RuleMetaData(Arrays.asList(mock(SQLFederationRule.class), transactionRule)));
         ComputeNodeInstanceContext computeNodeInstanceContext = mock(ComputeNodeInstanceContext.class);
         when(computeNodeInstanceContext.getModeConfiguration()).thenReturn(mock(ModeConfiguration.class));
-        ContextManager contextManager = new ContextManager(MetaDataContextsFactory.create(mock(MetaDataPersistService.class), metaData), computeNodeInstanceContext,
-                mock(PersistRepository.class));
+        ContextManager contextManager = new ContextManager(
+                new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(mock(MetaDataPersistService.class), metaData)), computeNodeInstanceContext, mock(PersistRepository.class));
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
     }
     
@@ -126,7 +125,7 @@ class ProxySQLExecutorTest {
     
     private ConnectionContext mockConnectionContext() {
         ConnectionContext result = mock(ConnectionContext.class);
-        when(result.getCurrentDatabaseName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
+        when(result.getCurrentDatabaseName()).thenReturn(Optional.of("foo_db"));
         return result;
     }
     
@@ -224,7 +223,7 @@ class ProxySQLExecutorTest {
         QueryContext result = mock(QueryContext.class);
         SQLStatementContext sqlStatementContext = mock(SQLStatementContext.class, withSettings().extraInterfaces(TableAvailable.class).defaultAnswer(RETURNS_DEEP_STUBS));
         when(sqlStatementContext.getDatabaseType()).thenReturn(databaseType);
-        when(((TableAvailable) sqlStatementContext).getTablesContext().getSchemaName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
+        when(((TableAvailable) sqlStatementContext).getTablesContext().getSchemaName()).thenReturn(Optional.of("foo_db"));
         when(result.getSqlStatementContext()).thenReturn(sqlStatementContext);
         return result;
     }
@@ -240,21 +239,22 @@ class ProxySQLExecutorTest {
     }
     
     private CreateTableStatementContext createMySQLCreateTableStatementContext() {
-        MySQLCreateTableStatement sqlStatement = new MySQLCreateTableStatement(false);
+        MySQLCreateTableStatement sqlStatement = new MySQLCreateTableStatement();
+        sqlStatement.setIfNotExists(false);
         sqlStatement.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
-        return new CreateTableStatementContext(sqlStatement, DefaultDatabase.LOGIC_NAME);
+        return new CreateTableStatementContext(sqlStatement);
     }
     
     private TruncateStatementContext createMySQLTruncateStatementContext() {
         MySQLTruncateStatement sqlStatement = new MySQLTruncateStatement();
         sqlStatement.getTables().add(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
-        return new TruncateStatementContext(sqlStatement, DefaultDatabase.LOGIC_NAME);
+        return new TruncateStatementContext(sqlStatement);
     }
     
     private SQLStatementContext createPostgreSQLTruncateStatementContext() {
         PostgreSQLTruncateStatement sqlStatement = new PostgreSQLTruncateStatement();
         sqlStatement.getTables().add(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
-        return new TruncateStatementContext(sqlStatement, DefaultDatabase.LOGIC_NAME);
+        return new TruncateStatementContext(sqlStatement);
     }
     
     private CursorStatementContext createCursorStatementContext() {
@@ -264,29 +264,29 @@ class ProxySQLExecutorTest {
     }
     
     private ShardingSphereMetaData createShardingSphereMetaData(final ShardingSphereDatabase database) {
-        return new ShardingSphereMetaData(Collections.singletonMap(DefaultDatabase.LOGIC_NAME, database), mock(ResourceMetaData.class),
-                mock(RuleMetaData.class), mock(ConfigurationProperties.class));
+        return new ShardingSphereMetaData(Collections.singleton(database), mock(ResourceMetaData.class), mock(RuleMetaData.class), mock(ConfigurationProperties.class));
     }
     
     private InsertStatementContext createMySQLInsertStatementContext() {
         MySQLInsertStatement sqlStatement = new MySQLInsertStatement();
         sqlStatement.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
         ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(database.getSchema(DefaultDatabase.LOGIC_NAME)).thenReturn(mock(ShardingSphereSchema.class));
-        return new InsertStatementContext(createShardingSphereMetaData(database), Collections.emptyList(), sqlStatement, DefaultDatabase.LOGIC_NAME);
+        when(database.getName()).thenReturn("foo_db");
+        return new InsertStatementContext(createShardingSphereMetaData(database), Collections.emptyList(), sqlStatement, "foo_db");
     }
     
     private CreateTableStatementContext createPostgreSQLCreateTableStatementContext() {
-        PostgreSQLCreateTableStatement sqlStatement = new PostgreSQLCreateTableStatement(false);
+        PostgreSQLCreateTableStatement sqlStatement = new PostgreSQLCreateTableStatement();
+        sqlStatement.setIfNotExists(false);
         sqlStatement.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
-        return new CreateTableStatementContext(sqlStatement, DefaultDatabase.LOGIC_NAME);
+        return new CreateTableStatementContext(sqlStatement);
     }
     
     private InsertStatementContext createPostgreSQLInsertStatementContext() {
         PostgreSQLInsertStatement sqlStatement = new PostgreSQLInsertStatement();
         sqlStatement.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
         ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(database.getSchema("public")).thenReturn(mock(ShardingSphereSchema.class));
-        return new InsertStatementContext(createShardingSphereMetaData(database), Collections.emptyList(), sqlStatement, DefaultDatabase.LOGIC_NAME);
+        when(database.getName()).thenReturn("foo_db");
+        return new InsertStatementContext(createShardingSphereMetaData(database), Collections.emptyList(), sqlStatement, "foo_db");
     }
 }

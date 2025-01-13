@@ -19,20 +19,17 @@ package org.apache.shardingsphere.proxy.backend.mysql.handler.admin.executor;
 
 import org.apache.shardingsphere.authority.model.ShardingSpherePrivileges;
 import org.apache.shardingsphere.authority.rule.AuthorityRule;
-import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.executor.sql.execute.result.query.QueryResultMetaData;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
-import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
-import org.apache.shardingsphere.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dal.ShowFilterSegment;
@@ -48,10 +45,8 @@ import org.mockito.quality.Strictness;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -70,6 +65,8 @@ import static org.mockito.Mockito.when;
 class ShowDatabasesExecutorTest {
     
     private static final String DATABASE_PATTERN = "database_%s";
+    
+    private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "MySQL");
     
     @Test
     void assertExecute() throws SQLException {
@@ -185,12 +182,10 @@ class ShowDatabasesExecutorTest {
     private ContextManager mockContextManager() {
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         RuleMetaData globalRuleMetaData = new RuleMetaData(Collections.singleton(mockAuthorityRule()));
-        MetaDataPersistService metaDataPersistService = mock(MetaDataPersistService.class);
-        ShardingSphereDataPersistService shardingSphereDataPersistService = mock(ShardingSphereDataPersistService.class);
-        when(shardingSphereDataPersistService.load(any())).thenReturn(Optional.empty());
-        when(metaDataPersistService.getShardingSphereDataPersistService()).thenReturn(shardingSphereDataPersistService);
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(metaDataPersistService, new ShardingSphereMetaData(getDatabases(),
-                mock(ResourceMetaData.class), globalRuleMetaData, new ConfigurationProperties(new Properties())));
+        MetaDataPersistService metaDataPersistService = mock(MetaDataPersistService.class, RETURNS_DEEP_STUBS);
+        when(metaDataPersistService.getShardingSphereDataPersistService().load(any())).thenReturn(Optional.empty());
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(createDatabases(), mock(), globalRuleMetaData, mock());
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(metaDataPersistService, metaData));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         return result;
     }
@@ -208,15 +203,9 @@ class ShowDatabasesExecutorTest {
         return result;
     }
     
-    private Map<String, ShardingSphereDatabase> getDatabases() {
-        Map<String, ShardingSphereDatabase> result = new LinkedHashMap<>(10, 1F);
-        for (int i = 0; i < 10; i++) {
-            ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-            when(database.getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "MySQL"));
-            when(database.getName()).thenReturn(String.format(DATABASE_PATTERN, i));
-            result.put(String.format(DATABASE_PATTERN, i), database);
-        }
-        return result;
+    private Collection<ShardingSphereDatabase> createDatabases() {
+        return IntStream.range(0, 10)
+                .mapToObj(each -> new ShardingSphereDatabase(String.format(DATABASE_PATTERN, each), databaseType, mock(), mock(), Collections.emptyList())).collect(Collectors.toList());
     }
     
     private ConnectionSession mockConnectionSession() {

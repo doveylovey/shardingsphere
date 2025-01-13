@@ -21,7 +21,6 @@ import org.apache.shardingsphere.authority.rule.AuthorityRule;
 import org.apache.shardingsphere.authority.rule.builder.DefaultAuthorityRuleConfigurationBuilder;
 import org.apache.shardingsphere.authority.rule.builder.DefaultUser;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
 import org.apache.shardingsphere.infra.hint.HintValueContext;
@@ -31,7 +30,7 @@ import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.connection.transaction.TransactionConnectionContext;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.infra.state.cluster.ClusterState;
+import org.apache.shardingsphere.mode.state.ClusterState;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
 import org.apache.shardingsphere.parser.rule.SQLParserRule;
@@ -101,13 +100,13 @@ class ProxyBackendHandlerFactoryTest {
         when(databaseConnectionManager.getConnectionSession()).thenReturn(connectionSession);
         when(connectionSession.getDatabaseConnectionManager()).thenReturn(databaseConnectionManager);
         ContextManager contextManager = mockContextManager();
-        when(contextManager.getStateContext().getClusterState()).thenReturn(ClusterState.OK);
+        when(contextManager.getStateContext().getState()).thenReturn(ClusterState.OK);
         when(ProxyContext.getInstance().getContextManager()).thenReturn(contextManager);
     }
     
     private ConnectionContext mockConnectionContext() {
         ConnectionContext result = mock(ConnectionContext.class);
-        when(result.getCurrentDatabaseName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
+        when(result.getCurrentDatabaseName()).thenReturn(Optional.of("foo_db"));
         when(result.getGrantee()).thenReturn(new Grantee(DefaultUser.USERNAME, "%"));
         when(result.getTransactionContext()).thenReturn(mock(TransactionConnectionContext.class));
         return result;
@@ -115,23 +114,15 @@ class ProxyBackendHandlerFactoryTest {
     
     private ContextManager mockContextManager() {
         MetaDataContexts metaDataContexts = mock(MetaDataContexts.class, RETURNS_DEEP_STUBS);
-        ShardingSphereDatabase database = mockDatabase();
-        when(metaDataContexts.getMetaData().getDatabase("db")).thenReturn(database);
+        when(metaDataContexts.getMetaData().getDatabase("db")).thenReturn(new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.emptyList()), Collections.emptyList()));
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         when(metaDataContexts.getMetaData().getProps()).thenReturn(new ConfigurationProperties(new Properties()));
         RuleMetaData globalRuleMetaData = new RuleMetaData(Arrays.asList(
                 new AuthorityRule(new DefaultAuthorityRuleConfigurationBuilder().build()),
                 new SQLParserRule(new DefaultSQLParserRuleConfigurationBuilder().build()),
-                new TransactionRule(new DefaultTransactionRuleConfigurationBuilder().build(), Collections.emptyMap())));
+                new TransactionRule(new DefaultTransactionRuleConfigurationBuilder().build(), Collections.emptyList())));
         when(metaDataContexts.getMetaData().getGlobalRuleMetaData()).thenReturn(globalRuleMetaData);
-        return result;
-    }
-    
-    private ShardingSphereDatabase mockDatabase() {
-        ShardingSphereDatabase result = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(result.getRuleMetaData().getRules()).thenReturn(Collections.emptyList());
-        when(result.getSchema(DefaultDatabase.LOGIC_NAME).getAllColumnNames("t_order")).thenReturn(Collections.singletonList("order_id"));
         return result;
     }
     

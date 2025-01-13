@@ -20,7 +20,6 @@ package org.apache.shardingsphere.proxy.backend.connector;
 import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.executor.sql.execute.result.query.QueryResult;
@@ -42,11 +41,11 @@ import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
-import org.apache.shardingsphere.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
+import org.apache.shardingsphere.mode.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.parser.config.SQLParserRuleConfiguration;
 import org.apache.shardingsphere.parser.rule.SQLParserRule;
 import org.apache.shardingsphere.proxy.backend.connector.jdbc.fixture.QueryHeaderBuilderFixture;
@@ -77,7 +76,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -125,21 +123,22 @@ class StandardDatabaseConnectorTest {
         ShardingSphereDataPersistService shardingSphereDataPersistService = mock(ShardingSphereDataPersistService.class);
         when(shardingSphereDataPersistService.load(any())).thenReturn(Optional.empty());
         when(metaDataPersistService.getShardingSphereDataPersistService()).thenReturn(shardingSphereDataPersistService);
-        Map<String, ShardingSphereDatabase> databases = mockDatabases();
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(
-                metaDataPersistService, new ShardingSphereMetaData(databases, mock(ResourceMetaData.class), globalRuleMetaData, new ConfigurationProperties(new Properties())));
+        ShardingSphereDatabase database = mockDatabase();
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(Collections.singleton(database), mock(ResourceMetaData.class), globalRuleMetaData, new ConfigurationProperties(new Properties()));
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(metaDataPersistService, metaData));
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
-        when(result.getDatabase("foo_db")).thenReturn(databases.get("foo_db"));
+        when(result.getDatabase("foo_db")).thenReturn(database);
         return result;
     }
     
-    private Map<String, ShardingSphereDatabase> mockDatabases() {
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
-        when(database.containsDataSource()).thenReturn(true);
-        when(database.isComplete()).thenReturn(true);
-        when(database.getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "H2"));
-        return Collections.singletonMap("foo_db", database);
+    private ShardingSphereDatabase mockDatabase() {
+        ShardingSphereDatabase result = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
+        when(result.getName()).thenReturn("foo_db");
+        when(result.containsDataSource()).thenReturn(true);
+        when(result.isComplete()).thenReturn(true);
+        when(result.getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "H2"));
+        return result;
     }
     
     @Test
@@ -181,19 +180,19 @@ class StandardDatabaseConnectorTest {
     
     private QueryContext createQueryContext(final SQLStatementContext sqlStatementContext) {
         ConnectionContext connectionContext = mock(ConnectionContext.class);
-        when(connectionContext.getCurrentDatabaseName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
+        when(connectionContext.getCurrentDatabaseName()).thenReturn(Optional.of("foo_db"));
         ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class);
-        when(metaData.containsDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(true);
-        ShardingSphereDatabase database = mockDatabases().get("foo_db");
-        when(metaData.getDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(database);
+        when(metaData.containsDatabase("foo_db")).thenReturn(true);
+        ShardingSphereDatabase database = mockDatabase();
+        when(metaData.getDatabase("foo_db")).thenReturn(database);
         return new QueryContext(sqlStatementContext, "schemaName", Collections.emptyList(), new HintValueContext(), connectionContext, metaData);
     }
     
     private ShardingSphereDatabase createDatabaseMetaData() {
         ShardingSphereDatabase result = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
         ShardingSphereColumn column = new ShardingSphereColumn("order_id", Types.INTEGER, true, false, false, true, false, false);
-        when(result.getSchema(DefaultDatabase.LOGIC_NAME).getTable("t_logic_order")).thenReturn(
-                new ShardingSphereTable("t_logic_order", Collections.singleton(column), Collections.singleton(new ShardingSphereIndex("order_id")), Collections.emptyList()));
+        when(result.getSchema("foo_db").getTable("t_logic_order")).thenReturn(new ShardingSphereTable(
+                "t_logic_order", Collections.singleton(column), Collections.singleton(new ShardingSphereIndex("order_id", Collections.emptyList(), false)), Collections.emptyList()));
         when(result.getRuleMetaData().getRules()).thenReturn(Collections.singleton(mock(ShardingRule.class)));
         return result;
     }

@@ -19,27 +19,26 @@ package org.apache.shardingsphere.encrypt.checker.sql.predicate;
 
 import org.apache.shardingsphere.encrypt.exception.metadata.MissingMatchedEncryptQueryAlgorithmException;
 import org.apache.shardingsphere.encrypt.rewrite.token.comparator.JoinConditionsEncryptorComparator;
-import org.apache.shardingsphere.encrypt.rewrite.util.EncryptPredicateSegmentUtils;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.encrypt.rule.table.EncryptTable;
 import org.apache.shardingsphere.infra.annotation.HighFrequencyInvocation;
+import org.apache.shardingsphere.infra.binder.context.extractor.SQLStatementContextExtractor;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
 import org.apache.shardingsphere.infra.binder.context.type.WhereAvailable;
 import org.apache.shardingsphere.infra.checker.SupportedSQLChecker;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.exception.generic.UnsupportedSQLOperationException;
+import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
+import org.apache.shardingsphere.sql.parser.statement.core.extractor.ExpressionExtractor;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.expr.BinaryOperationExpression;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.expr.ExpressionSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.predicate.AndPredicate;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.predicate.WhereSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.util.ExpressionExtractUtils;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -54,18 +53,17 @@ public final class EncryptPredicateColumnSupportedChecker implements SupportedSQ
     }
     
     @Override
-    public void check(final EncryptRule rule, final ShardingSphereSchema schema, final SQLStatementContext sqlStatementContext) {
-        Collection<SelectStatementContext> allSubqueryContexts = EncryptPredicateSegmentUtils.getAllSubqueryContexts(sqlStatementContext);
-        Collection<BinaryOperationExpression> joinConditions = EncryptPredicateSegmentUtils.getJoinConditions((WhereAvailable) sqlStatementContext, allSubqueryContexts);
+    public void check(final EncryptRule rule, final ShardingSphereDatabase database, final ShardingSphereSchema currentSchema, final SQLStatementContext sqlStatementContext) {
+        Collection<SelectStatementContext> allSubqueryContexts = SQLStatementContextExtractor.getAllSubqueryContexts(sqlStatementContext);
+        Collection<BinaryOperationExpression> joinConditions = SQLStatementContextExtractor.getJoinConditions((WhereAvailable) sqlStatementContext, allSubqueryContexts);
         ShardingSpherePreconditions.checkState(JoinConditionsEncryptorComparator.isSame(joinConditions, rule),
                 () -> new UnsupportedSQLOperationException("Can not use different encryptor in join condition"));
-        check(rule, schema, (WhereAvailable) sqlStatementContext);
+        check(rule, (WhereAvailable) sqlStatementContext);
     }
     
-    private void check(final EncryptRule rule, final ShardingSphereSchema schema, final WhereAvailable sqlStatementContext) {
-        Map<String, String> columnExpressionTableNames = ((TableAvailable) sqlStatementContext).getTablesContext().findTableNames(sqlStatementContext.getColumnSegments(), schema);
+    private void check(final EncryptRule rule, final WhereAvailable sqlStatementContext) {
         for (ColumnSegment each : sqlStatementContext.getColumnSegments()) {
-            Optional<EncryptTable> encryptTable = rule.findEncryptTable(columnExpressionTableNames.getOrDefault(each.getExpression(), ""));
+            Optional<EncryptTable> encryptTable = rule.findEncryptTable(each.getColumnBoundInfo().getOriginalTable().getValue());
             String columnName = each.getIdentifier().getValue();
             if (encryptTable.isPresent() && encryptTable.get().isEncryptColumn(columnName) && includesLike(sqlStatementContext.getWhereSegments(), each)) {
                 String tableName = encryptTable.get().getTable();
@@ -77,7 +75,7 @@ public final class EncryptPredicateColumnSupportedChecker implements SupportedSQ
     
     private boolean includesLike(final Collection<WhereSegment> whereSegments, final ColumnSegment targetColumnSegment) {
         for (WhereSegment each : whereSegments) {
-            Collection<AndPredicate> andPredicates = ExpressionExtractUtils.getAndPredicates(each.getExpr());
+            Collection<AndPredicate> andPredicates = ExpressionExtractor.extractAndPredicates(each.getExpr());
             for (AndPredicate andPredicate : andPredicates) {
                 if (isLikeColumnSegment(andPredicate, targetColumnSegment)) {
                     return true;

@@ -24,16 +24,17 @@ import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
 import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
 import org.apache.shardingsphere.mode.spi.PersistRepository;
 
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Storage unit manager.
@@ -98,8 +99,8 @@ public final class StorageUnitManager {
     public synchronized void unregisterStorageUnit(final String databaseName, final String storageUnitName) {
         try {
             closeStaleRules(databaseName);
-            SwitchingResource switchingResource = resourceSwitchManager.switchByUnregisterStorageUnit(metaDataContexts.get().getMetaData().getDatabase(databaseName).getResourceMetaData(),
-                    Collections.singletonList(storageUnitName));
+            SwitchingResource switchingResource = resourceSwitchManager.switchByUnregisterStorageUnit(
+                    metaDataContexts.get().getMetaData().getDatabase(databaseName).getResourceMetaData(), Collections.singletonList(storageUnitName));
             buildNewMetaDataContext(databaseName, switchingResource);
         } catch (final SQLException ex) {
             log.error("Alter database: {} register storage unit failed", databaseName, ex);
@@ -107,23 +108,21 @@ public final class StorageUnitManager {
     }
     
     private void buildNewMetaDataContext(final String databaseName, final SwitchingResource switchingResource) throws SQLException {
-        MetaDataContexts reloadMetaDataContexts = MetaDataContextsFactory.createBySwitchResource(databaseName, true,
-                switchingResource, metaDataContexts.get(), metaDataPersistService, computeNodeInstanceContext);
+        MetaDataContexts reloadMetaDataContexts = MetaDataContextsFactory.createBySwitchResource(
+                databaseName, true, switchingResource, metaDataContexts.get(), metaDataPersistService, computeNodeInstanceContext);
         metaDataContexts.set(reloadMetaDataContexts);
-        metaDataContexts.get().getMetaData().getDatabases().putAll(buildShardingSphereDatabase(reloadMetaDataContexts.getMetaData().getDatabase(databaseName)));
+        metaDataContexts.get().getMetaData().putDatabase(buildDatabase(reloadMetaDataContexts.getMetaData().getDatabase(databaseName)));
         switchingResource.closeStaleDataSources();
     }
     
-    private Map<String, ShardingSphereDatabase> buildShardingSphereDatabase(final ShardingSphereDatabase originalDatabase) {
-        return Collections.singletonMap(originalDatabase.getName().toLowerCase(), new ShardingSphereDatabase(originalDatabase.getName(),
-                originalDatabase.getProtocolType(), originalDatabase.getResourceMetaData(), originalDatabase.getRuleMetaData(), buildSchemas(originalDatabase)));
+    private ShardingSphereDatabase buildDatabase(final ShardingSphereDatabase originalDatabase) {
+        return new ShardingSphereDatabase(
+                originalDatabase.getName(), originalDatabase.getProtocolType(), originalDatabase.getResourceMetaData(), originalDatabase.getRuleMetaData(), buildSchemas(originalDatabase));
     }
     
-    private Map<String, ShardingSphereSchema> buildSchemas(final ShardingSphereDatabase originalDatabase) {
-        Map<String, ShardingSphereSchema> result = new LinkedHashMap<>(originalDatabase.getSchemas().size(), 1F);
-        originalDatabase.getSchemas().keySet().forEach(schemaName -> result.put(schemaName.toLowerCase(), new ShardingSphereSchema(
-                schemaName, originalDatabase.getSchema(schemaName).getTables(), metaDataPersistService.getDatabaseMetaDataFacade().getView().load(originalDatabase.getName(), schemaName))));
-        return result;
+    private Collection<ShardingSphereSchema> buildSchemas(final ShardingSphereDatabase originalDatabase) {
+        return originalDatabase.getAllSchemas().stream().map(each -> new ShardingSphereSchema(
+                each.getName(), each.getAllTables(), metaDataPersistService.getDatabaseMetaDataFacade().getView().load(originalDatabase.getName(), each.getName()))).collect(Collectors.toList());
     }
     
     @SneakyThrows(Exception.class)

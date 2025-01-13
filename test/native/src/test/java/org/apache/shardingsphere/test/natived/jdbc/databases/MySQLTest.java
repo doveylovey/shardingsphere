@@ -29,7 +29,6 @@ import org.junit.jupiter.api.condition.EnabledInNativeImage;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -53,16 +52,11 @@ class MySQLTest {
     
     private static final String SYSTEM_PROP_KEY_PREFIX = "fixture.test-native.yaml.database.mysql.";
     
-    private static final String USERNAME = "root";
-    
-    private static final String PASSWORD = "123456";
-    
-    private static final String DATABASE = "test";
+    private static final String PASSWORD = "example";
     
     @SuppressWarnings("resource")
     @Container
-    public static final GenericContainer<?> CONTAINER = new GenericContainer<>(DockerImageName.parse("mysql:9.0.1-oraclelinux9"))
-            .withEnv("MYSQL_DATABASE", DATABASE)
+    public static final GenericContainer<?> CONTAINER = new GenericContainer<>("mysql:9.1.0-oraclelinux9")
             .withEnv("MYSQL_ROOT_PASSWORD", PASSWORD)
             .withExposedPorts(3306);
     
@@ -105,14 +99,14 @@ class MySQLTest {
     
     private Connection openConnection() throws SQLException {
         Properties props = new Properties();
-        props.setProperty("user", USERNAME);
+        props.setProperty("user", "root");
         props.setProperty("password", PASSWORD);
-        return DriverManager.getConnection(jdbcUrlPrefix + DATABASE, props);
+        return DriverManager.getConnection(jdbcUrlPrefix, props);
     }
     
     @SuppressWarnings({"SqlDialectInspection", "SqlNoDataSourceInspection"})
     private DataSource createDataSource() throws SQLException {
-        Awaitility.await().atMost(Duration.ofMinutes(1L)).ignoreExceptionsMatching(e -> e instanceof CommunicationsException).until(() -> {
+        Awaitility.await().atMost(Duration.ofMinutes(1L)).ignoreExceptionsMatching(CommunicationsException.class::isInstance).until(() -> {
             openConnection().close();
             return true;
         });

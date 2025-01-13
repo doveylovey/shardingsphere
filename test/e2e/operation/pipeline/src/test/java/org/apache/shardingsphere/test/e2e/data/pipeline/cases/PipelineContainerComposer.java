@@ -41,6 +41,7 @@ import org.apache.shardingsphere.single.yaml.config.YamlSingleRuleConfiguration;
 import org.apache.shardingsphere.test.e2e.data.pipeline.command.ExtraSQLCommand;
 import org.apache.shardingsphere.test.e2e.data.pipeline.env.PipelineE2EEnvironment;
 import org.apache.shardingsphere.test.e2e.data.pipeline.env.enums.PipelineEnvTypeEnum;
+import org.apache.shardingsphere.test.e2e.data.pipeline.env.enums.PipelineProxyTypeEnum;
 import org.apache.shardingsphere.test.e2e.data.pipeline.framework.container.compose.BaseContainerComposer;
 import org.apache.shardingsphere.test.e2e.data.pipeline.framework.container.compose.DockerContainerComposer;
 import org.apache.shardingsphere.test.e2e.data.pipeline.framework.container.compose.NativeContainerComposer;
@@ -61,6 +62,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -242,7 +244,7 @@ public final class PipelineContainerComposer implements AutoCloseable {
         String registerStorageUnitTemplate = "REGISTER STORAGE UNIT ${ds} ( URL='${url}', USER='${user}', PASSWORD='${password}')".replace("${ds}", storageUnitName)
                 .replace("${user}", username)
                 .replace("${password}", getPassword())
-                .replace("${url}", getActualJdbcUrlTemplate(storageUnitName, true));
+                .replace("${url}", getActualJdbcUrlTemplate(storageUnitName, PipelineE2EEnvironment.getInstance().getItProxyType() == PipelineProxyTypeEnum.NONE));
         proxyExecuteWithLog(registerStorageUnitTemplate, 0);
         int timeout = databaseType instanceof OpenGaussDatabaseType ? 60 : 10;
         Awaitility.await().ignoreExceptions().atMost(timeout, TimeUnit.SECONDS).pollInterval(3L, TimeUnit.SECONDS).until(() -> showStorageUnitsName().contains(storageUnitName));
@@ -392,7 +394,7 @@ public final class PipelineContainerComposer implements AutoCloseable {
                 connection.createStatement().execute(each);
             }
         }
-        Awaitility.await().pollDelay(Math.max(sleepSeconds, 0L), TimeUnit.SECONDS).until(() -> true);
+        Awaitility.await().timeout(Duration.ofMinutes(1L)).pollDelay(Math.max(sleepSeconds, 0L), TimeUnit.SECONDS).until(() -> true);
     }
     
     /**

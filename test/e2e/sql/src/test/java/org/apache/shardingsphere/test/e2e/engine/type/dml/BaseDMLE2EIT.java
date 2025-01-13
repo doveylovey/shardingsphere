@@ -18,7 +18,9 @@
 package org.apache.shardingsphere.test.e2e.engine.type.dml;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Sets;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.expr.core.InlineExpressionParserFactory;
@@ -47,6 +49,7 @@ import javax.sql.DataSource;
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -56,6 +59,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -64,6 +68,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -103,14 +108,7 @@ public abstract class BaseDMLE2EIT implements E2EEnvironmentAware {
         }
     }
     
-    /**
-     * Get data set.
-     *
-     * @param actualUpdateCounts actual update counts
-     * @param dataSets data sets
-     * @return data set
-     */
-    public DataSet getDataSet(final int[] actualUpdateCounts, final Collection<DataSet> dataSets) {
+    private DataSet getDataSet(final int[] actualUpdateCounts, final Collection<DataSet> dataSets, final String sql) {
         Collection<DataSet> result = new LinkedList<>();
         assertThat(actualUpdateCounts.length, is(dataSets.size()));
         int count = 0;
@@ -121,18 +119,47 @@ public abstract class BaseDMLE2EIT implements E2EEnvironmentAware {
             result.add(each);
             count++;
         }
-        return mergeDataSets(result);
+        return mergeDataSets(result, sql);
     }
     
-    private DataSet mergeDataSets(final Collection<DataSet> dataSets) {
+    private DataSet mergeDataSets(final Collection<DataSet> dataSets, final String sql) {
         DataSet result = new DataSet();
         Set<DataSetRow> existedRows = new HashSet<>();
         for (DataSet each : dataSets) {
             mergeMetaData(each, result);
+            if (sql.trim().toUpperCase().startsWith("DELETE")) {
+                mergeDeleteRow(each, result, existedRows);
+                continue;
+            } else if (sql.trim().toUpperCase().startsWith("UPDATE")) {
+                mergeUpdateRow(each, result, existedRows);
+                continue;
+            }
             mergeRow(each, result, existedRows);
         }
         sortRow(result);
         return result;
+    }
+    
+    private void mergeDeleteRow(final DataSet original, final DataSet dist, final Set<DataSetRow> existedRows) {
+        Collection<DataSetRow> removedRows = getDifferentRows(existedRows, new HashSet<>(original.getRows()));
+        mergeRow(original, dist, existedRows);
+        dist.getRows().removeAll(removedRows);
+    }
+    
+    private Collection<DataSetRow> getDifferentRows(final Set<DataSetRow> existedRows, final Set<DataSetRow> originalRows) {
+        if (existedRows.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Collection<DataSetRow> result = new HashSet<>();
+        result.addAll(Sets.difference(existedRows, originalRows));
+        result.addAll(Sets.difference(originalRows, existedRows));
+        return result;
+    }
+    
+    private void mergeUpdateRow(final DataSet original, final DataSet dist, final Set<DataSetRow> existedRows) {
+        Collection<DataSetRow> removedRows = getDifferentRows(existedRows, new HashSet<>(original.getRows())).stream().filter(each -> !each.isUpdated()).collect(Collectors.toList());
+        mergeRow(original, dist, existedRows);
+        dist.getRows().removeAll(removedRows);
     }
     
     private void mergeMetaData(final DataSet original, final DataSet dist) {
@@ -187,7 +214,7 @@ public abstract class BaseDMLE2EIT implements E2EEnvironmentAware {
         for (E2ETestCaseAssertion each : testParam.getTestCaseContext().getTestCase().getAssertions()) {
             dataSets.add(DataSetLoader.load(testParam.getTestCaseContext().getParentPath(), testParam.getScenario(), testParam.getDatabaseType(), testParam.getMode(), each.getExpectedDataFile()));
         }
-        DataSet dataSet = getDataSet(actualUpdateCounts, dataSets);
+        DataSet dataSet = getDataSet(actualUpdateCounts, dataSets, testParam.getTestCaseContext().getTestCase().getSql());
         for (DataSetMetaData each : dataSet.getMetaDataList()) {
             assertDataSet(each, testParam, dataSet);
         }
@@ -259,6 +286,8 @@ public abstract class BaseDMLE2EIT implements E2EEnvironmentAware {
             assertThat(actual.getString(columnIndex), is(expected));
         } else if (Types.BINARY == actual.getMetaData().getColumnType(columnIndex)) {
             assertThat(actual.getObject(columnIndex), is(expected.getBytes(StandardCharsets.UTF_8)));
+        } else if (Types.CLOB == actual.getMetaData().getColumnType(columnIndex)) {
+            assertThat(getClobValue((Clob) actual.getObject(columnIndex)), is(expected));
         } else {
             assertThat(String.valueOf(actual.getObject(columnIndex)), is(expected));
         }
@@ -266,6 +295,11 @@ public abstract class BaseDMLE2EIT implements E2EEnvironmentAware {
     
     private boolean isPostgreSQLOrOpenGaussMoney(final String columnTypeName, final DatabaseType databaseType) {
         return "money".equalsIgnoreCase(columnTypeName) && ("PostgreSQL".equals(databaseType.getType()) || "openGauss".equals(databaseType.getType()));
+    }
+    
+    @SneakyThrows(SQLException.class)
+    private static String getClobValue(final Clob value) {
+        return value.getSubString(1, (int) value.length());
     }
     
     protected void assertGeneratedKeys(final AssertionTestParameter testParam, final ResultSet generatedKeys, final DatabaseType databaseType) throws SQLException {

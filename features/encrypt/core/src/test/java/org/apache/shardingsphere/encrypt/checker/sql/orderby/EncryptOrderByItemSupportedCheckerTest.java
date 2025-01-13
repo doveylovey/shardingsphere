@@ -25,16 +25,16 @@ import org.apache.shardingsphere.infra.binder.context.segment.select.orderby.Ord
 import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.metadata.database.enums.NullsOrderType;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sql.parser.statement.core.enums.OrderDirection;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.order.item.ColumnOrderByItemSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.AliasSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.OwnerSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.ColumnSegmentBoundInfo;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
@@ -94,13 +94,12 @@ class EncryptOrderByItemSupportedCheckerTest {
     
     @Test
     void assertCheckFailed() {
-        assertThrows(UnsupportedEncryptSQLException.class,
-                () -> new EncryptOrderByItemSupportedChecker().check(mockEncryptRule(), mock(ShardingSphereSchema.class), mockSelectStatementContext("foo_tbl")));
+        assertThrows(UnsupportedEncryptSQLException.class, () -> new EncryptOrderByItemSupportedChecker().check(mockEncryptRule(), mock(), mock(), mockSelectStatementContext("foo_tbl")));
     }
     
     @Test
     void assertCheckSuccess() {
-        assertDoesNotThrow(() -> new EncryptOrderByItemSupportedChecker().check(mockEncryptRule(), mock(ShardingSphereSchema.class), mockSelectStatementContext("bar_tbl")));
+        assertDoesNotThrow(() -> new EncryptOrderByItemSupportedChecker().check(mockEncryptRule(), mock(), mock(), mockSelectStatementContext("bar_tbl")));
     }
     
     private EncryptRule mockEncryptRule() {
@@ -119,6 +118,8 @@ class EncryptOrderByItemSupportedCheckerTest {
         simpleTableSegment.setAlias(new AliasSegment(0, 0, new IdentifierValue("a")));
         ColumnSegment columnSegment = new ColumnSegment(0, 0, new IdentifierValue("foo_col"));
         columnSegment.setOwner(new OwnerSegment(0, 0, new IdentifierValue("a")));
+        columnSegment.setColumnBoundInfo(
+                new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_db")), new IdentifierValue(tableName), new IdentifierValue("foo_col")));
         SelectStatementContext result = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
         when(result.getDatabaseType()).thenReturn(databaseType);
         ColumnOrderByItemSegment columnOrderByItemSegment = new ColumnOrderByItemSegment(columnSegment, OrderDirection.ASC, NullsOrderType.FIRST);
@@ -126,7 +127,7 @@ class EncryptOrderByItemSupportedCheckerTest {
         when(result.getOrderByContext().getItems()).thenReturn(Collections.singleton(orderByItem));
         when(result.getGroupByContext().getItems()).thenReturn(Collections.emptyList());
         when(result.getSubqueryContexts().values()).thenReturn(Collections.emptyList());
-        when(result.getTablesContext()).thenReturn(new TablesContext(Collections.singleton(simpleTableSegment), databaseType, DefaultDatabase.LOGIC_NAME));
+        when(result.getTablesContext()).thenReturn(new TablesContext(Collections.singleton(simpleTableSegment)));
         return result;
     }
 }

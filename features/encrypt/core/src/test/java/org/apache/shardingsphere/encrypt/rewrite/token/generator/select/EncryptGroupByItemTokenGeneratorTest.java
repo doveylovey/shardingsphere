@@ -23,16 +23,16 @@ import org.apache.shardingsphere.encrypt.rule.table.EncryptTable;
 import org.apache.shardingsphere.infra.binder.context.segment.select.orderby.OrderByItem;
 import org.apache.shardingsphere.infra.binder.context.segment.table.TablesContext;
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.metadata.database.enums.NullsOrderType;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sql.parser.statement.core.enums.OrderDirection;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.order.item.ColumnOrderByItemSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.AliasSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.OwnerSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.ColumnSegmentBoundInfo;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
@@ -50,15 +50,13 @@ import static org.mockito.Mockito.when;
 
 class EncryptGroupByItemTokenGeneratorTest {
     
-    private EncryptGroupByItemTokenGenerator generator;
-    
     private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
+    
+    private EncryptGroupByItemTokenGenerator generator;
     
     @BeforeEach
     void setup() {
         generator = new EncryptGroupByItemTokenGenerator(mockEncryptRule());
-        generator.setSchemas(Collections.singletonMap("test", mock(ShardingSphereSchema.class)));
-        generator.setDatabaseType(databaseType);
     }
     
     private EncryptRule mockEncryptRule() {
@@ -81,6 +79,8 @@ class EncryptGroupByItemTokenGeneratorTest {
         SimpleTableSegment simpleTableSegment = new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_encrypt")));
         simpleTableSegment.setAlias(new AliasSegment(0, 0, new IdentifierValue("a")));
         ColumnSegment columnSegment = new ColumnSegment(0, 0, new IdentifierValue("certificate_number"));
+        columnSegment.setColumnBoundInfo(new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_db")), new IdentifierValue("t_encrypt"),
+                new IdentifierValue("certificate_number")));
         columnSegment.setOwner(new OwnerSegment(0, 0, new IdentifierValue("a")));
         SelectStatementContext result = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
         when(result.getDatabaseType()).thenReturn(databaseType);
@@ -88,7 +88,7 @@ class EncryptGroupByItemTokenGeneratorTest {
         OrderByItem orderByItem = new OrderByItem(columnOrderByItemSegment);
         when(result.getGroupByContext().getItems()).thenReturn(Collections.singleton(orderByItem));
         when(result.getSubqueryContexts().values()).thenReturn(Collections.emptyList());
-        when(result.getTablesContext()).thenReturn(new TablesContext(Collections.singleton(simpleTableSegment), databaseType, DefaultDatabase.LOGIC_NAME));
+        when(result.getTablesContext()).thenReturn(new TablesContext(Collections.singleton(simpleTableSegment)));
         return result;
     }
 }

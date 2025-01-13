@@ -62,7 +62,6 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -105,6 +104,7 @@ class OpenGaussComBatchBindExecutorTest {
     private ConnectionSession mockConnectionSession() throws SQLException {
         ConnectionSession result = mock(ConnectionSession.class);
         when(result.getConnectionContext()).thenReturn(new ConnectionContext(Collections::emptySet));
+        when(result.getCurrentDatabaseName()).thenReturn("foo_db");
         when(result.getUsedDatabaseName()).thenReturn("foo_db");
         ConnectionContext connectionContext = mockConnectionContext();
         when(result.getConnectionContext()).thenReturn(connectionContext);
@@ -123,7 +123,6 @@ class OpenGaussComBatchBindExecutorTest {
     
     private ConnectionContext mockConnectionContext() {
         ConnectionContext result = mock(ConnectionContext.class);
-        when(result.getCurrentDatabaseName()).thenReturn(Optional.of("foo_db"));
         when(result.getTransactionContext()).thenReturn(mock(TransactionConnectionContext.class));
         return result;
     }
@@ -157,7 +156,7 @@ class OpenGaussComBatchBindExecutorTest {
         when(result.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.emptyList()));
         when(result.containsSchema("public")).thenReturn(true);
         when(result.getSchema("public").containsTable("bmsql")).thenReturn(true);
-        when(result.getSchema("public").getTable("bmsql").getColumnValues()).thenReturn(Collections.singleton(new ShardingSphereColumn("id", Types.VARCHAR, false, false, false, true, false, false)));
+        when(result.getSchema("public").getTable("bmsql").getAllColumns()).thenReturn(Collections.singleton(new ShardingSphereColumn("id", Types.VARCHAR, false, false, false, true, false, false)));
         return result;
     }
 }

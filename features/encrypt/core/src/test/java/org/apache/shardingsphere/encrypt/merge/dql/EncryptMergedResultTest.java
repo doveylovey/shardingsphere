@@ -33,6 +33,7 @@ import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.ColumnSegmentBoundInfo;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,12 +66,6 @@ class EncryptMergedResultTest {
     
     private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
     
-    @Mock
-    private ShardingSphereDatabase database;
-    
-    @Mock
-    private ShardingSphereMetaData metaData;
-    
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private SelectStatementContext selectStatementContext;
     
@@ -79,14 +74,14 @@ class EncryptMergedResultTest {
     
     @Test
     void assertNext() throws SQLException {
-        assertFalse(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).next());
+        assertFalse(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).next());
     }
     
     @Test
     void assertGetValueWithoutColumnProjection() throws SQLException {
         when(selectStatementContext.findColumnProjection(1)).thenReturn(Optional.empty());
         when(mergedResult.getValue(1, String.class)).thenReturn("foo_value");
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
+        assertThat(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
     }
     
     @Test
@@ -95,9 +90,9 @@ class EncryptMergedResultTest {
                 null, null, new ColumnSegmentBoundInfo(new IdentifierValue("foo_col")));
         when(selectStatementContext.findColumnProjection(1)).thenReturn(Optional.of(columnProjection));
         EncryptRule rule = mockRule(mock(EncryptAlgorithm.class));
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList());
         when(mergedResult.getValue(1, String.class)).thenReturn("foo_value");
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
+        assertThat(new EncryptMergedResult(database, mock(), selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
     }
     
     @Test
@@ -106,43 +101,39 @@ class EncryptMergedResultTest {
                 null, null, new ColumnSegmentBoundInfo(new IdentifierValue("bar_col")));
         when(selectStatementContext.findColumnProjection(1)).thenReturn(Optional.of(columnProjection));
         EncryptRule rule = mockRule(mock(EncryptAlgorithm.class));
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList());
         when(mergedResult.getValue(1, String.class)).thenReturn("foo_value");
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
+        assertThat(new EncryptMergedResult(database, mock(), selectStatementContext, mergedResult).getValue(1, String.class), is("foo_value"));
     }
     
     @Test
     void assertGetValueWithEncryptColumn() throws SQLException {
-        ColumnProjection columnProjection = new ColumnProjection(new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col"), new IdentifierValue("foo_alias"), databaseType,
-                null, null, new ColumnSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema"), new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col")));
+        ColumnProjection columnProjection =
+                new ColumnProjection(new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col"), new IdentifierValue("foo_alias"), databaseType, null, null, new ColumnSegmentBoundInfo(
+                        new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col")));
         when(selectStatementContext.findColumnProjection(1)).thenReturn(Optional.of(columnProjection));
         when(selectStatementContext.getTablesContext().getSchemaName()).thenReturn(Optional.of("foo_schema"));
         EncryptAlgorithm encryptAlgorithm = mock(EncryptAlgorithm.class);
         when(encryptAlgorithm.decrypt(eq("foo_value"), deepEq(new AlgorithmSQLContext("foo_db", "foo_schema", "foo_tbl", "foo_col")))).thenReturn("foo_decrypted_value");
         EncryptRule rule = mockRule(encryptAlgorithm);
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class);
-        when(database.getName()).thenReturn("foo_db");
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
-        when(metaData.containsDatabase("foo_db")).thenReturn(true);
-        when(metaData.getDatabase("foo_db")).thenReturn(database);
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList());
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(Collections.singleton(database), mock(), mock(), mock());
         when(mergedResult.getValue(1, Object.class)).thenReturn("foo_value");
         assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getValue(1, String.class), is("foo_decrypted_value"));
     }
     
     @Test
     void assertGetValueFailed() throws SQLException {
-        ColumnProjection columnProjection = new ColumnProjection(new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col"), new IdentifierValue("foo_alias"), databaseType,
-                null, null, new ColumnSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema"), new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col")));
+        ColumnProjection columnProjection =
+                new ColumnProjection(new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col"), new IdentifierValue("foo_alias"), databaseType, null, null, new ColumnSegmentBoundInfo(
+                        new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")), new IdentifierValue("foo_tbl"), new IdentifierValue("foo_col")));
         when(selectStatementContext.findColumnProjection(1)).thenReturn(Optional.of(columnProjection));
         when(selectStatementContext.getTablesContext().getSchemaName()).thenReturn(Optional.of("foo_schema"));
         EncryptAlgorithm encryptAlgorithm = mock(EncryptAlgorithm.class);
         when(encryptAlgorithm.decrypt(eq("foo_value"), deepEq(new AlgorithmSQLContext("foo_db", "foo_schema", "foo_tbl", "foo_col")))).thenThrow(new RuntimeException("Test failed"));
         EncryptRule rule = mockRule(encryptAlgorithm);
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class);
-        when(database.getName()).thenReturn("foo_db");
-        when(database.getRuleMetaData()).thenReturn(new RuleMetaData(Collections.singleton(rule)));
-        when(metaData.containsDatabase("foo_db")).thenReturn(true);
-        when(metaData.getDatabase("foo_db")).thenReturn(database);
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", mock(), mock(), new RuleMetaData(Collections.singleton(rule)), Collections.emptyList());
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(Collections.singleton(database), mock(), mock(), mock());
         when(mergedResult.getValue(1, Object.class)).thenReturn("foo_value");
         assertThrows(DecryptFailedException.class, () -> new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getValue(1, String.class));
     }
@@ -162,25 +153,25 @@ class EncryptMergedResultTest {
     void assertGetCalendarValue() throws SQLException {
         Calendar calendar = Calendar.getInstance();
         when(mergedResult.getCalendarValue(1, Date.class, calendar)).thenReturn(new Date(0L));
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getCalendarValue(1, Date.class, calendar), is(new Date(0L)));
+        assertThat(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).getCalendarValue(1, Date.class, calendar), is(new Date(0L)));
     }
     
     @Test
     void assertGetInputStream() throws SQLException {
         InputStream inputStream = mock(InputStream.class);
         when(mergedResult.getInputStream(1, "asc")).thenReturn(inputStream);
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getInputStream(1, "asc"), is(inputStream));
+        assertThat(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).getInputStream(1, "asc"), is(inputStream));
     }
     
     @Test
     void assertGetCharacterStream() throws SQLException {
         Reader reader = mock(Reader.class);
         when(mergedResult.getCharacterStream(1)).thenReturn(reader);
-        assertThat(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).getCharacterStream(1), is(reader));
+        assertThat(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).getCharacterStream(1), is(reader));
     }
     
     @Test
     void assertWasNull() throws SQLException {
-        assertFalse(new EncryptMergedResult(database, metaData, selectStatementContext, mergedResult).wasNull());
+        assertFalse(new EncryptMergedResult(mock(), mock(), selectStatementContext, mergedResult).wasNull());
     }
 }

@@ -21,7 +21,6 @@ import org.apache.shardingsphere.infra.binder.context.statement.CommonSQLStateme
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.executor.sql.context.ExecutionContext;
 import org.apache.shardingsphere.infra.hint.HintValueContext;
@@ -30,6 +29,8 @@ import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
+import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
+import org.apache.shardingsphere.infra.rule.attribute.datasource.aggregate.AggregatedDataSourceRuleAttribute;
 import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
@@ -40,6 +41,7 @@ import org.apache.shardingsphere.test.util.PropertiesBuilder;
 import org.apache.shardingsphere.test.util.PropertiesBuilder.Property;
 import org.junit.jupiter.api.Test;
 
+import javax.sql.DataSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -61,13 +63,13 @@ class KernelProcessorTest {
         when(sqlStatementContext.getSqlStatement()).thenReturn(mock(SelectStatement.class));
         when(sqlStatementContext.getDatabaseType()).thenReturn(databaseType);
         ConnectionContext connectionContext = mock(ConnectionContext.class);
-        when(connectionContext.getCurrentDatabaseName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
+        when(connectionContext.getCurrentDatabaseName()).thenReturn(Optional.of("foo_db"));
         ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class);
         ResourceMetaData resourceMetaData = mock(ResourceMetaData.class, RETURNS_DEEP_STUBS);
         when(resourceMetaData.getStorageUnits()).thenReturn(Collections.emptyMap());
-        ShardingSphereDatabase database = new ShardingSphereDatabase(DefaultDatabase.LOGIC_NAME, databaseType, resourceMetaData, new RuleMetaData(mockShardingSphereRule()), Collections.emptyMap());
-        when(metaData.containsDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(true);
-        when(metaData.getDatabase(DefaultDatabase.LOGIC_NAME)).thenReturn(database);
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", databaseType, resourceMetaData, new RuleMetaData(mockShardingSphereRule()), Collections.emptyList());
+        when(metaData.containsDatabase("foo_db")).thenReturn(true);
+        when(metaData.getDatabase("foo_db")).thenReturn(database);
         QueryContext queryContext = new QueryContext(sqlStatementContext, "SELECT * FROM tbl", Collections.emptyList(), new HintValueContext(), connectionContext, metaData);
         ConfigurationProperties props = new ConfigurationProperties(PropertiesBuilder.build(new Property(ConfigurationPropertyKey.SQL_SHOW.getKey(), Boolean.TRUE.toString())));
         ExecutionContext actual = new KernelProcessor().generateExecutionContext(queryContext, new RuleMetaData(mockShardingSphereRule()), props);
@@ -77,8 +79,18 @@ class KernelProcessorTest {
     private Collection<ShardingSphereRule> mockShardingSphereRule() {
         Collection<ShardingSphereRule> result = new LinkedList<>();
         SQLTranslatorRule sqlTranslatorRule = mock(SQLTranslatorRule.class);
+        when(sqlTranslatorRule.getAttributes()).thenReturn(new RuleAttributes());
         when(sqlTranslatorRule.translate(any(), any(), any(), any(), any(), any())).thenReturn(new SQLTranslatorContext("", Collections.emptyList()));
         result.add(sqlTranslatorRule);
+        result.add(mockAggregatedDataSourceRule());
+        return result;
+    }
+    
+    private ShardingSphereRule mockAggregatedDataSourceRule() {
+        ShardingSphereRule result = mock(ShardingSphereRule.class, RETURNS_DEEP_STUBS);
+        AggregatedDataSourceRuleAttribute ruleAttribute = mock(AggregatedDataSourceRuleAttribute.class);
+        when(ruleAttribute.getAggregatedDataSources()).thenReturn(Collections.singletonMap("ds_0", mock(DataSource.class)));
+        when(result.getAttributes().findAttribute(AggregatedDataSourceRuleAttribute.class)).thenReturn(Optional.of(ruleAttribute));
         return result;
     }
 }

@@ -23,6 +23,7 @@ import org.apache.shardingsphere.infra.database.core.metadata.data.model.ColumnM
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.IndexMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.SchemaMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.TableMetaData;
+import org.apache.shardingsphere.infra.database.core.metadata.database.datatype.DataTypeRegistry;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.sqlserver.type.SQLServerDatabaseType;
@@ -89,13 +90,14 @@ class SQLServerMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(LOAD_INDEX_META_DATA)
                 .executeQuery()).thenReturn(indexResultSet);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(15);
+        DataTypeRegistry.load(dataSource, "SQLServer");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.emptyList(), "foo_ds", dataSource, new SQLServerDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -108,13 +110,14 @@ class SQLServerMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(LOAD_INDEX_META_DATA)
                 .executeQuery()).thenReturn(indexResultSet);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(14);
+        DataTypeRegistry.load(dataSource, "SQLServer");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.emptyList(), "foo_ds", dataSource, new SQLServerDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, true, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, true, false, true));
     }
     
     @Test
@@ -126,13 +129,14 @@ class SQLServerMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(LOAD_INDEX_META_DATA)
                 .executeQuery()).thenReturn(indexResultSet);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(15);
+        DataTypeRegistry.load(dataSource, "SQLServer");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singletonList("tbl"), "foo_ds", dataSource, new SQLServerDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
     }
     
     @Test
@@ -144,13 +148,14 @@ class SQLServerMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement(LOAD_INDEX_META_DATA)
                 .executeQuery()).thenReturn(indexResultSet);
         when(dataSource.getConnection().getMetaData().getDatabaseMajorVersion()).thenReturn(14);
+        DataTypeRegistry.load(dataSource, "SQLServer");
         Collection<SchemaMetaData> actual = getDialectTableMetaDataLoader().load(
                 new MetaDataLoaderMaterial(Collections.singletonList("tbl"), "foo_ds", dataSource, new SQLServerDatabaseType(), "sharding_db"));
         assertTableMetaDataMap(actual);
         TableMetaData actualTableMetaData = actual.iterator().next().getTables().iterator().next();
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, true, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, false, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, true, false, true));
     }
     
     private DataSource mockDataSource() throws SQLException {
@@ -206,6 +211,23 @@ class SQLServerMetaDataLoaderTest {
         Iterator<IndexMetaData> indexesIterator = actualTableMetaData.getIndexes().iterator();
         IndexMetaData expected = new IndexMetaData("id", Collections.singletonList("id"));
         expected.setUnique(true);
-        assertThat(indexesIterator.next(), is(expected));
+        assertIndexMetaData(indexesIterator.next(), expected);
+    }
+    
+    private void assertColumnMetaData(final ColumnMetaData actual, final ColumnMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getDataType(), is(expected.getDataType()));
+        assertThat(actual.isPrimaryKey(), is(expected.isPrimaryKey()));
+        assertThat(actual.isGenerated(), is(expected.isGenerated()));
+        assertThat(actual.isCaseSensitive(), is(expected.isCaseSensitive()));
+        assertThat(actual.isVisible(), is(expected.isVisible()));
+        assertThat(actual.isUnsigned(), is(expected.isUnsigned()));
+        assertThat(actual.isNullable(), is(expected.isNullable()));
+    }
+    
+    private void assertIndexMetaData(final IndexMetaData actual, final IndexMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getColumns(), is(expected.getColumns()));
+        assertThat(actual.isUnique(), is(expected.isUnique()));
     }
 }

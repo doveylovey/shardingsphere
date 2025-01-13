@@ -26,14 +26,13 @@ import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementCont
 import org.apache.shardingsphere.infra.binder.context.statement.dml.SelectStatementContext;
 import org.apache.shardingsphere.infra.checker.SupportedSQLChecker;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.schema.model.ShardingSphereSchema;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.order.item.ColumnOrderByItemSegment;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -60,10 +59,10 @@ public final class EncryptOrderByItemSupportedChecker implements SupportedSQLChe
     }
     
     @Override
-    public void check(final EncryptRule rule, final ShardingSphereSchema schema, final SelectStatementContext sqlStatementContext) {
+    public void check(final EncryptRule rule, final ShardingSphereDatabase database, final ShardingSphereSchema currentSchema, final SelectStatementContext sqlStatementContext) {
         for (OrderByItem each : getOrderByItems(sqlStatementContext)) {
             if (each.getSegment() instanceof ColumnOrderByItemSegment) {
-                checkColumnOrderByItem(rule, schema, sqlStatementContext, ((ColumnOrderByItemSegment) each.getSegment()).getColumn());
+                checkColumnOrderByItem(rule, ((ColumnOrderByItemSegment) each.getSegment()).getColumn());
             }
         }
     }
@@ -79,10 +78,8 @@ public final class EncryptOrderByItemSupportedChecker implements SupportedSQLChe
         return result;
     }
     
-    private void checkColumnOrderByItem(final EncryptRule rule, final ShardingSphereSchema schema, final SelectStatementContext sqlStatementContext, final ColumnSegment columnSegment) {
-        Map<String, String> columnTableNames = sqlStatementContext.getTablesContext().findTableNames(Collections.singleton(columnSegment), schema);
-        String tableName = columnTableNames.getOrDefault(columnSegment.getExpression(), "");
-        Optional<EncryptTable> encryptTable = rule.findEncryptTable(tableName);
+    private void checkColumnOrderByItem(final EncryptRule rule, final ColumnSegment columnSegment) {
+        Optional<EncryptTable> encryptTable = rule.findEncryptTable(columnSegment.getColumnBoundInfo().getOriginalTable().getValue());
         String columnName = columnSegment.getIdentifier().getValue();
         ShardingSpherePreconditions.checkState(!encryptTable.isPresent() || !encryptTable.get().isEncryptColumn(columnName), () -> new UnsupportedEncryptSQLException("ORDER BY"));
     }

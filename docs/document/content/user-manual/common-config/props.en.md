@@ -17,6 +17,7 @@ Apache ShardingSphere provides the way of property configuration to configure sy
 | kernel-executor-size (?)           | int         | The max thread size of worker group to execute SQL. One ShardingSphereDataSource will use a independent thread pool, it does not share thread pool even different data source in same JVM                                                                   | infinite        |
 | max-connections-size-per-query (?) | int         | Max opened connection size for each query                                                                                                                                                                                                                   | 1               |
 | check-table-metadata-enabled (?)   | boolean     | Whether validate table meta data consistency when application startup or updated                                                                                                                                                                            | false           |
+| load-table-metadata-batch-size (?) | int         | The number of table metadata loaded at a time when application startup or refreshes table metadata                                                                                                                                                          | 1000            |
 
 ## Procedure
 
@@ -26,6 +27,10 @@ Apache ShardingSphere provides the way of property configuration to configure sy
 props:
     sql-show: true
 ```
+
+## Notes
+
+The default value of the `max-connections-size-per-query` configuration is 1, meaning each query request can only use one connection per database instance. If you adjust this parameter to enable memory-restricted mode (see [Memory-Strictly Mode](/en/reference/sharding/execute/#memory_strictly-mode) for details), ensure that your database's JDBC implementation supports streaming queries or can enable them. For example, in MySQL, you need to set `statement.setFetchSize(Integer.MIN_VALUE)` to achieve streaming queries.
 
 ## Sample
 

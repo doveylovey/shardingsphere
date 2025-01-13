@@ -28,7 +28,6 @@ import org.junit.jupiter.api.condition.EnabledInNativeImage;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -48,15 +47,11 @@ class OpenGaussTest {
     
     private static final String SYSTEM_PROP_KEY_PREFIX = "fixture.test-native.yaml.database.opengauss.";
     
-    private static final String USERNAME = "gaussdb";
-    
-    private static final String PASSWORD = "openGauss@123";
-    
-    private static final String DATABASE = "postgres";
+    private static final String PASSWORD = "Enmo@123";
     
     @SuppressWarnings("resource")
     @Container
-    public static final GenericContainer<?> CONTAINER = new GenericContainer<>(DockerImageName.parse("opengauss/opengauss:5.0.0"))
+    public static final GenericContainer<?> CONTAINER = new GenericContainer<>("enmotech/opengauss-lite:5.1.0")
             .withEnv("GS_PASSWORD", PASSWORD)
             .withExposedPorts(5432);
     
@@ -99,9 +94,9 @@ class OpenGaussTest {
     
     private Connection openConnection() throws SQLException {
         Properties props = new Properties();
-        props.setProperty("user", USERNAME);
+        props.setProperty("user", "gaussdb");
         props.setProperty("password", PASSWORD);
-        return DriverManager.getConnection(jdbcUrlPrefix + DATABASE, props);
+        return DriverManager.getConnection(jdbcUrlPrefix + "postgres", props);
     }
     
     @SuppressWarnings({"SqlDialectInspection", "SqlNoDataSourceInspection"})

@@ -18,7 +18,6 @@
 package org.apache.shardingsphere.infra.executor.sql.process;
 
 import org.apache.shardingsphere.infra.binder.context.statement.dml.UpdateStatementContext;
-import org.apache.shardingsphere.infra.database.core.DefaultDatabase;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupContext;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupReportContext;
 import org.apache.shardingsphere.infra.executor.sql.execute.engine.SQLExecutionUnit;
@@ -27,6 +26,7 @@ import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.session.connection.ConnectionContext;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.assignment.SetAssignmentSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
@@ -39,7 +39,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
 import java.util.Collections;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -62,11 +61,10 @@ class ProcessEngineTest {
     @Test
     void assertExecuteSQL() {
         ConnectionContext connectionContext = mock(ConnectionContext.class);
-        when(connectionContext.getCurrentDatabaseName()).thenReturn(Optional.of(DefaultDatabase.LOGIC_NAME));
         ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class);
         ExecutionGroupContext<? extends SQLExecutionUnit> executionGroupContext = mockExecutionGroupContext();
         new ProcessEngine().executeSQL(executionGroupContext,
-                new QueryContext(new UpdateStatementContext(getSQLStatement(), DefaultDatabase.LOGIC_NAME), null, null, new HintValueContext(), connectionContext, metaData));
+                new QueryContext(new UpdateStatementContext(getSQLStatement()), null, null, new HintValueContext(), connectionContext, metaData));
         verify(processRegistry).add(any());
     }
     
@@ -81,7 +79,9 @@ class ProcessEngineTest {
     
     private MySQLUpdateStatement getSQLStatement() {
         MySQLUpdateStatement result = new MySQLUpdateStatement();
-        result.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("foo_tbl"))));
+        TableNameSegment tableNameSegment = new TableNameSegment(0, 0, new IdentifierValue("foo_tbl"));
+        tableNameSegment.setTableBoundInfo(new TableSegmentBoundInfo(new IdentifierValue("foo_db"), new IdentifierValue("foo_schema")));
+        result.setTable(new SimpleTableSegment(tableNameSegment));
         result.setSetAssignment(new SetAssignmentSegment(0, 0, Collections.emptyList()));
         return result;
     }

@@ -40,10 +40,10 @@ import org.apache.shardingsphere.infra.exception.postgresql.exception.protocol.P
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.frontend.ssl.ProxySSLContext;
 import org.apache.shardingsphere.test.mock.AutoMockExtension;
@@ -132,9 +132,9 @@ class OpenGaussAuthenticationEngineTest {
     }
     
     private ContextManager mockContextManager() {
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(mock(MetaDataPersistService.class),
-                new ShardingSphereMetaData(Collections.emptyMap(), mock(ResourceMetaData.class),
-                        buildGlobalRuleMetaData(new UserConfiguration("root", "sharding", "", null, false)), mock(ConfigurationProperties.class)));
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(Collections.emptyList(), mock(ResourceMetaData.class),
+                buildGlobalRuleMetaData(new UserConfiguration("root", "sharding", "", null, false)), mock(ConfigurationProperties.class));
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(mock(MetaDataPersistService.class), metaData));
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         return result;
@@ -143,7 +143,7 @@ class OpenGaussAuthenticationEngineTest {
     private RuleMetaData buildGlobalRuleMetaData(final UserConfiguration userConfig) {
         AuthorityRuleConfiguration ruleConfig = new AuthorityRuleConfiguration(
                 Collections.singleton(userConfig), new AlgorithmConfiguration("ALL_PERMITTED", new Properties()), Collections.emptyMap(), null);
-        return new RuleMetaData(Collections.singleton(new AuthorityRuleBuilder().build(ruleConfig, Collections.emptyMap(), mock(ConfigurationProperties.class))));
+        return new RuleMetaData(Collections.singleton(new AuthorityRuleBuilder().build(ruleConfig, Collections.emptyList(), mock(ConfigurationProperties.class))));
     }
     
     @SneakyThrows(ReflectiveOperationException.class)

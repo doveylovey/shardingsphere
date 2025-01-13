@@ -23,6 +23,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Attribute;
 import lombok.SneakyThrows;
+import org.apache.shardingsphere.authentication.Authenticator;
+import org.apache.shardingsphere.authentication.AuthenticatorFactory;
+import org.apache.shardingsphere.authentication.result.AuthenticationResultBuilder;
 import org.apache.shardingsphere.authority.model.ShardingSpherePrivileges;
 import org.apache.shardingsphere.authority.rule.AuthorityRule;
 import org.apache.shardingsphere.db.protocol.constant.CommonConstants;
@@ -33,7 +36,6 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLErrPacket
 import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLOKPacket;
 import org.apache.shardingsphere.db.protocol.mysql.packet.handshake.MySQLHandshakePacket;
 import org.apache.shardingsphere.db.protocol.mysql.payload.MySQLPacketPayload;
-import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.exception.dialect.exception.syntax.database.UnknownDatabaseException;
 import org.apache.shardingsphere.infra.exception.mysql.exception.AccessDeniedException;
@@ -42,20 +44,15 @@ import org.apache.shardingsphere.infra.exception.mysql.exception.HandshakeExcept
 import org.apache.shardingsphere.infra.exception.mysql.vendor.MySQLVendorError;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
-import org.apache.shardingsphere.infra.metadata.database.resource.ResourceMetaData;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.infra.metadata.user.ShardingSphereUser;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
-import org.apache.shardingsphere.metadata.persist.data.ShardingSphereDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
-import org.apache.shardingsphere.authentication.result.AuthenticationResultBuilder;
-import org.apache.shardingsphere.authentication.Authenticator;
-import org.apache.shardingsphere.authentication.AuthenticatorFactory;
 import org.apache.shardingsphere.proxy.frontend.mysql.ssl.MySQLSSLRequestHandler;
 import org.apache.shardingsphere.proxy.frontend.ssl.ProxySSLContext;
 import org.apache.shardingsphere.test.mock.AutoMockExtension;
@@ -73,9 +70,7 @@ import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -288,15 +283,11 @@ class MySQLAuthenticationEngineTest {
     
     private ContextManager mockContextManager(final AuthorityRule rule) {
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
-        ShardingSphereDatabase database = mock(ShardingSphereDatabase.class);
-        when(database.getProtocolType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "MySQL"));
-        Map<String, ShardingSphereDatabase> databases = Collections.singletonMap("foo_db", database);
-        MetaDataPersistService metaDataPersistService = mock(MetaDataPersistService.class);
-        ShardingSphereDataPersistService shardingSphereDataPersistService = mock(ShardingSphereDataPersistService.class);
-        when(shardingSphereDataPersistService.load(any())).thenReturn(Optional.empty());
-        when(metaDataPersistService.getShardingSphereDataPersistService()).thenReturn(shardingSphereDataPersistService);
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(metaDataPersistService, new ShardingSphereMetaData(databases,
-                mock(ResourceMetaData.class), new RuleMetaData(Collections.singleton(rule)), new ConfigurationProperties(new Properties())));
+        MetaDataPersistService metaDataPersistService = mock(MetaDataPersistService.class, RETURNS_DEEP_STUBS);
+        when(metaDataPersistService.getShardingSphereDataPersistService().load(any())).thenReturn(Optional.empty());
+        ShardingSphereDatabase database = new ShardingSphereDatabase("foo_db", TypedSPILoader.getService(DatabaseType.class, "MySQL"), mock(), mock(), Collections.emptyList());
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(Collections.singleton(database), mock(), new RuleMetaData(Collections.singleton(rule)), mock());
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(metaDataPersistService, metaData));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         return result;
     }

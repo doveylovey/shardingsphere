@@ -23,6 +23,7 @@ import org.apache.shardingsphere.infra.database.core.metadata.data.model.ColumnM
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.IndexMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.SchemaMetaData;
 import org.apache.shardingsphere.infra.database.core.metadata.data.model.TableMetaData;
+import org.apache.shardingsphere.infra.database.core.metadata.database.datatype.DataTypeRegistry;
 import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.database.mysql.type.MySQLDatabaseType;
@@ -57,6 +58,7 @@ class MySQLMetaDataLoaderTest {
         ResultSet indexResultSet = mockIndexMetaDataResultSet();
         when(dataSource.getConnection().prepareStatement("SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE, COLUMN_NAME FROM information_schema.statistics "
                 + "WHERE TABLE_SCHEMA=? and TABLE_NAME IN ('tbl') ORDER BY NON_UNIQUE, INDEX_NAME, SEQ_IN_INDEX").executeQuery()).thenReturn(indexResultSet);
+        DataTypeRegistry.load(dataSource, "MySQL");
         assertTableMetaDataMap(dialectMetaDataLoader.load(new MetaDataLoaderMaterial(Collections.emptyList(), "foo_ds", dataSource, new MySQLDatabaseType(), "sharding_db")));
     }
     
@@ -71,6 +73,7 @@ class MySQLMetaDataLoaderTest {
         when(dataSource.getConnection().prepareStatement("SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE, COLUMN_NAME FROM information_schema.statistics WHERE TABLE_SCHEMA=? and TABLE_NAME IN ('tbl') "
                 + "ORDER BY NON_UNIQUE, INDEX_NAME, SEQ_IN_INDEX")
                 .executeQuery()).thenReturn(indexResultSet);
+        DataTypeRegistry.load(dataSource, "MySQL");
         assertTableMetaDataMap(dialectMetaDataLoader.load(new MetaDataLoaderMaterial(Collections.singletonList("tbl"), "foo_ds", dataSource, new MySQLDatabaseType(), "sharding_db")));
     }
     
@@ -118,19 +121,36 @@ class MySQLMetaDataLoaderTest {
         TableMetaData actualTableMetaData = schemaMetaDataList.iterator().next().getTables().iterator().next();
         assertThat(actualTableMetaData.getColumns().size(), is(9));
         Iterator<ColumnMetaData> columnsIterator = actualTableMetaData.getColumns().iterator();
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("doc", Types.LONGVARCHAR, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("geo", Types.BINARY, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("t_year", Types.DATE, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("pg", Types.BINARY, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("mpg", Types.BINARY, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("pt", Types.BINARY, false, false, false, true, false, true)));
-        assertThat(columnsIterator.next(), is(new ColumnMetaData("mpt", Types.BINARY, false, false, false, true, false, true)));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("id", Types.INTEGER, true, true, true, true, false, false));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("name", Types.VARCHAR, false, false, false, false, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("doc", Types.LONGVARCHAR, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("geo", Types.BINARY, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("t_year", Types.DATE, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("pg", Types.BINARY, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("mpg", Types.BINARY, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("pt", Types.BINARY, false, false, false, true, false, true));
+        assertColumnMetaData(columnsIterator.next(), new ColumnMetaData("mpt", Types.BINARY, false, false, false, true, false, true));
         assertThat(actualTableMetaData.getIndexes().size(), is(1));
         Iterator<IndexMetaData> indexesIterator = actualTableMetaData.getIndexes().iterator();
         IndexMetaData expected = new IndexMetaData("id", Collections.singletonList("id"));
         expected.setUnique(true);
-        assertThat(indexesIterator.next(), is(expected));
+        assertIndexMetaData(indexesIterator.next(), expected);
+    }
+    
+    private void assertColumnMetaData(final ColumnMetaData actual, final ColumnMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getDataType(), is(expected.getDataType()));
+        assertThat(actual.isPrimaryKey(), is(expected.isPrimaryKey()));
+        assertThat(actual.isGenerated(), is(expected.isGenerated()));
+        assertThat(actual.isCaseSensitive(), is(expected.isCaseSensitive()));
+        assertThat(actual.isVisible(), is(expected.isVisible()));
+        assertThat(actual.isUnsigned(), is(expected.isUnsigned()));
+        assertThat(actual.isNullable(), is(expected.isNullable()));
+    }
+    
+    private void assertIndexMetaData(final IndexMetaData actual, final IndexMetaData expected) {
+        assertThat(actual.getName(), is(expected.getName()));
+        assertThat(actual.getColumns(), is(expected.getColumns()));
+        assertThat(actual.isUnique(), is(expected.isUnique()));
     }
 }

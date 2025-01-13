@@ -28,10 +28,10 @@ import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.metadata.database.schema.util.SystemSchemaUtils;
 import org.apache.shardingsphere.infra.metadata.user.Grantee;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.mode.manager.ContextManager;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.metadata.MetaDataContextsFactory;
+import org.apache.shardingsphere.mode.metadata.ShardingSphereStatisticsFactory;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.handler.admin.executor.AbstractDatabaseMetaDataExecutor.DefaultDatabaseMetaDataExecutor;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
@@ -65,6 +65,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(AutoMockExtension.class)
 @StaticMockSettings({ProxyContext.class, SystemSchemaUtils.class})
 class DefaultDatabaseMetaDataExecutorTest {
+    
+    private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
     
     private final Grantee grantee = new Grantee("root", "127.0.0.1");
     
@@ -120,9 +122,8 @@ class DefaultDatabaseMetaDataExecutorTest {
     }
     
     private ShardingSphereDatabase createDatabase(final Map<String, String> expectedResultSetMap) throws SQLException {
-        return new ShardingSphereDatabase("auth_db", TypedSPILoader.getService(DatabaseType.class, "FIXTURE"),
-                new ResourceMetaData(Collections.singletonMap("foo_ds", new MockedDataSource(mockConnection(expectedResultSetMap)))),
-                mock(RuleMetaData.class), Collections.emptyMap());
+        return new ShardingSphereDatabase("auth_db",
+                databaseType, new ResourceMetaData(Collections.singletonMap("foo_ds", new MockedDataSource(mockConnection(expectedResultSetMap)))), mock(RuleMetaData.class), Collections.emptyList());
     }
     
     private Connection mockConnection(final Map<String, String> expectedResultSetMap) throws SQLException {
@@ -149,8 +150,9 @@ class DefaultDatabaseMetaDataExecutorTest {
         AuthorityRule authorityRule = mock(AuthorityRule.class);
         when(authorityRule.findPrivileges(grantee)).thenReturn(Optional.of(new DatabasePermittedPrivileges(Collections.singleton("auth_db"))));
         ContextManager result = mock(ContextManager.class, RETURNS_DEEP_STUBS);
-        MetaDataContexts metaDataContexts = MetaDataContextsFactory.create(mock(MetaDataPersistService.class), new ShardingSphereMetaData(Collections.singletonMap("auth_db", database),
-                mock(ResourceMetaData.class), new RuleMetaData(Collections.singleton(authorityRule)), new ConfigurationProperties(new Properties())));
+        ShardingSphereMetaData metaData = new ShardingSphereMetaData(
+                Collections.singleton(database), mock(ResourceMetaData.class), new RuleMetaData(Collections.singleton(authorityRule)), new ConfigurationProperties(new Properties()));
+        MetaDataContexts metaDataContexts = new MetaDataContexts(metaData, ShardingSphereStatisticsFactory.create(mock(MetaDataPersistService.class), metaData));
         when(result.getMetaDataContexts()).thenReturn(metaDataContexts);
         when(result.getDatabase("auth_db")).thenReturn(database);
         when(ProxyContext.getInstance().getAllDatabaseNames()).thenReturn(Collections.singleton("auth_db"));

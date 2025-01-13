@@ -52,15 +52,15 @@ public final class ShowTableMetaDataExecutor implements DistSQLQueryExecutor<Sho
     public Collection<LocalDataQueryResultRow> getRows(final ShowTableMetaDataStatement sqlStatement, final ContextManager contextManager) {
         String defaultSchema = new DatabaseTypeRegistry(database.getProtocolType()).getDefaultSchemaName(database.getName());
         ShardingSphereSchema schema = database.getSchema(defaultSchema);
-        return sqlStatement.getTableNames().stream().filter(each -> schema.getAllTableNames().contains(each.toLowerCase()))
-                .map(each -> buildTableRows(database.getName(), schema, each.toLowerCase())).flatMap(Collection::stream).collect(Collectors.toList());
+        return sqlStatement.getTableNames().stream()
+                .filter(schema::containsTable).map(each -> buildTableRows(database.getName(), schema, each)).flatMap(Collection::stream).collect(Collectors.toList());
     }
     
     private Collection<LocalDataQueryResultRow> buildTableRows(final String databaseName, final ShardingSphereSchema schema, final String tableName) {
         Collection<LocalDataQueryResultRow> result = new LinkedList<>();
         ShardingSphereTable table = schema.getTable(tableName);
-        result.addAll(table.getColumnValues().stream().map(each -> buildColumnRow(databaseName, tableName, each)).collect(Collectors.toList()));
-        result.addAll(table.getIndexValues().stream().map(each -> buildIndexRow(databaseName, tableName, each)).collect(Collectors.toList()));
+        result.addAll(table.getAllColumns().stream().map(each -> buildColumnRow(databaseName, tableName, each)).collect(Collectors.toList()));
+        result.addAll(table.getAllIndexes().stream().map(each -> buildIndexRow(databaseName, tableName, each)).collect(Collectors.toList()));
         return result;
     }
     
