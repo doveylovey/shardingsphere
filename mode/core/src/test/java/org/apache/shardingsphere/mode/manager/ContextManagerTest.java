@@ -37,9 +37,7 @@ import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
 import org.apache.shardingsphere.infra.rule.attribute.datanode.MutableDataNodeRuleAttribute;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.mode.metadata.persist.node.DatabaseMetaDataNodePath;
 import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
-import org.apache.shardingsphere.mode.spi.PersistRepository;
 import org.apache.shardingsphere.test.fixture.jdbc.MockedDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,8 +86,8 @@ class ContextManagerTest {
         when(metaDataContexts.getMetaData().getDatabase("foo_db")).thenReturn(database);
         when(metaDataContexts.getMetaData().getAllDatabases()).thenReturn(Collections.singleton(database));
         when(computeNodeInstanceContext.getInstance()).thenReturn(new ComputeNodeInstance(new ProxyInstanceMetaData("foo_id", 3307), Collections.emptyList()));
-        when(computeNodeInstanceContext.getModeConfiguration()).thenReturn(mock(ModeConfiguration.class));
-        contextManager = new ContextManager(metaDataContexts, computeNodeInstanceContext, mock(PersistRepository.class));
+        when(computeNodeInstanceContext.getModeConfiguration()).thenReturn(new ModeConfiguration("FIXTURE", mock()));
+        contextManager = new ContextManager(metaDataContexts, computeNodeInstanceContext, mock(), mock());
     }
     
     private ShardingSphereDatabase mockDatabase() throws SQLException {
@@ -115,13 +113,6 @@ class ContextManagerTest {
         when(storageUnit.getDataSource()).thenReturn(new MockedDataSource(connection));
         when(result.getResourceMetaData().getStorageUnits()).thenReturn(Collections.singletonMap("foo_ds", storageUnit));
         return result;
-    }
-    
-    @Test
-    void assertRenewMetaDataContexts() {
-        MetaDataContexts contexts = mock(MetaDataContexts.class);
-        contextManager.renewMetaDataContexts(contexts);
-        assertThat(contextManager.getMetaDataContexts(), is(contexts));
     }
     
     @Test
@@ -153,7 +144,7 @@ class ContextManagerTest {
         when(metaDataContexts.getMetaData().getDatabase("foo_db").getName()).thenReturn("foo_db");
         ShardingSphereDatabase database = mockDatabase();
         contextManager.reloadSchema(database, "foo_schema", "foo_ds");
-        verify(contextManager.getPersistServiceFacade().getRepository()).delete(DatabaseMetaDataNodePath.getSchemaPath("foo_db", "foo_schema"));
+        verify(contextManager.getPersistServiceFacade().getRepository()).delete("/metadata/foo_db/schemas/foo_schema");
     }
     
     @Test

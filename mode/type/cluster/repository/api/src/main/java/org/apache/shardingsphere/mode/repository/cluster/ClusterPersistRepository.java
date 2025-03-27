@@ -20,7 +20,7 @@ package org.apache.shardingsphere.mode.repository.cluster;
 import org.apache.shardingsphere.infra.instance.ComputeNodeInstanceContext;
 import org.apache.shardingsphere.mode.repository.cluster.listener.DataChangedEventListener;
 import org.apache.shardingsphere.mode.repository.cluster.lock.holder.DistributedLockHolder;
-import org.apache.shardingsphere.mode.spi.PersistRepository;
+import org.apache.shardingsphere.mode.spi.repository.PersistRepository;
 
 /**
  * Cluster persist repository.
@@ -34,6 +34,14 @@ public interface ClusterPersistRepository extends PersistRepository {
      * @param computeNodeInstanceContext compute node instance context
      */
     void init(ClusterPersistRepositoryConfiguration config, ComputeNodeInstanceContext computeNodeInstanceContext);
+    
+    /**
+     * Persist ephemeral data.
+     *
+     * @param key key of data
+     * @param value value of data
+     */
+    void persistEphemeral(String key, String value);
     
     /**
      * Persist exclusive ephemeral data.

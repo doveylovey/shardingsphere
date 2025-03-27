@@ -17,6 +17,8 @@
 
 package org.apache.shardingsphere.infra.database.postgresql.metadata.data.loader;
 
+import com.cedarsoftware.util.CaseInsensitiveMap;
+import com.cedarsoftware.util.CaseInsensitiveSet;
 import org.apache.shardingsphere.infra.database.core.metadata.data.loader.type.SchemaMetaDataLoader;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
@@ -35,7 +37,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -53,7 +54,8 @@ class PostgreSQLSchemaMetaDataLoaderTest {
     @BeforeEach
     void setUp() throws SQLException {
         ResultSet tableResultSet = mockTableResultSet();
-        when(dataSource.getConnection().getMetaData().getTables("catalog", "public", null, new String[]{"TABLE", "VIEW", "SYSTEM TABLE", "SYSTEM VIEW"})).thenReturn(tableResultSet);
+        when(dataSource.getConnection().getMetaData().getTables("catalog", "public", null, new String[]{"TABLE", "PARTITIONED TABLE", "VIEW", "SYSTEM TABLE", "SYSTEM VIEW"}))
+                .thenReturn(tableResultSet);
         when(dataSource.getConnection().getCatalog()).thenReturn("catalog");
         when(dataSource.getConnection().getSchema()).thenReturn("public");
         ResultSet schemaResultSet = mockSchemaResultSet();
@@ -62,8 +64,8 @@ class PostgreSQLSchemaMetaDataLoaderTest {
     
     private ResultSet mockTableResultSet() throws SQLException {
         ResultSet result = mock(ResultSet.class);
-        when(result.next()).thenReturn(true, true, true, true, false);
-        when(result.getString("TABLE_NAME")).thenReturn("tbl", "$tbl", "/tbl", "##tbl");
+        when(result.next()).thenReturn(true, true, true, true, true, false);
+        when(result.getString("TABLE_NAME")).thenReturn("tbl", "$tbl", "/tbl", "##tbl", "partitioned_tbl");
         return result;
     }
     
@@ -81,10 +83,10 @@ class PostgreSQLSchemaMetaDataLoaderTest {
     }
     
     private Map<String, Collection<String>> createSchemaTableNames() {
-        Map<String, Collection<String>> result = new LinkedHashMap<>();
-        result.put("public", Collections.singletonList("tbl"));
-        result.put("schema_1", Collections.emptyList());
-        result.put("schema_2", Collections.emptyList());
+        Map<String, Collection<String>> result = new CaseInsensitiveMap<>();
+        result.put("public", new CaseInsensitiveSet<>(Arrays.asList("tbl", "partitioned_tbl")));
+        result.put("schema_1", Collections.emptySet());
+        result.put("schema_2", Collections.emptySet());
         return result;
     }
     
