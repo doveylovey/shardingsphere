@@ -141,7 +141,7 @@ selectSubquery
     ;
 
 combineType
-    : UNION ALL? | INTERSECT | MINUS
+    : UNION ALL? | INTERSECT ALL? | MINUS ALL? | EXCEPT ALL?
     ;
 
 parenthesisSelectSubquery
@@ -450,6 +450,7 @@ fromClauseOption
 selectTableReference
     : queryTableExprClause | containersClause | shardsClause
     | (queryTableExprClause | containersClause | shardsClause) alias?
+    | LP_ joinClause RP_
     ;
 
 queryTableExprClause
