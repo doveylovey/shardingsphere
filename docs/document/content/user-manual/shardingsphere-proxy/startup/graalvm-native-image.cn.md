@@ -84,7 +84,7 @@ sdk use java 22.0.2-graalce
 
 ```bash
 cd ./shardingsphere/
-./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native -DskipTests clean package
+./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native,default-dep -DskipTests clean package
 ```
 
 情形二：需要使用存在自定义 SPI 实现的 JAR 或第三方依赖的 JAR。在 `distribution/proxy-native/pom.xml` 的 `dependencies` 加入如下选项之一，
@@ -108,14 +108,13 @@ cd ./shardingsphere/
 
 ```bash
 cd ./shardingsphere/
-./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native -DskipTests clean package
+./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native,default-dep -DskipTests clean package
 ```
 
 3. 通过命令行启动 Native Image, 需要带上 4 个参数，
    第 1 个参数为 ShardingSphere Proxy Native 使用的端口，
    第 2 个参数为用户编写的包含 `global.yaml` 配置文件的文件夹，
-   第 3 个参数为要侦听的主机，如果为 `0.0.0.0` 则允许任意数据库客户端均可访问 ShardingSphere Proxy Native
-   第 4 个参数为 Force Start，如果为 `true` 则保证 ShardingSphere Proxy Native 无论能否连接都能正常启动。
+   第 3 个参数为要侦听的主机，如果为 `0.0.0.0` 则允许任意数据库客户端均可访问 ShardingSphere Proxy Native。
 
 已完成构建的 GraalVM Native Image 的二进制文件仅可设置命令行参数。这意味着，
 
@@ -134,7 +133,7 @@ cd ./distribution/proxy-native/target/apache-shardingsphere-5.5.2-shardingsphere
 
 ```shell
 cd ./shardingsphere/
-./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native,docker.native -DskipTests clean package
+./mvnw -am -pl distribution/proxy-native -T1C -Prelease.native,default-dep,docker.native -DskipTests clean package
 ```
 
 假设存在包含 `global.yaml` 的 `conf` 文件夹为 `./custom/conf`，可通过如下的 `docker-compose.yml` 文件启动包含 GraalVM Native Image 的 Docker Image。

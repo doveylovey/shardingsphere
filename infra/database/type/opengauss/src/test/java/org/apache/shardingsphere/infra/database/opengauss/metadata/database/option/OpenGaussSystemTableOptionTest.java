@@ -25,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OpenGaussSystemTableOptionTest {
     
     @Test
-    public void assertIsSystemCatalogQueryExpressions() {
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("version()"));
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("intervaltonum(gs_password_deadline())"));
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("gs_password_notifytime()"));
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("Version()"));
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("Intervaltonum(gs_password_deadline())"));
-        assertTrue(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("Gs_password_notifytime()"));
-        assertFalse(new OpenGaussSystemTableOption().isSystemCatalogQueryExpressions("invalid()"));
+    void assertIsSystemCatalogQueryExpressions() {
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("version()"));
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("intervaltonum(gs_password_deadline())"));
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("gs_password_notifytime()"));
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("Version()"));
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("Intervaltonum(gs_password_deadline())"));
+        assertTrue(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("Gs_password_notifytime()"));
+        assertFalse(new OpenGaussDriverQuerySystemCatalogOption().isSystemCatalogQueryExpressions("invalid()"));
     }
 }

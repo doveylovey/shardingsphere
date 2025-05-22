@@ -23,11 +23,13 @@ import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
+import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
 import org.apache.shardingsphere.infra.binder.engine.SQLBindEngine;
 import org.apache.shardingsphere.infra.connection.kernel.KernelProcessor;
+import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.table.DialectDriverQuerySystemCatalogOption;
 import org.apache.shardingsphere.infra.database.core.metadata.database.system.SystemDatabase;
 import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.opengauss.type.OpenGaussDatabaseType;
+import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.exception.kernel.connection.SQLExecutionInterruptedException;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroup;
@@ -54,16 +56,15 @@ import org.apache.shardingsphere.infra.metadata.statistics.ShardingSphereStatist
 import org.apache.shardingsphere.infra.metadata.statistics.TableStatistics;
 import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
-import org.apache.shardingsphere.sqlfederation.executor.constant.EnumerableConstants;
 import org.apache.shardingsphere.sqlfederation.executor.context.SQLFederationContext;
 import org.apache.shardingsphere.sqlfederation.executor.context.SQLFederationExecutorContext;
 import org.apache.shardingsphere.sqlfederation.executor.enumerator.JDBCRowEnumerator;
 import org.apache.shardingsphere.sqlfederation.executor.enumerator.MemoryRowEnumerator;
 import org.apache.shardingsphere.sqlfederation.executor.utils.StatisticsAssembleUtils;
-import org.apache.shardingsphere.sqlfederation.optimizer.context.OptimizerContext;
-import org.apache.shardingsphere.sqlfederation.optimizer.metadata.schema.table.EmptyRowEnumerator;
-import org.apache.shardingsphere.sqlfederation.optimizer.metadata.schema.table.ScanExecutor;
-import org.apache.shardingsphere.sqlfederation.optimizer.metadata.schema.table.ScanExecutorContext;
+import org.apache.shardingsphere.sqlfederation.compiler.context.CompilerContext;
+import org.apache.shardingsphere.sqlfederation.compiler.metadata.schema.table.EmptyRowEnumerator;
+import org.apache.shardingsphere.sqlfederation.compiler.metadata.schema.table.ScanExecutor;
+import org.apache.shardingsphere.sqlfederation.compiler.metadata.schema.table.ScanExecutorContext;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -89,7 +90,7 @@ public final class EnumerableScanExecutor implements ScanExecutor {
     
     private final JDBCExecutorCallback<? extends ExecuteResult> callback;
     
-    private final OptimizerContext optimizerContext;
+    private final CompilerContext compilerContext;
     
     private final SQLFederationExecutorContext executorContext;
     
@@ -103,19 +104,28 @@ public final class EnumerableScanExecutor implements ScanExecutor {
     
     @Override
     public Enumerable<Object> execute(final ShardingSphereTable table, final ScanExecutorContext scanContext) {
-        String databaseName = executorContext.getCurrentDatabaseName();
-        String schemaName = executorContext.getSchemaName();
-        DatabaseType databaseType = optimizerContext.getParserContext(databaseName).getDatabaseType();
-        if (new SystemDatabase(databaseType).getSystemSchemas().contains(schemaName)) {
-            return createMemoryEnumerable(databaseName, schemaName, table, databaseType);
+        SQLStatementContext sqlStatementContext = federationContext.getQueryContext().getSqlStatementContext();
+        if (containsSystemSchema(sqlStatementContext)) {
+            return createMemoryEnumerable(sqlStatementContext, table);
         }
-        QueryContext queryContext = createQueryContext(federationContext.getMetaData(), scanContext, databaseType, federationContext.getQueryContext().isUseCache());
+        QueryContext queryContext = createQueryContext(federationContext.getMetaData(), scanContext, sqlStatementContext.getDatabaseType(), federationContext.getQueryContext().isUseCache());
         ExecutionContext executionContext = new KernelProcessor().generateExecutionContext(queryContext, globalRuleMetaData, executorContext.getProps());
         if (federationContext.isPreview()) {
             federationContext.getPreviewExecutionUnits().addAll(executionContext.getExecutionUnits());
             return createEmptyEnumerable();
         }
-        return createJDBCEnumerable(queryContext, federationContext.getMetaData().getDatabase(databaseName), executionContext);
+        return createJDBCEnumerable(queryContext, federationContext.getMetaData().getDatabase(executorContext.getCurrentDatabaseName()), executionContext);
+    }
+    
+    private boolean containsSystemSchema(final SQLStatementContext sqlStatementContext) {
+        Collection<String> usedSchemaNames = sqlStatementContext instanceof TableAvailable ? ((TableAvailable) sqlStatementContext).getTablesContext().getSchemaNames() : Collections.emptyList();
+        Collection<String> systemSchemas = new SystemDatabase(sqlStatementContext.getDatabaseType()).getSystemSchemas();
+        for (String each : usedSchemaNames) {
+            if (systemSchemas.contains(each)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     private AbstractEnumerable<Object> createJDBCEnumerable(final QueryContext queryContext, final ShardingSphereDatabase database, final ExecutionContext context) {
@@ -152,10 +162,16 @@ public final class EnumerableScanExecutor implements ScanExecutor {
         }
     }
     
-    private Enumerable<Object> createMemoryEnumerable(final String databaseName, final String schemaName, final ShardingSphereTable table, final DatabaseType databaseType) {
-        if (databaseType instanceof OpenGaussDatabaseType && EnumerableConstants.SYSTEM_CATALOG_TABLES.contains(table.getName())) {
-            return createMemoryEnumerator(StatisticsAssembleUtils.assembleTableStatistics(table, federationContext.getMetaData()), table, databaseType);
+    private Enumerable<Object> createMemoryEnumerable(final SQLStatementContext sqlStatementContext, final ShardingSphereTable table) {
+        DatabaseType databaseType = sqlStatementContext.getDatabaseType();
+        Optional<DialectDriverQuerySystemCatalogOption> driverQuerySystemCatalogOption = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getDriverQuerySystemCatalogOption();
+        if (driverQuerySystemCatalogOption.isPresent() && driverQuerySystemCatalogOption.get().isSystemTable(table.getName())) {
+            return createMemoryEnumerator(StatisticsAssembleUtils.assembleTableStatistics(table, federationContext.getMetaData(), driverQuerySystemCatalogOption.get()), table, databaseType);
         }
+        ShardingSpherePreconditions.checkState(sqlStatementContext instanceof TableAvailable,
+                () -> new IllegalStateException(String.format("Can not support %s in sql federation", sqlStatementContext.getSqlStatement().getClass().getSimpleName())));
+        String databaseName = ((TableAvailable) sqlStatementContext).getTablesContext().getDatabaseName().orElse(executorContext.getCurrentDatabaseName());
+        String schemaName = ((TableAvailable) sqlStatementContext).getTablesContext().getSchemaName().orElse(executorContext.getCurrentSchemaName());
         Optional<TableStatistics> tableStatistics = Optional.ofNullable(statistics.getDatabaseStatistics(databaseName))
                 .map(optional -> optional.getSchemaStatistics(schemaName)).map(optional -> optional.getTableStatistics(table.getName()));
         return tableStatistics.map(optional -> createMemoryEnumerator(optional, table, databaseType)).orElseGet(this::createEmptyEnumerable);
@@ -201,7 +217,7 @@ public final class EnumerableScanExecutor implements ScanExecutor {
     
     private QueryContext createQueryContext(final ShardingSphereMetaData metaData, final ScanExecutorContext sqlString, final DatabaseType databaseType, final boolean useCache) {
         String sql = sqlString.getSql().replace(System.lineSeparator(), " ");
-        SQLStatement sqlStatement = optimizerContext.getSqlParserRule().getSQLParserEngine(databaseType).parse(sql, useCache);
+        SQLStatement sqlStatement = compilerContext.getSqlParserRule().getSQLParserEngine(databaseType).parse(sql, useCache);
         List<Object> params = getParameters(sqlString.getParamIndexes());
         HintValueContext hintValueContext = new HintValueContext();
         SQLStatementContext sqlStatementContext = new SQLBindEngine(metaData, executorContext.getCurrentDatabaseName(), hintValueContext).bind(sqlStatement, params);

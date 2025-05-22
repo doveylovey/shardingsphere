@@ -20,15 +20,18 @@ package org.apache.shardingsphere.infra.database.opengauss.metadata.database;
 import org.apache.shardingsphere.infra.database.core.metadata.database.enums.NullsOrderType;
 import org.apache.shardingsphere.infra.database.core.metadata.database.enums.QuoteCharacter;
 import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.DialectDatabaseMetaData;
+import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.IdentifierPatternType;
 import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.datatype.DialectDataTypeOption;
 import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.index.DialectIndexOption;
-import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.schema.DefaultSchemaOption;
 import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.schema.DialectSchemaOption;
-import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.table.DialectSystemTableOption;
-import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.table.TableNamePatternType;
+import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.table.DialectDriverQuerySystemCatalogOption;
 import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.transaction.DialectTransactionOption;
 import org.apache.shardingsphere.infra.database.opengauss.metadata.database.option.OpenGaussDataTypeOption;
-import org.apache.shardingsphere.infra.database.opengauss.metadata.database.option.OpenGaussSystemTableOption;
+import org.apache.shardingsphere.infra.database.opengauss.metadata.database.option.OpenGaussDriverQuerySystemCatalogOption;
+import org.apache.shardingsphere.infra.database.opengauss.metadata.database.option.OpenGaussSchemaOption;
+
+import java.sql.Connection;
+import java.util.Optional;
 
 /**
  * Database meta data of openGauss.
@@ -38,6 +41,11 @@ public final class OpenGaussDatabaseMetaData implements DialectDatabaseMetaData 
     @Override
     public QuoteCharacter getQuoteCharacter() {
         return QuoteCharacter.QUOTE;
+    }
+    
+    @Override
+    public IdentifierPatternType getIdentifierPatternType() {
+        return IdentifierPatternType.LOWER_CASE;
     }
     
     @Override
@@ -51,13 +59,13 @@ public final class OpenGaussDatabaseMetaData implements DialectDatabaseMetaData 
     }
     
     @Override
-    public DialectSchemaOption getSchemaOption() {
-        return new DefaultSchemaOption(true, "public");
+    public Optional<DialectDriverQuerySystemCatalogOption> getDriverQuerySystemCatalogOption() {
+        return Optional.of(new OpenGaussDriverQuerySystemCatalogOption());
     }
     
     @Override
-    public DialectSystemTableOption getSystemTableOption() {
-        return new OpenGaussSystemTableOption();
+    public DialectSchemaOption getSchemaOption() {
+        return new OpenGaussSchemaOption();
     }
     
     @Override
@@ -67,12 +75,7 @@ public final class OpenGaussDatabaseMetaData implements DialectDatabaseMetaData 
     
     @Override
     public DialectTransactionOption getTransactionOption() {
-        return new DialectTransactionOption(true, false, false, true, false);
-    }
-    
-    @Override
-    public TableNamePatternType getTableNamePatternType() {
-        return TableNamePatternType.LOWER_CASE;
+        return new DialectTransactionOption(true, false, false, true, false, Connection.TRANSACTION_READ_COMMITTED, true);
     }
     
     @Override
