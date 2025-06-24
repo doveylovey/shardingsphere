@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropDiskgroupStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Drop diskgroup statement.
+ * Drop diskgroup statement for Oracle.
  */
-public class OracleDropDiskgroupStatement extends DropDiskgroupStatement implements OracleStatement {
+public final class OracleDropDiskgroupStatement extends DDLStatement {
 }

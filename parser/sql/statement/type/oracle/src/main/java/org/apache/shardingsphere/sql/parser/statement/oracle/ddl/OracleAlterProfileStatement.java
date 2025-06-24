@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterProfileStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle alter profile statement.
+ * Alter profile statement for Oracle.
  */
-public final class OracleAlterProfileStatement extends AlterProfileStatement implements OracleStatement {
+public final class OracleAlterProfileStatement extends DDLStatement {
 }

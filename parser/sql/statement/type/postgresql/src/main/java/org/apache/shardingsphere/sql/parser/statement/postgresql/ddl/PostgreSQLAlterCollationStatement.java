@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterCollationStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL alter collation statement.
+ * Alter collation statement for PostgreSQL.
  */
-public final class PostgreSQLAlterCollationStatement extends AlterCollationStatement implements PostgreSQLStatement {
+public final class PostgreSQLAlterCollationStatement extends DDLStatement {
 }

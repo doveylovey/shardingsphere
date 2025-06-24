@@ -20,12 +20,13 @@ package org.apache.shardingsphere.infra.binder.engine.statement.dml;
 import com.cedarsoftware.util.CaseInsensitiveMap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
-import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.context.TableSegmentBinderContext;
 import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.type.SimpleTableSegmentBinder;
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinder;
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinderContext;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.LoadXMLStatement;
+import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementCopyUtils;
+import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.LoadXMLStatement;
 
 /**
  * Load XML statement binder.
@@ -34,18 +35,13 @@ public final class LoadXMLStatementBinder implements SQLStatementBinder<LoadXMLS
     
     @Override
     public LoadXMLStatement bind(final LoadXMLStatement sqlStatement, final SQLStatementBinderContext binderContext) {
-        LoadXMLStatement result = copy(sqlStatement);
         Multimap<CaseInsensitiveMap.CaseInsensitiveString, TableSegmentBinderContext> tableBinderContexts = LinkedHashMultimap.create();
-        result.setTableSegment(SimpleTableSegmentBinder.bind(sqlStatement.getTableSegment(), binderContext, tableBinderContexts));
-        return result;
+        return copy(sqlStatement, SimpleTableSegmentBinder.bind(sqlStatement.getTable(), binderContext, tableBinderContexts));
     }
     
-    @SneakyThrows(ReflectiveOperationException.class)
-    private static LoadXMLStatement copy(final LoadXMLStatement sqlStatement) {
-        LoadXMLStatement result = sqlStatement.getClass().getDeclaredConstructor().newInstance();
-        result.addParameterMarkerSegments(sqlStatement.getParameterMarkerSegments());
-        result.getCommentSegments().addAll(sqlStatement.getCommentSegments());
-        result.getVariableNames().addAll(sqlStatement.getVariableNames());
+    private LoadXMLStatement copy(final LoadXMLStatement sqlStatement, final SimpleTableSegment boundTableSegment) {
+        LoadXMLStatement result = new LoadXMLStatement(boundTableSegment);
+        SQLStatementCopyUtils.copyAttributes(sqlStatement, result);
         return result;
     }
 }

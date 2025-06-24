@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateAggregateStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL create aggregate statement.
+ * Create aggregate statement for PostgreSQL.
  */
-public final class PostgreSQLCreateAggregateStatement extends CreateAggregateStatement implements PostgreSQLStatement {
+public final class PostgreSQLCreateAggregateStatement extends DDLStatement {
 }

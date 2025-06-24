@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterDatabaseLinkStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle alter database link statement.
+ * Alter database link statement for Oracle.
  */
-public final class OracleAlterDatabaseLinkStatement extends AlterDatabaseLinkStatement implements OracleStatement {
+public final class OracleAlterDatabaseLinkStatement extends DDLStatement {
 }

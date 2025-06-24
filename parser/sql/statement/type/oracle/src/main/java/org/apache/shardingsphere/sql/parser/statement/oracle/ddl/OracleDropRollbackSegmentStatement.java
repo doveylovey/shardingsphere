@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropRollbackSegmentStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle drop rollback segment statement.
+ * Drop rollback segment statement for Oracle.
  */
-public final class OracleDropRollbackSegmentStatement extends DropRollbackSegmentStatement implements OracleStatement {
+public final class OracleDropRollbackSegmentStatement extends DDLStatement {
 }

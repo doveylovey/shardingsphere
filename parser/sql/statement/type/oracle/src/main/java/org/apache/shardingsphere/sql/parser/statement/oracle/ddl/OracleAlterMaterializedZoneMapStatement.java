@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterMaterializedZoneMapStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle alter materialized zone map statement.
+ * Alter materialized zone map statement for Oracle.
  */
-public final class OracleAlterMaterializedZoneMapStatement extends AlterMaterializedZoneMapStatement implements OracleStatement {
+public final class OracleAlterMaterializedZoneMapStatement extends DDLStatement {
 }

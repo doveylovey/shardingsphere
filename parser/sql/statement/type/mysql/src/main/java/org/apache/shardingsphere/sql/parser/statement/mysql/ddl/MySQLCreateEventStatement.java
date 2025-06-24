@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.mysql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateEventStatement;
-import org.apache.shardingsphere.sql.parser.statement.mysql.MySQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * MySQL create event statement.
+ * Create event statement for MySQL.
  */
-public final class MySQLCreateEventStatement extends CreateEventStatement implements MySQLStatement {
+public final class MySQLCreateEventStatement extends DDLStatement {
 }

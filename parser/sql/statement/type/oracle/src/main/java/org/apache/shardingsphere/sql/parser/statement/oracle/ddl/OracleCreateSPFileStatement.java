@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateSPFileStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle create server parameter file statement.
+ * Create server parameter file statement for Oracle.
  */
-public class OracleCreateSPFileStatement extends CreateSPFileStatement implements OracleStatement {
+public final class OracleCreateSPFileStatement extends DDLStatement {
 }

@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropTextSearchStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL drop text search statement.
+ * Drop text search statement for PostgreSQL.
  */
-public final class PostgreSQLDropTextSearchStatement extends DropTextSearchStatement implements PostgreSQLStatement {
+public final class PostgreSQLDropTextSearchStatement extends DDLStatement {
 }

@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateDimensionStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle create dimension statement.
+ * Create dimension statement for Oracle.
  */
-public final class OracleCreateDimensionStatement extends CreateDimensionStatement implements OracleStatement {
+public final class OracleCreateDimensionStatement extends DDLStatement {
 }

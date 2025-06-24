@@ -17,12 +17,14 @@
 
 package org.apache.shardingsphere.sharding.checker.sql.dml;
 
-import org.apache.shardingsphere.infra.binder.context.statement.dml.CopyStatementContext;
+import org.apache.shardingsphere.infra.binder.context.statement.type.CommonSQLStatementContext;
 import org.apache.shardingsphere.sharding.exception.syntax.UnsupportedShardingOperationException;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.CopyStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.SQLStatementAttributes;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.TableSQLStatementAttribute;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.CopyStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,18 +46,20 @@ class ShardingCopySupportedCheckerTest {
     
     @Test
     void assertCheckWithNotShardingTable() {
-        assertDoesNotThrow(() -> new ShardingCopySupportedChecker().check(rule, mock(), mock(), createCopyStatementContext()));
+        assertDoesNotThrow(() -> new ShardingCopySupportedChecker().check(rule, mock(), mock(), createSQLStatementContext()));
     }
     
     @Test
     void assertCheckWitShardingTable() {
         when(rule.isShardingTable("foo_tbl")).thenReturn(true);
-        assertThrows(UnsupportedShardingOperationException.class, () -> new ShardingCopySupportedChecker().check(rule, mock(), mock(), createCopyStatementContext()));
+        assertThrows(UnsupportedShardingOperationException.class, () -> new ShardingCopySupportedChecker().check(rule, mock(), mock(), createSQLStatementContext()));
     }
     
-    private CopyStatementContext createCopyStatementContext() {
+    private CommonSQLStatementContext createSQLStatementContext() {
         CopyStatement sqlStatement = mock(CopyStatement.class);
-        when(sqlStatement.getTable()).thenReturn(Optional.of(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("foo_tbl")))));
-        return new CopyStatementContext(sqlStatement);
+        SimpleTableSegment table = new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("foo_tbl")));
+        when(sqlStatement.getTable()).thenReturn(Optional.of(table));
+        when(sqlStatement.getAttributes()).thenReturn(new SQLStatementAttributes(new TableSQLStatementAttribute(table)));
+        return new CommonSQLStatementContext(mock(), sqlStatement);
     }
 }

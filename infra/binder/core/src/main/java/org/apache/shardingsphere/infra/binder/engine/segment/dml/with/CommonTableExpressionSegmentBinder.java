@@ -41,7 +41,7 @@ import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.item.Proj
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.ColumnSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.bound.TableSegmentBoundInfo;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SubqueryTableSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.SelectStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 
 import java.util.ArrayList;
@@ -93,8 +93,8 @@ public final class CommonTableExpressionSegmentBinder {
     
     private static Multimap<CaseInsensitiveString, TableSegmentBinderContext> createCurrentTableBinderContexts(final Collection<ColumnSegment> definitionColumns,
                                                                                                                final SQLStatementBinderContext binderContext, final SelectStatement selectStatement) {
-        Collection<ProjectionSegment> subqueryProjections = SubqueryTableBindUtils.createSubqueryProjections(selectStatement.getProjections().getProjections(), new IdentifierValue(""),
-                binderContext.getSqlStatement().getDatabaseType(), TableSourceType.TEMPORARY_TABLE);
+        Collection<ProjectionSegment> subqueryProjections = SubqueryTableBindUtils.createSubqueryProjections(
+                selectStatement.getProjections().getProjections(), new IdentifierValue(""), binderContext.getDatabaseType(), TableSourceType.TEMPORARY_TABLE);
         Multimap<CaseInsensitiveString, TableSegmentBinderContext> result = LinkedHashMultimap.create();
         Collection<ProjectionSegment> boundDefinitionColumns = createBoundDefinitionColumns(definitionColumns, subqueryProjections);
         Collection<ProjectionSegment> boundProjectionSegments = definitionColumns.isEmpty() ? subqueryProjections : new LinkedList<>(boundDefinitionColumns);

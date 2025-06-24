@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropPluggableDatabaseStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle drop pluggable database statement.
+ * Drop pluggable database statement for Oracle.
  */
-public final class OracleDropPluggableDatabaseStatement extends DropPluggableDatabaseStatement implements OracleStatement {
+public final class OracleDropPluggableDatabaseStatement extends DDLStatement {
 }

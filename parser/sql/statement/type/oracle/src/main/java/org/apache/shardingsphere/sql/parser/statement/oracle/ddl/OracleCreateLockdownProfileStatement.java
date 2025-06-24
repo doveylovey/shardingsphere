@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateLockdownProfileStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle create lockdown profile statement.
+ * Create lockdown profile statement for Oracle.
  */
-public final class OracleCreateLockdownProfileStatement extends CreateLockdownProfileStatement implements OracleStatement {
+public final class OracleCreateLockdownProfileStatement extends DDLStatement {
 }

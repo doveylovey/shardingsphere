@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropPolicyStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL drop policy statement.
+ * Drop policy statement for PostgreSQL.
  */
-public final class PostgreSQLDropPolicyStatement extends DropPolicyStatement implements PostgreSQLStatement {
+public final class PostgreSQLDropPolicyStatement extends DDLStatement {
 }

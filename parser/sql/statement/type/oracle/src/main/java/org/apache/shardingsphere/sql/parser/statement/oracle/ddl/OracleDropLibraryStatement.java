@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropLibraryStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle drop library statement.
+ * Drop library statement for Oracle.
  */
-public final class OracleDropLibraryStatement extends DropLibraryStatement implements OracleStatement {
+public final class OracleDropLibraryStatement extends DDLStatement {
 }

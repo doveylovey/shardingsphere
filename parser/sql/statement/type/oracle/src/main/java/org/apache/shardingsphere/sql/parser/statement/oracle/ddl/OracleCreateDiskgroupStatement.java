@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateDiskgroupStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Create diskgroup statement.
+ * Create diskgroup statement for Oracle.
  */
-public class OracleCreateDiskgroupStatement extends CreateDiskgroupStatement implements OracleStatement {
+public final class OracleCreateDiskgroupStatement extends DDLStatement {
 }

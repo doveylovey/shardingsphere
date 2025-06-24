@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.DropLanguageStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL drop language statement.
+ * Drop language statement for PostgreSQL.
  */
-public final class PostgreSQLDropLanguageStatement extends DropLanguageStatement implements PostgreSQLStatement {
+public final class PostgreSQLDropLanguageStatement extends DDLStatement {
 }

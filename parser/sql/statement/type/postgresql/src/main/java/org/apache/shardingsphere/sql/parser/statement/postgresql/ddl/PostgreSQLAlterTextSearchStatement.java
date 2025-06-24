@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterTextSearchStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL alter text search statement.
+ * Alter text search statement for PostgreSQL.
  */
-public final class PostgreSQLAlterTextSearchStatement extends AlterTextSearchStatement implements PostgreSQLStatement {
+public final class PostgreSQLAlterTextSearchStatement extends DDLStatement {
 }

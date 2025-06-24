@@ -17,12 +17,11 @@
 
 package org.apache.shardingsphere.proxy.backend.connector;
 
+import org.apache.shardingsphere.infra.binder.context.statement.type.CommonSQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.ddl.CreateTableStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.ddl.CursorStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.ddl.TruncateStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.dml.InsertStatementContext;
-import org.apache.shardingsphere.infra.binder.context.type.TableAvailable;
+import org.apache.shardingsphere.infra.binder.context.statement.type.ddl.CreateTableStatementContext;
+import org.apache.shardingsphere.infra.binder.context.statement.type.ddl.CursorStatementContext;
+import org.apache.shardingsphere.infra.binder.context.statement.type.dml.InsertStatementContext;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
@@ -49,9 +48,11 @@ import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateTableStatement;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.TruncateStatement;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.InsertStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.SQLStatementAttributes;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.TableSQLStatementAttribute;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.CreateTableStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.TruncateStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.InsertStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.apache.shardingsphere.sqlfederation.rule.SQLFederationRule;
 import org.apache.shardingsphere.test.mock.AutoMockExtension;
@@ -74,7 +75,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 @ExtendWith(AutoMockExtension.class)
 @StaticMockSettings(ProxyContext.class)
@@ -153,7 +153,7 @@ class ProxySQLExecutorTest {
     @Test
     void assertCheckExecutePrerequisitesWhenExecuteDMLInXATransaction() {
         ExecutionContext executionContext = new ExecutionContext(
-                new QueryContext(createInsertStatementContext(mysqlDatabaseType), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(), mock(ShardingSphereMetaData.class)),
+                new QueryContext(mockInsertStatementContext(mysqlDatabaseType), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(), mock(ShardingSphereMetaData.class)),
                 Collections.emptyList(), mock(RouteContext.class));
         new ProxySQLExecutor(JDBCDriverType.STATEMENT, databaseConnectionManager, mock(DatabaseConnector.class), mockQueryContext()).checkExecutePrerequisites(executionContext);
     }
@@ -179,7 +179,7 @@ class ProxySQLExecutorTest {
     }
     
     @Test
-    void assertCheckExecutePrerequisitesWhenExecuteDDLInPostgreSQLTransaction() {
+    void assertCheckExecutePrerequisitesWhenExecuteCreateTableInPostgreSQLTransaction() {
         when(transactionRule.getDefaultType()).thenReturn(TransactionType.LOCAL);
         ExecutionContext executionContext = new ExecutionContext(
                 new QueryContext(createCreateTableStatementContext(postgresqlDatabaseType), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(),
@@ -203,7 +203,7 @@ class ProxySQLExecutorTest {
     void assertCheckExecutePrerequisitesWhenExecuteCursorInPostgreSQLTransaction() {
         when(transactionRule.getDefaultType()).thenReturn(TransactionType.LOCAL);
         ExecutionContext executionContext = new ExecutionContext(
-                new QueryContext(createCursorStatementContext(), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(), mock(ShardingSphereMetaData.class)),
+                new QueryContext(mockCursorStatementContext(), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(), mock(ShardingSphereMetaData.class)),
                 Collections.emptyList(), mock(RouteContext.class));
         new ProxySQLExecutor(JDBCDriverType.STATEMENT, databaseConnectionManager, mock(DatabaseConnector.class), mockQueryContext()).checkExecutePrerequisites(executionContext);
     }
@@ -212,7 +212,7 @@ class ProxySQLExecutorTest {
     void assertCheckExecutePrerequisitesWhenExecuteDMLInPostgreSQLTransaction() {
         when(transactionRule.getDefaultType()).thenReturn(TransactionType.LOCAL);
         ExecutionContext executionContext = new ExecutionContext(
-                new QueryContext(createInsertStatementContext(postgresqlDatabaseType), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(),
+                new QueryContext(mockInsertStatementContext(postgresqlDatabaseType), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(),
                         mock(ShardingSphereMetaData.class)),
                 Collections.emptyList(), mock(RouteContext.class));
         new ProxySQLExecutor(JDBCDriverType.STATEMENT, databaseConnectionManager, mock(DatabaseConnector.class), mockQueryContext()).checkExecutePrerequisites(executionContext);
@@ -230,9 +230,9 @@ class ProxySQLExecutorTest {
     
     private QueryContext mockQueryContext() {
         QueryContext result = mock(QueryContext.class);
-        SQLStatementContext sqlStatementContext = mock(SQLStatementContext.class, withSettings().extraInterfaces(TableAvailable.class).defaultAnswer(RETURNS_DEEP_STUBS));
+        SQLStatementContext sqlStatementContext = mock(SQLStatementContext.class, RETURNS_DEEP_STUBS);
         when(sqlStatementContext.getDatabaseType()).thenReturn(databaseType);
-        when(((TableAvailable) sqlStatementContext).getTablesContext().getSchemaName()).thenReturn(Optional.of("foo_db"));
+        when(sqlStatementContext.getTablesContext().getSchemaName()).thenReturn(Optional.of("foo_db"));
         when(result.getSqlStatementContext()).thenReturn(sqlStatementContext);
         return result;
     }
@@ -250,22 +250,20 @@ class ProxySQLExecutorTest {
     
     private CreateTableStatementContext createCreateTableStatementContext(final DatabaseType databaseType) {
         CreateTableStatement sqlStatement = mock(CreateTableStatement.class);
-        when(sqlStatement.getDatabaseType()).thenReturn(databaseType);
         when(sqlStatement.getTable()).thenReturn(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))));
-        return new CreateTableStatementContext(sqlStatement);
+        return new CreateTableStatementContext(databaseType, sqlStatement);
     }
     
-    private TruncateStatementContext createTruncateStatementContext(final DatabaseType databaseType) {
+    private SQLStatementContext createTruncateStatementContext(final DatabaseType databaseType) {
         TruncateStatement sqlStatement = mock(TruncateStatement.class);
-        when(sqlStatement.getDatabaseType()).thenReturn(databaseType);
-        when(sqlStatement.getTables()).thenReturn(Collections.singletonList(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order")))));
-        return new TruncateStatementContext(sqlStatement);
+        when(sqlStatement.getAttributes()).thenReturn(new SQLStatementAttributes(new TableSQLStatementAttribute(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order"))))));
+        return new CommonSQLStatementContext(databaseType, sqlStatement);
     }
     
-    private CursorStatementContext createCursorStatementContext() {
+    private CursorStatementContext mockCursorStatementContext() {
         CursorStatementContext result = mock(CursorStatementContext.class, RETURNS_DEEP_STUBS);
         when(result.getTablesContext().getDatabaseName()).thenReturn(Optional.empty());
-        when(result.getSqlStatement().getDatabaseType()).thenReturn(TypedSPILoader.getService(DatabaseType.class, "FIXTURE"));
+        when(result.getDatabaseType()).thenReturn(databaseType);
         return result;
     }
     
@@ -273,12 +271,11 @@ class ProxySQLExecutorTest {
         return new ShardingSphereMetaData(Collections.singleton(database), mock(ResourceMetaData.class), mock(RuleMetaData.class), mock(ConfigurationProperties.class));
     }
     
-    private InsertStatementContext createInsertStatementContext(final DatabaseType databaseType) {
+    private InsertStatementContext mockInsertStatementContext(final DatabaseType databaseType) {
         InsertStatement sqlStatement = mock(InsertStatement.class);
-        when(sqlStatement.getDatabaseType()).thenReturn(databaseType);
         when(sqlStatement.getTable()).thenReturn(Optional.of(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("t_order")))));
         ShardingSphereDatabase database = mock(ShardingSphereDatabase.class, RETURNS_DEEP_STUBS);
         when(database.getName()).thenReturn("foo_db");
-        return new InsertStatementContext(createShardingSphereMetaData(database), Collections.emptyList(), sqlStatement, "foo_db");
+        return new InsertStatementContext(databaseType, sqlStatement, Collections.emptyList(), createShardingSphereMetaData(database), "foo_db");
     }
 }

@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterClusterStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle alter cluster statement.
+ * Alter cluster statement for Oracle.
  */
-public final class OracleAlterClusterStatement extends AlterClusterStatement implements OracleStatement {
+public final class OracleAlterClusterStatement extends DDLStatement {
 }

@@ -28,7 +28,7 @@ import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.paginatio
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.pagination.top.TopProjectionSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.predicate.WhereSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SubqueryTableSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.SelectStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.util.SQLUtils;
 
 import java.util.Collection;
@@ -68,7 +68,7 @@ public final class PaginationContextEngine {
         if (topProjectionSegment.isPresent()) {
             return new TopPaginationContextEngine().createPaginationContext(topProjectionSegment.get(), expressions, params);
         }
-        if (!expressions.isEmpty() && new DatabaseTypeRegistry(selectStatement.getDatabaseType()).getDialectDatabaseMetaData().getPaginationOption().isContainsRowNumber()) {
+        if (!expressions.isEmpty() && new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getPaginationOption().isContainsRowNumber()) {
             return new RowNumberPaginationContextEngine(databaseType).createPaginationContext(expressions, projectionsContext, params);
         }
         return new PaginationContext(null, null, params);

@@ -19,7 +19,7 @@ package org.apache.shardingsphere.test.it.sql.parser.internal.asserts.statement.
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.LoadXMLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.LoadXMLStatement;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.SQLCaseAssertContext;
 import org.apache.shardingsphere.test.it.sql.parser.internal.asserts.segment.table.TableAssert;
 import org.apache.shardingsphere.test.it.sql.parser.internal.cases.parser.jaxb.statement.dml.LoadXMLStatementTestCase;
@@ -45,9 +45,9 @@ public final class LoadXMLStatementAssert {
     
     private static void assertTable(final SQLCaseAssertContext assertContext, final LoadXMLStatement actual, final LoadXMLStatementTestCase expected) {
         if (null == expected.getTable()) {
-            assertNull(actual.getTableSegment(), assertContext.getText("Actual table should not exist."));
+            assertNull(actual.getTable(), assertContext.getText("Actual table should not exist."));
         } else {
-            TableAssert.assertIs(assertContext, actual.getTableSegment(), expected.getTable());
+            TableAssert.assertIs(assertContext, actual.getTable(), expected.getTable());
         }
     }
 }

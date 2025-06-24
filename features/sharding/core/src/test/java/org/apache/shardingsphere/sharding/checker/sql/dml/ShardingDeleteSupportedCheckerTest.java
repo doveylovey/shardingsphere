@@ -17,15 +17,14 @@
 
 package org.apache.shardingsphere.sharding.checker.sql.dml;
 
-import org.apache.shardingsphere.infra.binder.context.statement.dml.DeleteStatementContext;
+import org.apache.shardingsphere.infra.binder.context.statement.type.dml.DeleteStatementContext;
 import org.apache.shardingsphere.sharding.exception.syntax.DMLWithMultipleShardingTablesException;
 import org.apache.shardingsphere.sharding.rule.ShardingRule;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.DeleteMultiTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.DeleteStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.DeleteStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
-import org.apache.shardingsphere.sql.parser.statement.sql92.dml.SQL92DeleteStatement;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -43,11 +42,11 @@ class ShardingDeleteSupportedCheckerTest {
         tableSegment.getActualDeleteTables().add(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("user"))));
         tableSegment.getActualDeleteTables().add(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("order"))));
         tableSegment.getActualDeleteTables().add(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("order_item"))));
-        DeleteStatement sqlStatement = new SQL92DeleteStatement();
+        DeleteStatement sqlStatement = new DeleteStatement();
         sqlStatement.setTable(tableSegment);
         ShardingRule rule = mock(ShardingRule.class);
         when(rule.containsShardingTable(new HashSet<>(Arrays.asList("user", "order", "order_item")))).thenReturn(true);
-        DeleteStatementContext sqlStatementContext = new DeleteStatementContext(sqlStatement);
+        DeleteStatementContext sqlStatementContext = new DeleteStatementContext(mock(), sqlStatement);
         assertThrows(DMLWithMultipleShardingTablesException.class, () -> new ShardingDeleteSupportedChecker().check(rule, mock(), mock(), sqlStatementContext));
     }
 }

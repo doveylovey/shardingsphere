@@ -28,9 +28,7 @@ import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.paginatio
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.pagination.limit.NumberLiteralLimitValueSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.pagination.top.TopProjectionSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.predicate.WhereSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.dml.SelectStatement;
-import org.apache.shardingsphere.sql.parser.statement.sql92.dml.SQL92SelectStatement;
-import org.apache.shardingsphere.sql.parser.statement.sqlserver.dml.SQLServerSelectStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.SelectStatement;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -45,7 +43,7 @@ class PaginationContextEngineTest {
     
     @Test
     void assertCreatePaginationContextWhenLimitSegmentIsPresent() {
-        SQL92SelectStatement selectStatement = new SQL92SelectStatement();
+        SelectStatement selectStatement = new SelectStatement();
         selectStatement.setLimit(new LimitSegment(0, 10, new NumberLiteralLimitValueSegment(0, 10, 100L),
                 new NumberLiteralLimitValueSegment(0, 10, 100L)));
         PaginationContext paginationContext = new PaginationContextEngine(getDatabaseType("SQL92")).createPaginationContext(
@@ -56,10 +54,10 @@ class PaginationContextEngineTest {
     
     @Test
     void assertCreatePaginationContextWhenLimitSegmentAbsentAndTopSegmentPresent() {
-        SQLServerSelectStatement subquerySelectStatement = new SQLServerSelectStatement();
+        SelectStatement subquerySelectStatement = new SelectStatement();
         subquerySelectStatement.setProjections(new ProjectionsSegment(0, 0));
         subquerySelectStatement.getProjections().getProjections().add(new TopProjectionSegment(0, 10, null, "rowNumberAlias"));
-        SQLServerSelectStatement selectStatement = new SQLServerSelectStatement();
+        SelectStatement selectStatement = new SelectStatement();
         selectStatement.setProjections(new ProjectionsSegment(0, 0));
         selectStatement.getProjections().getProjections().add(new SubqueryProjectionSegment(new SubquerySegment(0, 0, subquerySelectStatement, ""), ""));
         PaginationContext paginationContext = new PaginationContextEngine(getDatabaseType("SQLServer")).createPaginationContext(
@@ -70,7 +68,7 @@ class PaginationContextEngineTest {
     
     @Test
     void assertCreatePaginationContextWhenLimitSegmentTopSegmentAbsentAndWhereSegmentPresent() {
-        SQLServerSelectStatement selectStatement = new SQLServerSelectStatement();
+        SelectStatement selectStatement = new SelectStatement();
         selectStatement.setProjections(new ProjectionsSegment(0, 0));
         WhereSegment where = new WhereSegment(0, 10, null);
         selectStatement.setWhere(where);
@@ -83,7 +81,7 @@ class PaginationContextEngineTest {
     
     @Test
     void assertCreatePaginationContextWhenResultIsPaginationContext() {
-        SelectStatement selectStatement = new SQL92SelectStatement();
+        SelectStatement selectStatement = new SelectStatement();
         selectStatement.setProjections(new ProjectionsSegment(0, 0));
         ProjectionsContext projectionsContext = new ProjectionsContext(0, 0, false, Collections.emptyList());
         assertThat(new PaginationContextEngine(getDatabaseType("SQL92")).createPaginationContext(

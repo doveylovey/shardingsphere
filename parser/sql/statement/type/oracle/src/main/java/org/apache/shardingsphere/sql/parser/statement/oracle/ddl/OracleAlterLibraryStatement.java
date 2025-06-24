@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterLibraryStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle alter library statement.
+ * Alter library statement for Oracle.
  */
-public final class OracleAlterLibraryStatement extends AlterLibraryStatement implements OracleStatement {
+public final class OracleAlterLibraryStatement extends DDLStatement {
 }

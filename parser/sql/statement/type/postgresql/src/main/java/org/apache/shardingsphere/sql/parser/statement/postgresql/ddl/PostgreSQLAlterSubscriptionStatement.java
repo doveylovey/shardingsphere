@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.postgresql.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.AlterSubscriptionStatement;
-import org.apache.shardingsphere.sql.parser.statement.postgresql.PostgreSQLStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * PostgreSQL alter subscription statement.
+ * Alter subscription statement for PostgreSQL.
  */
-public final class PostgreSQLAlterSubscriptionStatement extends AlterSubscriptionStatement implements PostgreSQLStatement {
+public final class PostgreSQLAlterSubscriptionStatement extends DDLStatement {
 }

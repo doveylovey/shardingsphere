@@ -17,11 +17,10 @@
 
 package org.apache.shardingsphere.sql.parser.statement.oracle.ddl;
 
-import org.apache.shardingsphere.sql.parser.statement.core.statement.ddl.CreateRestorePointStatement;
-import org.apache.shardingsphere.sql.parser.statement.oracle.OracleStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.DDLStatement;
 
 /**
- * Oracle create restore point statement.
+ * Create restore point statement for Oracle.
  */
-public final class OracleCreateRestorePointStatement extends CreateRestorePointStatement implements OracleStatement {
+public final class OracleCreateRestorePointStatement extends DDLStatement {
 }
