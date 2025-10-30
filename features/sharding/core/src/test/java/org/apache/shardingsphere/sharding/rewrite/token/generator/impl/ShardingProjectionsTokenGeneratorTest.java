@@ -17,14 +17,14 @@
 
 package org.apache.shardingsphere.sharding.rewrite.token.generator.impl;
 
+import org.apache.shardingsphere.database.connector.core.metadata.database.enums.NullsOrderType;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.binder.context.segment.select.projection.Projection;
 import org.apache.shardingsphere.infra.binder.context.segment.select.projection.impl.AggregationDistinctProjection;
 import org.apache.shardingsphere.infra.binder.context.segment.select.projection.impl.AggregationProjection;
 import org.apache.shardingsphere.infra.binder.context.segment.select.projection.impl.DerivedProjection;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.context.statement.type.dml.SelectStatementContext;
-import org.apache.shardingsphere.infra.database.core.metadata.database.enums.NullsOrderType;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
 import org.apache.shardingsphere.infra.route.context.RouteMapper;
 import org.apache.shardingsphere.infra.route.context.RouteUnit;
@@ -105,12 +105,11 @@ class ShardingProjectionsTokenGeneratorTest {
     @Test
     void assertGenerateSQLToken() {
         SelectStatementContext selectStatementContext = mock(SelectStatementContext.class, RETURNS_DEEP_STUBS);
-        when(selectStatementContext.getDatabaseType()).thenReturn(databaseType);
         Collection<Projection> projections = Arrays.asList(
                 createAggregationProjection(), createDerivedProjectionWithOwner(), createDerivedProjectionWithoutOwner(), createOtherDerivedProjection(), mock());
         when(selectStatementContext.getProjectionsContext().getProjections()).thenReturn(projections);
         when(selectStatementContext.getProjectionsContext().getStopIndex()).thenReturn(2);
-        when(selectStatementContext.getSqlStatement()).thenReturn(mock(SelectStatement.class));
+        when(selectStatementContext.getSqlStatement()).thenReturn(new SelectStatement(databaseType));
         ProjectionsToken actual = generator.generateSQLToken(selectStatementContext);
         assertThat(actual.toString(routeUnit),
                 is(", foo_agg_expr AS foo_agg_alias , foo_tbl_0.foo_derived_col AS foo_derived_alias , bar_derived_col AS bar_derived_alias , other_expr AS other_alias "));

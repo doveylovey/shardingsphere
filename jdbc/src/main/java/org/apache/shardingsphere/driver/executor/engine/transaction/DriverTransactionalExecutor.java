@@ -17,8 +17,8 @@
 
 package org.apache.shardingsphere.driver.executor.engine.transaction;
 
+import org.apache.shardingsphere.database.exception.core.SQLExceptionTransformEngine;
 import org.apache.shardingsphere.driver.jdbc.core.connection.ShardingSphereConnection;
-import org.apache.shardingsphere.infra.exception.dialect.SQLExceptionTransformEngine;
 import org.apache.shardingsphere.infra.executor.sql.context.ExecutionContext;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.transaction.implicit.ImplicitTransactionCallback;
@@ -58,7 +58,7 @@ public final class DriverTransactionalExecutor {
     
     private <T> T executeWithImplicitCommit(final ShardingSphereDatabase database, final ImplicitTransactionCallback<T> callback) throws SQLException {
         try {
-            connection.setAutoCommit(false);
+            connection.getDatabaseConnectionManager().begin();
             T result = callback.execute();
             connection.commit();
             return result;
@@ -67,8 +67,6 @@ public final class DriverTransactionalExecutor {
             // CHECKSTYLE:ON
             connection.rollback();
             throw SQLExceptionTransformEngine.toSQLException(ex, database.getProtocolType());
-        } finally {
-            connection.setAutoCommit(true);
         }
     }
 }

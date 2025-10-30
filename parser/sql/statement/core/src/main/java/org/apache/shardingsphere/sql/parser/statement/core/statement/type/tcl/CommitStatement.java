@@ -17,8 +17,14 @@
 
 package org.apache.shardingsphere.sql.parser.statement.core.statement.type.tcl;
 
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
+
 /**
  * Commit statement.
  */
 public final class CommitStatement extends TCLStatement {
+    
+    public CommitStatement(final DatabaseType databaseType) {
+        super(databaseType);
+    }
 }

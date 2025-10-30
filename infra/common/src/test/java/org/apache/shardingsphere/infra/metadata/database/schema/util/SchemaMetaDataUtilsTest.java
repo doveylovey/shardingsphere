@@ -17,10 +17,10 @@
 
 package org.apache.shardingsphere.infra.metadata.database.schema.util;
 
+import org.apache.shardingsphere.database.connector.core.metadata.data.loader.MetaDataLoaderMaterial;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
-import org.apache.shardingsphere.infra.database.core.metadata.data.loader.MetaDataLoaderMaterial;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.metadata.database.resource.unit.StorageUnit;
 import org.apache.shardingsphere.infra.metadata.database.schema.builder.GenericSchemaBuilderMaterial;
@@ -28,7 +28,7 @@ import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
 import org.apache.shardingsphere.infra.rule.attribute.RuleAttributes;
 import org.apache.shardingsphere.infra.rule.attribute.datanode.DataNodeRuleAttribute;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
-import org.apache.shardingsphere.test.fixture.jdbc.MockedDataSource;
+import org.apache.shardingsphere.test.infra.fixture.jdbc.MockedDataSource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -114,10 +114,8 @@ class SchemaMetaDataUtilsTest {
     }
     
     private List<DataNode> mockSingleTableDataNodes() {
-        DataNode firstDataNode = new DataNode("ds_0.t_single");
-        firstDataNode.setSchemaName("public");
-        DataNode secondDataNode = new DataNode("ds_0.t_single");
-        secondDataNode.setSchemaName("test");
+        DataNode firstDataNode = new DataNode("ds_0", "public", "t_single");
+        DataNode secondDataNode = new DataNode("ds_0", "test", "t_single");
         return Arrays.asList(firstDataNode, secondDataNode);
     }
     

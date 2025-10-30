@@ -17,10 +17,15 @@
 
 package org.apache.shardingsphere.sql.parser.statement.core.statement.type.dcl;
 
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
 
 /**
  * Data control statement.
  */
 public abstract class DCLStatement extends SQLStatement {
+    
+    protected DCLStatement(final DatabaseType databaseType) {
+        super(databaseType);
+    }
 }

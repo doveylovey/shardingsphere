@@ -30,7 +30,7 @@ import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.context.ty
 import org.apache.shardingsphere.infra.binder.engine.segment.dml.from.type.SubqueryTableSegmentBinder;
 import org.apache.shardingsphere.infra.binder.engine.segment.util.SubqueryTableBindUtils;
 import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementBinderContext;
-import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.exception.kernel.syntax.DifferenceInColumnCountOfSelectListAndColumnNameListException;
 import org.apache.shardingsphere.infra.exception.kernel.syntax.DuplicateCommonTableExpressionAliasException;
 import org.apache.shardingsphere.sql.parser.statement.core.enums.TableSourceType;
@@ -78,7 +78,7 @@ public final class CommonTableExpressionSegmentBinder {
                     new SimpleTableSegmentBinderContext(segment.getColumns().stream().map(ColumnProjectionSegment::new).collect(Collectors.toList()), TableSourceType.TEMPORARY_TABLE));
         }
         SubqueryTableSegment subqueryTableSegment = new SubqueryTableSegment(segment.getStartIndex(), segment.getStopIndex(), segment.getSubquery());
-        subqueryTableSegment.setAlias(segment.getAliasSegment());
+        segment.getAliasSegment().ifPresent(subqueryTableSegment::setAlias);
         SubqueryTableSegment boundSubquerySegment =
                 SubqueryTableSegmentBinder.bind(subqueryTableSegment, binderContext, LinkedHashMultimap.create(), binderContext.getExternalTableBinderContexts(), true);
         CommonTableExpressionSegment result = new CommonTableExpressionSegment(
@@ -94,7 +94,7 @@ public final class CommonTableExpressionSegmentBinder {
     private static Multimap<CaseInsensitiveString, TableSegmentBinderContext> createCurrentTableBinderContexts(final Collection<ColumnSegment> definitionColumns,
                                                                                                                final SQLStatementBinderContext binderContext, final SelectStatement selectStatement) {
         Collection<ProjectionSegment> subqueryProjections = SubqueryTableBindUtils.createSubqueryProjections(
-                selectStatement.getProjections().getProjections(), new IdentifierValue(""), binderContext.getDatabaseType(), TableSourceType.TEMPORARY_TABLE);
+                selectStatement.getProjections().getProjections(), new IdentifierValue(""), binderContext.getSqlStatement().getDatabaseType(), TableSourceType.TEMPORARY_TABLE);
         Multimap<CaseInsensitiveString, TableSegmentBinderContext> result = LinkedHashMultimap.create();
         Collection<ProjectionSegment> boundDefinitionColumns = createBoundDefinitionColumns(definitionColumns, subqueryProjections);
         Collection<ProjectionSegment> boundProjectionSegments = definitionColumns.isEmpty() ? subqueryProjections : new LinkedList<>(boundDefinitionColumns);

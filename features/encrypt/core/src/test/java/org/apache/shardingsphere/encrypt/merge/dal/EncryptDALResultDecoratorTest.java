@@ -17,12 +17,11 @@
 
 package org.apache.shardingsphere.encrypt.merge.dal;
 
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.encrypt.merge.dal.show.EncryptShowColumnsMergedResult;
 import org.apache.shardingsphere.encrypt.merge.dal.show.EncryptShowCreateTableMergedResult;
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
-import org.apache.shardingsphere.infra.binder.context.statement.type.CommonSQLStatementContext;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.merge.result.MergedResult;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
@@ -30,8 +29,8 @@ import org.apache.shardingsphere.parser.rule.SQLParserRule;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.SQLStatement;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.ColumnInResultSetSQLStatementAttribute;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.SQLStatementAttributes;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.ColumnInResultSetSQLStatementAttribute;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.TableInResultSetSQLStatementAttribute;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
 import org.junit.jupiter.api.Test;
@@ -41,8 +40,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.isA;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -62,7 +61,7 @@ class EncryptDALResultDecoratorTest {
     void assertMergedResultWithShowColumnsStatement() {
         sqlStatementContext = mockColumnInResultSetSQLStatementAttributeContext();
         EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(mock(RuleMetaData.class));
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, rule), instanceOf(EncryptShowColumnsMergedResult.class));
+        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(EncryptShowColumnsMergedResult.class));
     }
     
     @Test
@@ -71,14 +70,14 @@ class EncryptDALResultDecoratorTest {
         RuleMetaData ruleMetaData = mock(RuleMetaData.class);
         when(ruleMetaData.getSingleRule(SQLParserRule.class)).thenReturn(mock(SQLParserRule.class));
         EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(ruleMetaData);
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, rule), instanceOf(EncryptShowCreateTableMergedResult.class));
+        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(EncryptShowCreateTableMergedResult.class));
     }
     
     @Test
     void assertMergedResultWithOtherStatement() {
         sqlStatementContext = mock(SQLStatementContext.class, RETURNS_DEEP_STUBS);
         EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(mock(RuleMetaData.class));
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, rule), instanceOf(MergedResult.class));
+        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(MergedResult.class));
     }
     
     private SQLStatementContext mockColumnInResultSetSQLStatementAttributeContext() {
@@ -90,8 +89,8 @@ class EncryptDALResultDecoratorTest {
     }
     
     private SQLStatementContext mockTableInfoInResultSetAvailableStatementContext() {
-        SQLStatementContext result = mock(CommonSQLStatementContext.class, RETURNS_DEEP_STUBS);
-        when(result.getDatabaseType()).thenReturn(databaseType);
+        SQLStatementContext result = mock(SQLStatementContext.class, RETURNS_DEEP_STUBS);
+        when(result.getSqlStatement().getDatabaseType()).thenReturn(databaseType);
         SimpleTableSegment simpleTableSegment = new SimpleTableSegment(new TableNameSegment(1, 7, new IdentifierValue("foo_tbl")));
         when(result.getTablesContext().getSimpleTables()).thenReturn(Collections.singleton(simpleTableSegment));
         SQLStatement sqlStatement = mock(SQLStatement.class);

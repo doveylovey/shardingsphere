@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.sharding.route.engine.condition.generator.impl;
 
-import org.apache.shardingsphere.sharding.route.engine.condition.Column;
+import org.apache.shardingsphere.infra.metadata.database.schema.HashColumn;
 import org.apache.shardingsphere.sharding.route.engine.condition.value.ListShardingConditionValue;
 import org.apache.shardingsphere.sharding.route.engine.condition.value.ShardingConditionValue;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.dml.column.ColumnSegment;
@@ -38,9 +38,9 @@ import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Properties;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +48,7 @@ class ConditionValueInOperatorGeneratorTest {
     
     private final ConditionValueInOperatorGenerator generator = new ConditionValueInOperatorGenerator();
     
-    private final Column column = new Column("id", "tbl");
+    private final HashColumn column = new HashColumn("id", "tbl");
     
     private final TimestampServiceRule timestampServiceRule = new TimestampServiceRule(new TimestampServiceRuleConfiguration("System", new Properties()));
     
@@ -59,7 +59,7 @@ class ConditionValueInOperatorGeneratorTest {
         InExpression inExpression = new InExpression(0, 0, null, listExpression, false);
         Optional<ShardingConditionValue> shardingConditionValue = generator.generate(inExpression, column, new LinkedList<>(), timestampServiceRule);
         assertTrue(shardingConditionValue.isPresent());
-        assertThat(((ListShardingConditionValue<?>) shardingConditionValue.get()).getValues().iterator().next(), instanceOf(Date.class));
+        assertThat(((ListShardingConditionValue<?>) shardingConditionValue.get()).getValues().iterator().next(), isA(Date.class));
         assertTrue(shardingConditionValue.get().getParameterMarkerIndexes().isEmpty());
     }
     
@@ -100,7 +100,7 @@ class ConditionValueInOperatorGeneratorTest {
         InExpression predicate = new InExpression(0, 0, left, right, false);
         Optional<ShardingConditionValue> actual = generator.generate(predicate, column, Collections.singletonList(1), timestampServiceRule);
         assertTrue(actual.isPresent());
-        assertThat(actual.get(), instanceOf(ListShardingConditionValue.class));
+        assertThat(actual.get(), isA(ListShardingConditionValue.class));
         ListShardingConditionValue<Integer> conditionValue = (ListShardingConditionValue<Integer>) actual.get();
         assertThat(conditionValue.getTableName(), is("tbl"));
         assertThat(conditionValue.getColumnName(), is("id"));

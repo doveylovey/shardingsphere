@@ -17,24 +17,19 @@
 
 package org.apache.shardingsphere.sql.parser.statement.core.statement.type.dal;
 
-import lombok.RequiredArgsConstructor;
-
-import java.util.Optional;
+import lombok.Getter;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 
 /**
  * Show statement.
  */
-@RequiredArgsConstructor
+@Getter
 public final class ShowStatement extends DALStatement {
     
     private final String name;
     
-    /**
-     * Get name.
-     *
-     * @return name
-     */
-    public Optional<String> getName() {
-        return Optional.ofNullable(name);
+    public ShowStatement(final DatabaseType databaseType, final String name) {
+        super(databaseType);
+        this.name = name;
     }
 }

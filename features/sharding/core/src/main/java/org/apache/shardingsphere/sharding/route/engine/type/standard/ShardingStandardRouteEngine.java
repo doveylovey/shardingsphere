@@ -21,7 +21,7 @@ import com.cedarsoftware.util.CaseInsensitiveSet;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.datanode.DataNode;
-import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.hint.HintManager;
 import org.apache.shardingsphere.infra.hint.HintValueContext;
 import org.apache.shardingsphere.infra.route.context.RouteContext;
@@ -274,7 +274,7 @@ public final class ShardingStandardRouteEngine implements ShardingRouteEngine {
                 : tableShardingStrategy.doSharding(availableTargetTables, tableShardingValues, shardingTable.getTableDataNode(), props);
         Collection<DataNode> result = new LinkedList<>();
         for (String each : routedTables) {
-            result.add(new DataNode(routedDataSource, each));
+            result.add(new DataNode(routedDataSource, (String) null, each));
         }
         return result;
     }

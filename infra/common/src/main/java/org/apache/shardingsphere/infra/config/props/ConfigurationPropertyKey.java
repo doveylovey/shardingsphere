@@ -19,7 +19,7 @@ package org.apache.shardingsphere.infra.config.props;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.infra.props.TypedPropertyKey;
 
 import java.util.Arrays;
@@ -122,7 +122,12 @@ public enum ConfigurationPropertyKey implements TypedPropertyKey {
     /**
      * Agent plugins enabled.
      */
-    AGENT_PLUGINS_ENABLED("agent-plugins-enabled", String.valueOf(Boolean.TRUE), boolean.class, false);
+    AGENT_PLUGINS_ENABLED("agent-plugins-enabled", String.valueOf(Boolean.TRUE), boolean.class, false),
+    
+    /**
+     * Persist schemas to repository.
+     */
+    PERSIST_SCHEMAS_TO_REPOSITORY_ENABLED("persist-schemas-to-repository-enabled", String.valueOf(Boolean.TRUE), boolean.class, true);
     
     private final String key;
     

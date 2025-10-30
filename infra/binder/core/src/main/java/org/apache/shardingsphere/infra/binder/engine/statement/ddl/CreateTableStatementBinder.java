@@ -29,7 +29,7 @@ import org.apache.shardingsphere.infra.binder.engine.statement.SQLStatementCopyU
 import org.apache.shardingsphere.infra.binder.engine.statement.dml.SelectStatementBinder;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.ddl.column.ColumnDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.CreateTableStatement;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl.table.CreateTableStatement;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.type.dml.SelectStatement;
 
 import java.util.Collection;
@@ -52,7 +52,7 @@ public final class CreateTableStatementBinder implements SQLStatementBinder<Crea
     
     private CreateTableStatement copy(final CreateTableStatement sqlStatement,
                                       final SimpleTableSegment boundTable, final SelectStatement boundSelectStatement, final Collection<ColumnDefinitionSegment> boundColumnDefinitions) {
-        CreateTableStatement result = new CreateTableStatement();
+        CreateTableStatement result = new CreateTableStatement(sqlStatement.getDatabaseType());
         result.setTable(boundTable);
         result.setSelectStatement(boundSelectStatement);
         result.getColumnDefinitions().addAll(boundColumnDefinitions);

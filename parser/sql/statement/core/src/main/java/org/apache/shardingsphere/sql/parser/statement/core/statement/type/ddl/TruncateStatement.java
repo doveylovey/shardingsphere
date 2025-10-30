@@ -18,12 +18,12 @@
 package org.apache.shardingsphere.sql.parser.statement.core.statement.type.ddl;
 
 import lombok.Getter;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.SQLStatementAttributes;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.TableSQLStatementAttribute;
 
 import java.util.Collection;
-import java.util.LinkedList;
 
 /**
  * Truncate table statement.
@@ -31,7 +31,12 @@ import java.util.LinkedList;
 @Getter
 public final class TruncateStatement extends DDLStatement {
     
-    private final Collection<SimpleTableSegment> tables = new LinkedList<>();
+    private final Collection<SimpleTableSegment> tables;
+    
+    public TruncateStatement(final DatabaseType databaseType, final Collection<SimpleTableSegment> tables) {
+        super(databaseType);
+        this.tables = tables;
+    }
     
     @Override
     public SQLStatementAttributes getAttributes() {

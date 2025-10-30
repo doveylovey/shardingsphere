@@ -22,14 +22,14 @@ import lombok.SneakyThrows;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
+import org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.table.DialectDriverQuerySystemCatalogOption;
+import org.apache.shardingsphere.database.connector.core.metadata.database.system.SystemDatabase;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseTypeRegistry;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.binder.engine.SQLBindEngine;
 import org.apache.shardingsphere.infra.connection.kernel.KernelProcessor;
-import org.apache.shardingsphere.infra.database.core.metadata.database.metadata.option.table.DialectDriverQuerySystemCatalogOption;
-import org.apache.shardingsphere.infra.database.core.metadata.database.system.SystemDatabase;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseTypeRegistry;
-import org.apache.shardingsphere.infra.exception.core.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.exception.ShardingSpherePreconditions;
 import org.apache.shardingsphere.infra.exception.kernel.connection.SQLExecutionInterruptedException;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroup;
 import org.apache.shardingsphere.infra.executor.kernel.model.ExecutionGroupContext;
@@ -89,7 +89,7 @@ public final class EnumerableScanImplementor implements ScanImplementor {
         if (containsSystemSchema(sqlStatementContext)) {
             return createMemoryEnumerable(sqlStatementContext, table);
         }
-        QueryContext scanQueryContext = createQueryContext(queryContext.getMetaData(), scanContext, sqlStatementContext.getDatabaseType(), queryContext.isUseCache());
+        QueryContext scanQueryContext = createQueryContext(queryContext.getMetaData(), scanContext, sqlStatementContext.getSqlStatement().getDatabaseType(), queryContext.isUseCache());
         ExecutionContext executionContext = new KernelProcessor().generateExecutionContext(scanQueryContext, queryContext.getMetaData().getGlobalRuleMetaData(), queryContext.getMetaData().getProps());
         if (executorContext.isPreview()) {
             executorContext.getPreviewExecutionUnits().addAll(executionContext.getExecutionUnits());
@@ -100,7 +100,7 @@ public final class EnumerableScanImplementor implements ScanImplementor {
     
     private boolean containsSystemSchema(final SQLStatementContext sqlStatementContext) {
         Collection<String> usedSchemaNames = sqlStatementContext.getTablesContext().getSchemaNames();
-        Collection<String> systemSchemas = new SystemDatabase(sqlStatementContext.getDatabaseType()).getSystemSchemas();
+        Collection<String> systemSchemas = new SystemDatabase(sqlStatementContext.getSqlStatement().getDatabaseType()).getSystemSchemas();
         for (String each : usedSchemaNames) {
             if (systemSchemas.contains(each)) {
                 return true;
@@ -123,7 +123,7 @@ public final class EnumerableScanImplementor implements ScanImplementor {
                 List<QueryResult> queryResults =
                         executorContext.getJdbcExecutor().execute(executionGroupContext, executorContext.getCallback()).stream().map(QueryResult.class::cast).collect(Collectors.toList());
                 MergeEngine mergeEngine = new MergeEngine(queryContext.getMetaData(), database, queryContext.getMetaData().getProps(), queryContext.getConnectionContext());
-                MergedResult mergedResult = mergeEngine.merge(queryResults, queryContext.getSqlStatementContext());
+                MergedResult mergedResult = mergeEngine.merge(queryResults, queryContext);
                 Collection<Statement> statements = getStatements(executionGroupContext.getInputGroups());
                 return new JDBCDataRowEnumerator(mergedResult, queryResults.get(0).getMetaData(), statements);
             }
@@ -148,7 +148,7 @@ public final class EnumerableScanImplementor implements ScanImplementor {
     }
     
     private Enumerable<Object> createMemoryEnumerable(final SQLStatementContext sqlStatementContext, final ShardingSphereTable table) {
-        DatabaseType databaseType = sqlStatementContext.getDatabaseType();
+        DatabaseType databaseType = sqlStatementContext.getSqlStatement().getDatabaseType();
         Optional<DialectDriverQuerySystemCatalogOption> driverQuerySystemCatalogOption = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getDriverQuerySystemCatalogOption();
         if (driverQuerySystemCatalogOption.isPresent() && driverQuerySystemCatalogOption.get().isSystemTable(table.getName())) {
             return createMemoryEnumerator(MemoryTableStatisticsBuilder.buildTableStatistics(table, queryContext.getMetaData(), driverQuerySystemCatalogOption.get()), table, databaseType);
@@ -203,7 +203,7 @@ public final class EnumerableScanImplementor implements ScanImplementor {
         SQLStatement sqlStatement = compilerContext.getSqlParserRule().getSQLParserEngine(databaseType).parse(sql, useCache);
         List<Object> params = getParameters(sqlString.getParamIndexes());
         HintValueContext hintValueContext = new HintValueContext();
-        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaData, executorContext.getCurrentDatabaseName(), hintValueContext).bind(databaseType, sqlStatement, params);
+        SQLStatementContext sqlStatementContext = new SQLBindEngine(metaData, executorContext.getCurrentDatabaseName(), hintValueContext).bind(sqlStatement);
         return new QueryContext(sqlStatementContext, sql, params, hintValueContext, queryContext.getConnectionContext(), metaData, useCache);
     }
     

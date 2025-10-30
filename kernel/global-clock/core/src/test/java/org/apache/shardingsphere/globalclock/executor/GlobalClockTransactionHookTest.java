@@ -17,16 +17,15 @@
 
 package org.apache.shardingsphere.globalclock.executor;
 
+import org.apache.shardingsphere.database.connector.core.spi.DatabaseTypedSPILoader;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.globalclock.provider.GlobalClockProvider;
 import org.apache.shardingsphere.globalclock.rule.GlobalClockRule;
-import org.apache.shardingsphere.infra.database.core.spi.DatabaseTypedSPILoader;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
-import org.apache.shardingsphere.mode.lock.LockContext;
 import org.apache.shardingsphere.infra.session.connection.transaction.TransactionConnectionContext;
 import org.apache.shardingsphere.infra.spi.type.ordered.OrderedSPILoader;
 import org.apache.shardingsphere.sql.parser.statement.core.enums.TransactionIsolationLevel;
-import org.apache.shardingsphere.test.mock.AutoMockExtension;
-import org.apache.shardingsphere.test.mock.StaticMockSettings;
+import org.apache.shardingsphere.test.infra.framework.extension.mock.AutoMockExtension;
+import org.apache.shardingsphere.test.infra.framework.extension.mock.StaticMockSettings;
 import org.apache.shardingsphere.transaction.spi.TransactionHook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +40,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -143,13 +141,6 @@ class GlobalClockTransactionHookTest {
         when(globalClockProvider.getCurrentTimestamp()).thenReturn(10L);
         transactionHook.beforeExecuteSQL(rule, databaseType, Collections.emptyList(), transactionContext, null);
         verify(globalClockTransactionExecutor).sendSnapshotTimestamp(Collections.emptyList(), 10L);
-    }
-    
-    @Test
-    void assertBeforeCommitWhenDisabledGlobalClockRule() throws SQLException {
-        LockContext lockContext = mock(LockContext.class);
-        transactionHook.beforeCommit(rule, databaseType, Collections.emptyList(), transactionContext);
-        verify(lockContext, times(0)).tryLock(any(), anyLong());
     }
     
     @Test

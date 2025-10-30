@@ -20,7 +20,7 @@ package org.apache.shardingsphere.proxy.backend.handler;
 import com.google.common.base.Strings;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.infra.database.core.type.DatabaseType;
+import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.parser.rule.SQLParserRule;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.backend.session.ConnectionSession;
@@ -43,16 +43,17 @@ public final class ProxySQLComQueryParser {
      * @return SQL statement
      */
     public static SQLStatement parse(final String sql, final DatabaseType databaseType, final ConnectionSession connectionSession) {
+        DatabaseType parserDatabaseType = getParserDatabaseType(databaseType, connectionSession);
         if (SQLUtils.trimComment(sql).isEmpty()) {
-            return new EmptyStatement();
+            return new EmptyStatement(parserDatabaseType);
         }
         SQLParserRule rule = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().getGlobalRuleMetaData().getSingleRule(SQLParserRule.class);
-        return rule.getSQLParserEngine(getProtocolType(databaseType, connectionSession)).parse(sql, false);
+        return rule.getSQLParserEngine(parserDatabaseType).parse(sql, false);
     }
     
-    private static DatabaseType getProtocolType(final DatabaseType defaultDatabaseType, final ConnectionSession connectionSession) {
+    private static DatabaseType getParserDatabaseType(final DatabaseType defaultDatabaseType, final ConnectionSession connectionSession) {
         String databaseName = connectionSession.getUsedDatabaseName();
-        return Strings.isNullOrEmpty(databaseName) || !ProxyContext.getInstance().databaseExists(databaseName)
+        return Strings.isNullOrEmpty(databaseName) || !ProxyContext.getInstance().getContextManager().getMetaDataContexts().getMetaData().containsDatabase(databaseName)
                 ? defaultDatabaseType
                 : ProxyContext.getInstance().getContextManager().getDatabase(databaseName).getProtocolType();
     }
