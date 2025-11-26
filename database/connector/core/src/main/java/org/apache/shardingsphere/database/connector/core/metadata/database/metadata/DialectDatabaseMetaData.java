@@ -34,10 +34,12 @@ import org.apache.shardingsphere.database.connector.core.metadata.database.metad
 import org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.sqlbatch.DialectSQLBatchOption;
 import org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.table.DialectDriverQuerySystemCatalogOption;
 import org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.transaction.DialectTransactionOption;
+import org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.version.DialectProtocolVersionOption;
 import org.apache.shardingsphere.database.connector.core.spi.DatabaseTypedSPI;
 import org.apache.shardingsphere.infra.spi.annotation.SingletonSPI;
 
 import java.sql.Connection;
+import java.util.Collections;
 import java.util.Optional;
 
 /**
@@ -128,7 +130,7 @@ public interface DialectDatabaseMetaData extends DatabaseTypedSPI {
      * @return transaction option
      */
     default DialectTransactionOption getTransactionOption() {
-        return new DialectTransactionOption(false, false, false, false, true, Connection.TRANSACTION_READ_COMMITTED, false, false);
+        return new DialectTransactionOption(false, false, false, false, true, Connection.TRANSACTION_READ_COMMITTED, false, false, Collections.emptyList());
     }
     
     /**
@@ -154,8 +156,8 @@ public interface DialectDatabaseMetaData extends DatabaseTypedSPI {
      *
      * @return generated key option
      */
-    default DialectGeneratedKeyOption getGeneratedKeyOption() {
-        return new DialectGeneratedKeyOption(false);
+    default Optional<DialectGeneratedKeyOption> getGeneratedKeyOption() {
+        return Optional.empty();
     }
     
     /**
@@ -174,5 +176,14 @@ public interface DialectDatabaseMetaData extends DatabaseTypedSPI {
      */
     default DialectSQLBatchOption getSQLBatchOption() {
         return new DialectSQLBatchOption(true);
+    }
+    
+    /**
+     * Get protocol version option.
+     *
+     * @return protocol version option
+     */
+    default DialectProtocolVersionOption getProtocolVersionOption() {
+        return new DialectProtocolVersionOption("");
     }
 }

@@ -15,13 +15,16 @@
 1. Remove SQL formatting feature - [#35390](https://github.com/apache/shardingsphere/pull/35390)
 1. Remove logging rule feature - [#35458](https://github.com/apache/shardingsphere/pull/35458)
 1. Remove configuration property key `system-log-level` - [#35493](https://github.com/apache/shardingsphere/pull/35493)
+1. Change ShardingSphere SQL log topic from `ShardingSphere-SQL` to `org.apache.shardingsphere.sql` - [#37022](https://github.com/apache/shardingsphere/pull/37022)
 
 ### New Features
 
+1. Add ShardingSphere BOM - [#36866](https://github.com/apache/shardingsphere/issues/36866)
 1. Decouple feature modules as pluggable - [#36086](https://github.com/apache/shardingsphere/pull/36086)
 1. Decouple database types as pluggable - [#35346](https://github.com/apache/shardingsphere/pull/35346)
 1. Decouple registry center types as pluggable - [#36087](https://github.com/apache/shardingsphere/pull/36087)
 1. Proxy: Support Firebird Proxy - [#35937](https://github.com/apache/shardingsphere/pull/35937)
+1. JDBC: Support ZooKeeper and ETCD URL format - [#37037](https://github.com/apache/shardingsphere/pull/37037)
 
 ### Enhancements
 
@@ -29,6 +32,7 @@
 1. Metadata: Support IPv6 for JDBC connection URL - [#35289](https://github.com/apache/shardingsphere/issues/35289)
 1. Metadata: Support to load partition tables for PostgreSQL - [#34346](https://github.com/apache/shardingsphere/pull/34346)
 1. Metadata: Support for connecting to Presto's Memory Connector - [#34432](https://github.com/apache/shardingsphere/pull/34432)
+1. Kernel: Add LocalDate data type support - [#37053](https://github.com/apache/shardingsphere/pull/37053)
 1. SQL Parser: Support to parse stored procedure syntax for MySQL - [#36690](https://github.com/apache/shardingsphere/pull/36690)
 1. SQL Parser: Support to parse more SQL statements for MySQL - [#36689](https://github.com/apache/shardingsphere/issues/36689)
 1. SQL Parser: Support to parse more SQL statements for SQLServer - [#36695](https://github.com/apache/shardingsphere/issues/36695)
@@ -44,20 +48,34 @@
 1. DistSQL: Add DistSQL for query storage units which used in single rule - [#35131](https://github.com/apache/shardingsphere/pull/35131)
 1. Proxy: Implement write bool binary data type for PostgreSQL protocol - [#35831](https://github.com/apache/shardingsphere/pull/35831)
 1. Proxy: Add authority check on SQL `SHOW CREATE DATABASE` for MySQL - [#36862](https://github.com/apache/shardingsphere/pull/36862)
+1. Sharding: Using cache to avoid memory overflow from inline expression parsing - [#22196](https://github.com/apache/shardingsphere/issues/22196)
+1. Sharding: Add digital suffix check with binding table names - [#35293](https://github.com/apache/shardingsphere/issues/35293)
 1. Encrypt: Use EncryptDerivedColumnSuffix to enhance encrypt table subquery rewrite logic - [#34829](https://github.com/apache/shardingsphere/pull/34829)
 1. Encrypt: Add quotes to encrypt rewrite derived columns - [#34950](https://github.com/apache/shardingsphere/pull/34950)
 1. Encrypt: Support NOT LIKE operator in encryption feature - [#35984](https://github.com/apache/shardingsphere/pull/35984)
 1. Readwrite-splitting: Update transactional read query strategy default type as PRIMARY - [#36477](https://github.com/apache/shardingsphere/pull/36477)
+1. Pipeline: Improve pipeline job progress incremental latestActiveTimeMillis persistence - [#34655](https://github.com/apache/shardingsphere/pull/34655)
+1. Pipeline: Improve heterogeneous databases migration - [#35424](https://github.com/apache/shardingsphere/pull/35424)
+1. Pipeline: Improve DATA_MATCH data consistency check to use range streaming query - [#35740](https://github.com/apache/shardingsphere/pull/35740)
+1. Pipeline: Add streaming-range-type property and LARGE impl in DATA_MATCH consistency check on MySQL sharding table for better performance - [#35786](https://github.com/apache/shardingsphere/pull/35786)
+1. Pipeline: Improve migration consistency check to reflect storage unit maxPoolSize dynamically - [#36507](https://github.com/apache/shardingsphere/pull/36507)
+1. Pipeline: Improve "show migration check status" inventory_finished_percentage column inaccurate result - [#36509](https://github.com/apache/shardingsphere/pull/36509)
+1. Pipeline: Compatible with COMPLEX_INLINE allow-range-query-with-inline-sharding - [#36524](https://github.com/apache/shardingsphere/pull/36524)
+1. Pipeline: Support pipeline job realtime reflection on proxy global properties after restarting - [#36749](https://github.com/apache/shardingsphere/pull/36749)
+1. Pipeline: InventoryDumper reuse table inventory calculator for better function and performance - [#36830](https://github.com/apache/shardingsphere/pull/36830)
+1. Pipeline: Improve "alter transmission rule": verify STREAM_CHANNEL TYPE NAME - [#36864](https://github.com/apache/shardingsphere/pull/36864)
 1. Pipeline: InventoryDumperContextSplitter supports multi-columns unique key first integer column splitting - [#36935](https://github.com/apache/shardingsphere/pull/36935)
 
 ### Bug Fixes
 
 1. Kernel: Fix not return generate key when set null in INSERT statement - [35783](https://github.com/apache/shardingsphere/pull/35783)
+1. Kernel: Add AllowNotUseDatabaseSQLStatementAttribute to support some mysql dal statement execute without use database - [#37033](https://github.com/apache/shardingsphere/pull/37033)
 1. Metadata: Fix the exception to rename schema name when executing ALTER SCHEMA - [#34465](https://github.com/apache/shardingsphere/pull/34465)
 1. SQL Parser: Support multiple column names with pivot and unpivot clause - [35586](https://github.com/apache/shardingsphere/pull/35586)
 1. SQL Parser: Fix set OnDuplicateKeyColumnsSegment on INSERT for PostgreSQL - [#34425](https://github.com/apache/shardingsphere/pull/34425)
 1. SQL Parser: Fix SQL parser error when SQL contains implicit concat expression for MySQL - [#34660](https://github.com/apache/shardingsphere/pull/34660)
 1. SQL Parser: Fix SQL parser error when SQL contains subquery with alias for Oracle - [#35239](https://github.com/apache/shardingsphere/pull/35239)
+1. SQL Parser: Fix multiple SQLs split error when comma contained - [#31609](https://github.com/apache/shardingsphere/pull/31609)
 1. SQL Binder: Fix unable to find the outer table in the NotExpressionBinder - [36135](https://github.com/apache/shardingsphere/pull/36135)
 1. SQL Binder: Fix unable to find the outer table in the ExistsSubqueryExpressionBinder - [#36068](https://github.com/apache/shardingsphere/pull/36068)
 1. SQL Binder: Fix column bind exception caused by oracle XMLELEMENT function first parameter without quote - [#36963](https://github.com/apache/shardingsphere/pull/36963)
@@ -79,6 +97,11 @@
 1. Mode: Fix issue of drop schema can not work on standalone mode - [#34470](https://github.com/apache/shardingsphere/pull/34470)
 1. Encrypt: Resolve rewrite issue in nested concat function - [#35815](https://github.com/apache/shardingsphere/pull/35815)
 1. Sharding: Fix mod sharding algorithm judgement -[#36386](https://github.com/apache/shardingsphere/pull/36386)
+1. Sharding: Fix check inline sharding algorithms in table rules - [#36999](https://github.com/apache/shardingsphere/pull/36999)
+1. Pipeline: Recover value of migration incremental importer batch size - [#34670](https://github.com/apache/shardingsphere/pull/34670)
+1. Pipeline: Fix InventoryDumper first time dump SQL without ORDER BY on multiple columns unique key table - [#34736](https://github.com/apache/shardingsphere/pull/34736)
+1. Pipeline: Fix MySQL JDBC query properties extension when SSL is required on server - [#36581](https://github.com/apache/shardingsphere/pull/36581)
+1. Pipeline: Fix migration might skip some records on big table after job restarting - [#36878](https://github.com/apache/shardingsphere/pull/36878)
 
 ### Change Logs
 
