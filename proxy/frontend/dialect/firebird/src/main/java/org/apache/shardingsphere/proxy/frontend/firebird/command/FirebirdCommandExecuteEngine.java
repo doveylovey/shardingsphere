@@ -39,6 +39,7 @@ import org.apache.shardingsphere.proxy.frontend.command.executor.ResponseType;
 import org.apache.shardingsphere.proxy.frontend.firebird.err.FirebirdErrorPacketFactory;
 
 import java.sql.SQLException;
+import java.util.Optional;
 
 /**
  * Command execute engine for Firebird.
@@ -58,13 +59,18 @@ public final class FirebirdCommandExecuteEngine implements CommandExecuteEngine 
     }
     
     @Override
-    public CommandExecutor getCommandExecutor(final CommandPacketType type, final CommandPacket packet, final ConnectionSession connectionSession) throws SQLException {
+    public CommandExecutor getCommandExecutor(final CommandPacketType type, final CommandPacket packet, final ConnectionSession connectionSession) {
         return FirebirdCommandExecutorFactory.newInstance((FirebirdCommandPacketType) type, packet, connectionSession);
     }
     
     @Override
     public FirebirdPacket getErrorPacket(final Exception cause) {
         return FirebirdErrorPacketFactory.newInstance(cause);
+    }
+    
+    @Override
+    public Optional<DatabasePacket> getOtherPacket(final ConnectionSession connectionSession) {
+        return Optional.empty();
     }
     
     @Override

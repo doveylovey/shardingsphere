@@ -10,16 +10,11 @@ ShardingSphere 对 HiveServer2 JDBC Driver 的支持位于可选模块中。
 
 ## 前提条件
 
-要在 ShardingSphere 的配置文件为数据节点使用类似 `jdbc:hive2://localhost:10000/` 的 `standardJdbcUrl`，
+要在 ShardingSphere 的配置文件为数据节点使用类似 `jdbc:hive2://localhost:10000/` 的 `jdbcUrl`，
 可能的 Maven 依赖关系如下，
 
 ```xml
 <dependencies>
-    <dependency>
-        <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>shardingsphere-jdbc</artifactId>
-        <version>${shardingsphere.version}</version>
-    </dependency>
     <dependency>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-jdbc-dialect-hive</artifactId>
@@ -48,18 +43,13 @@ ShardingSphere 对 HiveServer2 JDBC Driver 的支持位于可选模块中。
 <dependencies>
     <dependency>
         <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>shardingsphere-jdbc</artifactId>
-        <version>${shardingsphere.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>shardingsphere-parser-engine-sql-hive</artifactId>
+        <artifactId>shardingsphere-jdbc-dialect-hive</artifactId>
         <version>${shardingsphere.version}</version>
     </dependency>
     <dependency>
         <groupId>io.github.linghengqian</groupId>
         <artifactId>hive-server2-jdbc-driver-thin</artifactId>
-        <version>1.7.0</version>
+        <version>1.8.2</version>
         <exclusions>
             <exclusion>
                 <groupId>com.fasterxml.woodstox</groupId>
@@ -90,18 +80,18 @@ services:
       - "10000:10000"
 ```
 
-### 创建业务表
+### 创建业务库
 
-通过第三方工具在 HiveServer2 内创建业务库与业务表。
-以 DBeaver Community 为例，若使用 Ubuntu 22.04.4，可通过 Snapcraft 快速安装，
+通过第三方工具在 HiveServer2 内创建业务库。
+以 DBeaver Community 为例，若使用 Ubuntu 24.04，可通过 Snapcraft 快速安装，
 
 ```shell
 sudo apt update && sudo apt upgrade -y
-sudo snap install dbeaver-ce
+sudo snap install dbeaver-ce --classic
 snap run dbeaver-ce
 ```
 
-在 DBeaver Community 内，使用 `jdbc:hive2://localhost:10000/` 的 `standardJdbcUrl` 连接至 HiveServer2，`username` 和 `password` 留空。
+在 DBeaver Community 内，使用 `jdbc:hive2://localhost:10000/` 的 `jdbcUrl` 连接至 HiveServer2，`username` 和 `password` 留空。
 执行如下 SQL，
 
 ```sql
@@ -111,40 +101,59 @@ CREATE DATABASE demo_ds_1;
 CREATE DATABASE demo_ds_2;
 ```
 
-分别使用 `jdbc:hive2://localhost:10000/demo_ds_0` ，
-`jdbc:hive2://localhost:10000/demo_ds_1` 和 `jdbc:hive2://localhost:10000/demo_ds_2` 的 `standardJdbcUrl` 连接至 HiveServer2 来执行如下 SQL，
-
-```sql
--- noinspection SqlNoDataSourceInspectionForFile
-CREATE TABLE IF NOT EXISTS t_order
-(
-    order_id   BIGINT NOT NULL,
-    order_type INT,
-    user_id    INT    NOT NULL,
-    address_id BIGINT NOT NULL,
-    status     string,
-    PRIMARY KEY (order_id) disable novalidate
-) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2');
-```
-
 ### 在业务项目创建 ShardingSphere 数据源
 
-在业务项目引入`前提条件`涉及的依赖后，在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件`demo.yaml`，
+在业务项目引入`前提条件`涉及的依赖后，额外引入如下依赖，
+
+```xml
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-jdbc</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-data-source-pool-hikari</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-url-classpath</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-standalone-mode-repository-memory</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-sharding-core</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-authority-simple</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+```
+
+在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件 `demo.yaml`，
 
 ```yaml
 dataSources:
     ds_0:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0
+        jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0
     ds_1:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_1
+        jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_1
     ds_2:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_2
+        jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_2
 rules:
 - !SHARDING
     tables:
@@ -185,6 +194,7 @@ public class ExampleUtils {
         try (HikariDataSource dataSource = new HikariDataSource(config);
              Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE IF NOT EXISTS t_order (order_id BIGINT NOT NULL, order_type INT, user_id INT NOT NULL, address_id BIGINT NOT NULL, status string, PRIMARY KEY (order_id) disable novalidate) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2')");
             statement.execute("TRUNCATE TABLE t_order");
             statement.execute("INSERT INTO t_order (user_id, order_type, address_id, status) VALUES (1, 1, 1, 'INSERT_TEST')");
             statement.executeQuery("SELECT * FROM t_order");
@@ -199,7 +209,7 @@ public class ExampleUtils {
 
 ### 连接至开启 ZooKeeper Service Discovery 的 HiveServer2
 
-ShardingSphere 配置文件中的 `standardJdbcUrl` 可配置连接至开启 ZooKeeper Service Discovery 的 HiveServer2。
+ShardingSphere 配置文件中的 `jdbcUrl` 可配置连接至开启 ZooKeeper Service Discovery 的 HiveServer2。
 
 引入讨论，假设存在如下 Docker Compose 文件来启动开启 ZooKeeper Service Discovery 的 HiveServer2。
 
@@ -226,7 +236,7 @@ services:
 ```
 
 在 DBeaver Community 内，
-使用 `jdbc:hive2://127.0.0.1:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 的 `standardJdbcUrl` 连接至 HiveServer2，
+使用 `jdbc:hive2://127.0.0.1:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 的 `jdbcUrl` 连接至 HiveServer2，
 `username` 和 `password` 留空。
 执行如下 SQL，
 
@@ -237,40 +247,57 @@ CREATE DATABASE demo_ds_1;
 CREATE DATABASE demo_ds_2;
 ```
 
-分别使用 `jdbc:hive2://127.0.0.1:2181/demo_ds_0;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` ，
-`jdbc:hive2://127.0.0.1:2181/demo_ds_1;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 和
-`jdbc:hive2://127.0.0.1:2181/demo_ds_2;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2`
-的 `standardJdbcUrl` 连接至 HiveServer2 来执行如下 SQL，
+在业务项目引入`前提条件`涉及的依赖后，额外引入如下依赖，
 
-```sql
--- noinspection SqlNoDataSourceInspectionForFile
-CREATE TABLE IF NOT EXISTS t_order
-(
-    order_id   BIGINT NOT NULL,
-    order_type INT,
-    user_id    INT    NOT NULL,
-    address_id BIGINT NOT NULL,
-    status     string,
-    PRIMARY KEY (order_id) disable novalidate
-) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2');
+```xml
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-jdbc</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-data-source-pool-hikari</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-url-classpath</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-standalone-mode-repository-memory</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-sharding-core</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-authority-simple</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
 ```
 
-在业务项目引入`前提条件`涉及的依赖后，在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件`demo.yaml`，
+在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件 `demo.yaml`，
 
 ```yaml
 dataSources:
     ds_0:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_0;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
+        jdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_0;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
     ds_1:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_1;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
+        jdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_1;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
     ds_2:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: org.apache.hive.jdbc.HiveDriver
-        standardJdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_2;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
+        jdbcUrl: jdbc:hive2://127.0.0.1:2181/demo_ds_2;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
 rules:
 - !SHARDING
     tables:
@@ -309,6 +336,7 @@ public class ExampleUtils {
         try (HikariDataSource dataSource = new HikariDataSource(config);
              Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE IF NOT EXISTS t_order (order_id BIGINT NOT NULL, order_type INT, user_id INT NOT NULL, address_id BIGINT NOT NULL, status string, PRIMARY KEY (order_id) disable novalidate) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2')");
             statement.execute("TRUNCATE TABLE t_order");
             statement.execute("INSERT INTO t_order (user_id, order_type, address_id, status) VALUES (1, 1, 1, 'INSERT_TEST')");
             statement.executeQuery("SELECT * FROM t_order");
@@ -343,7 +371,7 @@ networks:
 ```
 
 在 DBeaver Community 内，
-使用 `jdbc:hive2://127.0.0.1:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 的 `standardJdbcUrl` 连接至 HiveServer2，
+使用 `jdbc:hive2://127.0.0.1:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 的 `jdbcUrl` 连接至 HiveServer2，
 `username` 和 `password` 留空。
 执行如下 SQL，
 
@@ -352,24 +380,6 @@ networks:
 CREATE DATABASE demo_ds_0;
 CREATE DATABASE demo_ds_1;
 CREATE DATABASE demo_ds_2;
-```
-
-分别使用 `jdbc:hive2://127.0.0.1:2181/demo_ds_0;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` ，
-`jdbc:hive2://127.0.0.1:2181/demo_ds_1;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2` 和
-`jdbc:hive2://127.0.0.1:2181/demo_ds_2;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2`
-的 `standardJdbcUrl` 连接至 HiveServer2 来执行如下 SQL，
-
-```sql
--- noinspection SqlNoDataSourceInspectionForFile
-CREATE TABLE IF NOT EXISTS t_order
-(
-    order_id   BIGINT NOT NULL,
-    order_type INT,
-    user_id    INT    NOT NULL,
-    address_id BIGINT NOT NULL,
-    status     string,
-    PRIMARY KEY (order_id) disable novalidate
-) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2');
 ```
 
 此时，旧的 ShardingSphere JDBC DataSource 仍可在不重新创建 JDBC DataSource 的情况下，
@@ -384,6 +394,7 @@ public class ExampleUtils {
     void test(HikariDataSource dataSource) throws SQLException {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE IF NOT EXISTS t_order (order_id BIGINT NOT NULL, order_type INT, user_id INT NOT NULL, address_id BIGINT NOT NULL, status string, PRIMARY KEY (order_id) disable novalidate) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2')");
             statement.execute("TRUNCATE TABLE t_order");
             statement.execute("INSERT INTO t_order (user_id, order_type, address_id, status) VALUES (1, 1, 1, 'INSERT_TEST')");
             statement.executeQuery("SELECT * FROM t_order");
@@ -415,38 +426,9 @@ ShardingSphere 仅针对 HiveServer2 `4.0.1` 进行集成测试。
 
 ### SQL 限制
 
-HiveServer2 并不能保证每一条 `insert` 相关的 DML SQL 都能成功执行，尽管可能没有任何异常被抛出。
-
 ShardingSphere JDBC DataSource 尚不支持执行 HiveServer2 的 `set` 语句。
-
-ShardingSphere JDBC DataSource 当前支持通过执行 `create table` 语句创建普通表，但不支持通过执行 `create table` 语句创建 Iceberg 表。
-这意味着 ShardingSphere JDBC DataSource 可执行类似如下的语句,
-
-```sql
--- noinspection SqlNoDataSourceInspectionForFile
-create table IF NOT EXISTS t_order (
-    order_id   BIGINT NOT NULL,
-    order_type INT,
-    user_id    INT    NOT NULL,
-    address_id BIGINT NOT NULL,
-    status     VARCHAR(50),
-    PRIMARY KEY (order_id) disable novalidate
-) CLUSTERED BY (order_id) INTO 2 BUCKETS STORED AS ORC TBLPROPERTIES ('transactional' = 'true');
-```
-
-但 ShardingSphere JDBC DataSource 无法执行类似如下的语句,
-
-```sql
--- noinspection SqlNoDataSourceInspectionForFile
-CREATE TABLE IF NOT EXISTS t_order (
-    order_id   BIGINT NOT NULL,
-    order_type INT,
-    user_id    INT    NOT NULL,
-    address_id BIGINT NOT NULL,
-    status     string,
-    PRIMARY KEY (order_id) disable novalidate
-) STORED BY ICEBERG STORED AS ORC TBLPROPERTIES ('format-version' = '2');
-```
+当前 ShardingSphere 对 HiveServer2 的 `INNER JOIN` 语法解析存在不足，
+对 `SELECT i.* FROM t_order o, t_order_item i WHERE o.order_id = i.order_id` 这类 SQL，它可能返回错误的查询结果。
 
 #### 使用 `initFile` 参数部分绕开 SQL 限制
 
@@ -462,15 +444,15 @@ dataSources:
   ds_0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
+    jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
   ds_1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
+    jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
   ds_2:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
+    jdbcUrl: jdbc:hive2://localhost:10000/demo_ds_0;initFile=/tmp/init.sql
 ```
 
 `/tmp/init.sql` 的可能内容如下，
@@ -495,15 +477,15 @@ dataSources:
   ds_0:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: $${fixture.hive.ds0.jdbc-url::}
+    jdbcUrl: $${fixture.hive.ds0.jdbc-url::}
   ds_1:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: $${fixture.hive.ds1.jdbc-url::}
+    jdbcUrl: $${fixture.hive.ds1.jdbc-url::}
   ds_2:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: org.apache.hive.jdbc.HiveDriver
-    standardJdbcUrl: $${fixture.hive.ds2.jdbc-url::}
+    jdbcUrl: $${fixture.hive.ds2.jdbc-url::}
 ```
 
 此时使用 ShardingSphere JDBC Driver 时可以通过拼接字符串的手段传入业务项目的 classpath 上的文件的绝对路径。
@@ -581,7 +563,7 @@ CREATE TABLE IF NOT EXISTS t_order
 ```
 
 Iceberg 表格式支持的 Hive type 相对较少，为 HiveServer2 执行 SQL `set iceberg.mr.schema.auto.conversion=true;`有助于缓解这一问题。
-SQL `set iceberg.mr.schema.auto.conversion=true;` 存在 https://issues.apache.org/jira/browse/HIVE-26507 涉及的弊端。
+但 SQL `set iceberg.mr.schema.auto.conversion=true;` 存在 https://issues.apache.org/jira/browse/HIVE-26507 涉及的弊端。
 
 ### 事务限制
 

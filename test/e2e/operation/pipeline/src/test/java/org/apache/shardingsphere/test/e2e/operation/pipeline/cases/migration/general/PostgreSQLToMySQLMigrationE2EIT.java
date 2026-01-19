@@ -17,14 +17,11 @@
 
 package org.apache.shardingsphere.test.e2e.operation.pipeline.cases.migration.general;
 
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.shardingsphere.data.pipeline.core.job.JobStatus;
 import org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobType;
-import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
-import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.test.e2e.env.runtime.E2ETestEnvironment;
 import org.apache.shardingsphere.test.e2e.env.runtime.type.RunEnvironment.Type;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.cases.PipelineContainerComposer;
@@ -34,8 +31,11 @@ import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.param.Pip
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.param.PipelineE2ESettings.PipelineE2EDatabaseSettings;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.param.PipelineE2ETestCaseArgumentsProvider;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.param.PipelineTestParameter;
+import org.apache.shardingsphere.test.e2e.operation.pipeline.util.PipelineE2EDistSQLFacade;
 import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionTimeoutException;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -49,7 +49,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,7 +63,7 @@ class PostgreSQLToMySQLMigrationE2EIT extends AbstractMigrationE2EIT {
     void assertMigrationSuccess(final PipelineTestParameter testParam) throws SQLException {
         PostgreSQLContainer<?> postgresqlContainer = null;
         Type type = E2ETestEnvironment.getInstance().getRunEnvironment().getType();
-        try (PipelineContainerComposer containerComposer = new PipelineContainerComposer(testParam, new MigrationJobType())) {
+        try (PipelineContainerComposer containerComposer = new PipelineContainerComposer(testParam)) {
             if (Type.DOCKER == type) {
                 postgresqlContainer = new PostgreSQLContainer<>("postgres:13");
                 postgresqlContainer.withNetwork(containerComposer.getContainerComposer().getContainers().getNetwork()).withNetworkAliases("postgresql.host")
@@ -78,8 +77,9 @@ class PostgreSQLToMySQLMigrationE2EIT extends AbstractMigrationE2EIT {
                     + "KEY_GENERATE_STRATEGY(COLUMN=order_id, TYPE(NAME='snowflake')))", 2);
             initTargetTable(containerComposer);
             containerComposer.proxyExecuteWithLog("MIGRATE TABLE source_ds.t_order INTO t_order", 2);
-            Awaitility.await().ignoreExceptions().atMost(10L, TimeUnit.SECONDS).pollInterval(1L, TimeUnit.SECONDS).until(() -> !listJobId(containerComposer).isEmpty());
-            String jobId = listJobId(containerComposer).get(0);
+            PipelineE2EDistSQLFacade distSQLFacade = new PipelineE2EDistSQLFacade(containerComposer, new MigrationJobType());
+            Awaitility.await().ignoreExceptions().atMost(10L, TimeUnit.SECONDS).pollInterval(1L, TimeUnit.SECONDS).until(() -> !distSQLFacade.listJobIds().isEmpty());
+            String jobId = distSQLFacade.listJobIds().get(0);
             containerComposer.waitJobStatusReached(String.format("SHOW MIGRATION STATUS %s", jobId), JobStatus.EXECUTE_INCREMENTAL_TASK, 15);
             try (Connection connection = DriverManager.getConnection(jdbcUrl, "postgres", "postgres")) {
                 connection.createStatement().execute(String.format("INSERT INTO t_order (order_id,user_id,status) VALUES (%s, %s, '%s')", "1000000000", 1, "incremental"));
@@ -87,9 +87,8 @@ class PostgreSQLToMySQLMigrationE2EIT extends AbstractMigrationE2EIT {
             }
             containerComposer.waitIncrementTaskFinished(String.format("SHOW MIGRATION STATUS '%s'", jobId));
             assertCheckMigrationSuccess(containerComposer, jobId, "DATA_MATCH");
-            commitMigrationByJobId(containerComposer, jobId);
-            List<String> lastJobIds = listJobId(containerComposer);
-            assertTrue(lastJobIds.isEmpty());
+            distSQLFacade.commit(jobId);
+            assertTrue(distSQLFacade.listJobIds().isEmpty());
         } finally {
             if (null != postgresqlContainer) {
                 postgresqlContainer.close();
@@ -150,17 +149,13 @@ class PostgreSQLToMySQLMigrationE2EIT extends AbstractMigrationE2EIT {
         }
     }
     
-    @SneakyThrows
     private static boolean waitForTableExistence(final Connection connection, final String tableName) {
-        int elapsedTime = 0;
-        while (elapsedTime < 60) {
-            if (tableExists(connection, tableName)) {
-                return true;
-            }
-            Thread.sleep(3 * 1000L);
-            elapsedTime += 3;
+        try {
+            Awaitility.await().ignoreExceptions().atMost(60L, TimeUnit.SECONDS).pollInterval(3L, TimeUnit.SECONDS).until(() -> tableExists(connection, tableName));
+            return true;
+        } catch (final ConditionTimeoutException ex) {
+            return false;
         }
-        return false;
     }
     
     private static boolean tableExists(final Connection connection, final String tableName) throws SQLException {
@@ -169,7 +164,7 @@ class PostgreSQLToMySQLMigrationE2EIT extends AbstractMigrationE2EIT {
         }
     }
     
-    private static boolean isEnabled() {
-        return PipelineE2ECondition.isEnabled(TypedSPILoader.getService(DatabaseType.class, "MySQL"));
+    private static boolean isEnabled(final ExtensionContext context) {
+        return PipelineE2ECondition.isEnabled(context);
     }
 }

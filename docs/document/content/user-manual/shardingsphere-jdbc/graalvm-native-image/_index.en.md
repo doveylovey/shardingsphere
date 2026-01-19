@@ -34,75 +34,108 @@ java.beans.Introspector was unintentionally initialized at build time. To see wh
 
 ### Maven Ecology
 
-Users need to actively use the GraalVM Reachability Metadata central repository. 
 The following configuration is for reference to configure additional Maven Profiles for the project, 
 and the documentation of GraalVM Native Build Tools shall prevail.
 
 ```xml
 <project>
-     <dependencies>
-         <dependency>
-             <groupId>org.apache.shardingsphere</groupId>
-             <artifactId>shardingsphere-jdbc</artifactId>
-             <version>${shardingsphere.version}</version>
-         </dependency>
-     </dependencies>
-    
-     <build>
-         <plugins>
-             <plugin>
-                 <groupId>org.graalvm.buildtools</groupId>
-                 <artifactId>native-maven-plugin</artifactId>
-                 <version>0.11.0</version>
-                 <extensions>true</extensions>
-                 <configuration>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-reachability-metadata</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+A more convenient configuration for testing third-party dependencies might look like this,
+
+```xml
+<project>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-jdbc</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-reachability-metadata</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+                <configuration>
                     <buildArgs>
-                       <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
-                       <buildArg>-H:+AddAllCharsets</buildArg>
-                       <buildArg>-H:+IncludeAllLocales</buildArg>
+                        <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                        <buildArg>-H:+AddAllCharsets</buildArg>
+                        <buildArg>-H:+IncludeAllLocales</buildArg>
                     </buildArgs>
-                 </configuration>
-                 <executions>
-                     <execution>
-                         <id>build-native</id>
-                         <goals>
-                             <goal>compile-no-fork</goal>
-                         </goals>
-                         <phase>package</phase>
-                     </execution>
-                     <execution>
-                         <id>test-native</id>
-                         <goals>
-                             <goal>test</goal>
-                         </goals>
-                         <phase>test</phase>
-                     </execution>
-                 </executions>
-             </plugin>
-         </plugins>
-     </build>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>build-native</id>
+                        <goals>
+                            <goal>compile-no-fork</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                    <execution>
+                        <id>test-native</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <phase>test</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
 ```
 
 ### Gradle Ecosystem
 
-Users need to actively use the GraalVM Reachability Metadata central repository.
 The following configuration is for reference to configure additional Gradle Tasks for the project,
 and the documentation of GraalVM Native Build Tools shall prevail.
-Due to the limitations of https://github.com/gradle/gradle/issues/17559 , 
-users need to introduce the JSON file of Metadata Repository through Maven dependency. 
-Reference https://github.com/graalvm/native-build-tools/issues/572 .
 
 ```groovy
 plugins {
-   id 'org.graalvm.buildtools.native' version '0.11.0'
+   id 'org.graalvm.buildtools.native' version '0.11.3'
 }
+dependencies {
+   implementation 'org.apache.shardingsphere:shardingsphere-infra-reachability-metadata:${shardingsphere.version}'
+}
+```
 
+A more convenient configuration for testing third-party dependencies might look like this. Due to limitations outlined in https://github.com/gradle/gradle/issues/17559 , users may need to include the Metadata Repository's JSON file as a Maven dependency. See https://github.com/graalvm/native-build-tools/issues/572 .
+
+```groovy
+plugins {
+   id 'org.graalvm.buildtools.native' version '0.11.3'
+}
 dependencies {
    implementation 'org.apache.shardingsphere:shardingsphere-jdbc:${shardingsphere.version}'
-   implementation(group: 'org.graalvm.buildtools', name: 'graalvm-reachability-metadata', version: '0.11.0', classifier: 'repository', ext: 'zip')
+   implementation 'org.apache.shardingsphere:shardingsphere-infra-reachability-metadata:${shardingsphere.version}'
+   implementation(group: 'org.graalvm.buildtools', name: 'graalvm-reachability-metadata', version: '0.11.3', classifier: 'repository', ext: 'zip')
 }
-
 graalvmNative {
    binaries {
       main {
@@ -117,19 +150,19 @@ graalvmNative {
       }
    }
    metadataRepository {
-      enabled.set(false)
+        enabled.set(false)
    }
 }
 ```
 
-### For build tools such as sbt that are not supported by GraalVM Native Build Tools
+### sbt
 
-Such requirements require opening additional issues at https://github.com/graalvm/native-build-tools 
-and providing the Plugin implementation of the corresponding build tool.
+For build tools such as sbt that are not supported by GraalVM Native Build Tools,
+you need to open an additional issue at https://github.com/graalvm/native-build-tools and provide the corresponding plugin implementation for the build tool.
 
 ## Usage restrictions
 
-1. The following algorithm classes are not available under GraalVM Native Image due to the involvement of https://github.com/oracle/graal/issues/5522.
+1. The following algorithm classes are not available under GraalVM Native Image due to the involvement of https://github.com/oracle/graal/issues/5522 .
     - `org.apache.shardingsphere.sharding.algorithm.sharding.inline.InlineShardingAlgorithm`
     - `org.apache.shardingsphere.sharding.algorithm.sharding.inline.ComplexInlineShardingAlgorithm`
     - `org.apache.shardingsphere.sharding.algorithm.sharding.hint.HintInlineShardingAlgorithm`
@@ -257,6 +290,28 @@ Caused by: java.io.UnsupportedEncodingException: Codepage Cp1252 is not supporte
  [...]
 ```
 
+For Maven, possible configurations are,
+
+```xml
+<project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>-H:+AddAllCharsets</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
 5. To discuss the steps required to use XA distributed transactions under the GraalVM Native Image of ShardingSphere JDBC, 
 additional known prerequisites need to be introduced,
    - `org.apache.shardingsphere.transaction.xa.jta.datasource.swapper.DataSourceSwapper#loadXADataSource(String)` will instantiate the `javax.sql.XADataSource` implementation class of each database driver through `java.lang.Class#getDeclaredConstructors`.
@@ -291,42 +346,13 @@ Users need to define the following JSON in the `reachability-metadata.json` file
 }
 ```
 
-6. When using the ClickHouse dialect through ShardingSphere JDBC, 
-users need to manually introduce the relevant optional modules and the ClickHouse JDBC driver with the classifier `http`.
-In principle, ShardingSphere's GraalVM Native Image integration does not want to use `com.clickhouse:clickhouse-jdbc` with classifier `all`, 
-because Uber Jar will cause the collection of duplicate GraalVM Reachability Metadata.
-Possible configuration examples are as follows,
-
-```xml
-<project>
-    <dependencies>
-      <dependency>
-         <groupId>org.apache.shardingsphere</groupId>
-         <artifactId>shardingsphere-jdbc</artifactId>
-         <version>${shardingsphere.version}</version>
-      </dependency>
-       <dependency>
-          <groupId>org.apache.shardingsphere</groupId>
-          <artifactId>shardingsphere-jdbc-dialect-clickhouse</artifactId>
-          <version>${shardingsphere.version}</version>
-      </dependency>
-       <dependency>
-          <groupId>com.clickhouse</groupId>
-          <artifactId>clickhouse-jdbc</artifactId>
-          <version>0.6.3</version>
-          <classifier>http</classifier>
-       </dependency>
-    </dependencies>
-</project>
-```
-
-7. ShardingSphere's unit test only uses the Maven module `io.github.linghengqian:hive-server2-jdbc-driver-thin` to verify the availability of HiveServer2 integration under GraalVM Native Image. 
+6. ShardingSphere's unit test only uses the Maven module `io.github.linghengqian:hive-server2-jdbc-driver-thin` to verify the availability of HiveServer2 integration under GraalVM Native Image. 
 If developers use `org.apache.hive:hive-jdbc` directly, they should handle dependency conflicts and provide additional GraalVM Reachability Metadata by themselves.
 
-8. Due to https://github.com/oracle/graal/issues/7979 , 
+7. Due to https://github.com/oracle/graal/issues/7979 , 
 the Oracle JDBC Driver corresponding to the `com.oracle.database.jdbc:ojdbc8` Maven module cannot be used under GraalVM Native Image.
 
-9. Including but not limited to `com.mysql.cj.LocalizedErrorMessages`,
+8. Including but not limited to `com.mysql.cj.LocalizedErrorMessages`,
    `com.microsoft.sqlserver.jdbc.SQLServerResource`,
    `org.postgresql.translation.messages`,
    `org.opengauss.translation.messages` from third-party dependencies. By default, L10N resources are loaded according to the system's default locale,
@@ -351,6 +377,35 @@ without it being registered as reachable. Add it to the resource metadata to sol
   com.mysql.cj.jdbc.NonRegisteringDriver.connect(NonRegisteringDriver.java:186)
 ```
 
-10. Due to the use of `janino-compiler/janino` by `apache/calcite`, 
+For Maven, possible configurations are,
+
+```xml
+<project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                        <buildArg>-H:+IncludeAllLocales</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+9. Due to the use of `janino-compiler/janino` by `apache/calcite`, 
     ShardingSphere's `SQL Federation` feature is unavailable in the GraalVM Native Image.
     This also prevents ShardingSphere Proxy Native from integrating with OpenGauss.
+
+10. Due to the issue at https://github.com/oracle/graal/issues/11280, 
+    Etcd's Cluster mode integration cannot be used on GraalVM Native Images compiled via Windows 11,
+    and Etcd's Cluster mode will conflict with the GraalVM Tracing Agent.
+    If developers need to use Etcd's Cluster mode on GraalVM Native Images compiled via Linux,
+    they need to provide additional GraalVM Reachability Metadata related JSON themselves.

@@ -23,7 +23,10 @@ import org.apache.shardingsphere.encrypt.merge.dal.show.EncryptShowCreateTableMe
 import org.apache.shardingsphere.encrypt.rule.EncryptRule;
 import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.merge.result.MergedResult;
+import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
+import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
 import org.apache.shardingsphere.infra.metadata.database.rule.RuleMetaData;
+import org.apache.shardingsphere.infra.session.query.QueryContext;
 import org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader;
 import org.apache.shardingsphere.parser.rule.SQLParserRule;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
@@ -33,12 +36,15 @@ import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.S
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.ColumnInResultSetSQLStatementAttribute;
 import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.TableInResultSetSQLStatementAttribute;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isA;
@@ -52,32 +58,45 @@ class EncryptDALResultDecoratorTest {
     private final DatabaseType databaseType = TypedSPILoader.getService(DatabaseType.class, "FIXTURE");
     
     @Mock
-    private EncryptRule rule;
-    
-    @Mock
     private SQLStatementContext sqlStatementContext;
+    
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private ShardingSphereDatabase database;
+    
+    @BeforeEach
+    public void setup() {
+        when(database.getRuleMetaData().findSingleRule(EncryptRule.class)).thenReturn(Optional.ofNullable(mock(EncryptRule.class)));
+    }
     
     @Test
     void assertMergedResultWithShowColumnsStatement() {
         sqlStatementContext = mockColumnInResultSetSQLStatementAttributeContext();
-        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(mock(RuleMetaData.class));
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(EncryptShowColumnsMergedResult.class));
+        QueryContext queryContext = mock(QueryContext.class);
+        when(queryContext.getSqlStatementContext()).thenReturn(sqlStatementContext);
+        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(database, mock(ShardingSphereMetaData.class));
+        assertThat(decorator.decorate(mock(MergedResult.class), queryContext), isA(EncryptShowColumnsMergedResult.class));
     }
     
     @Test
     void assertMergedResultWithShowCreateTableStatement() {
         sqlStatementContext = mockTableInfoInResultSetAvailableStatementContext();
+        QueryContext queryContext = mock(QueryContext.class);
+        when(queryContext.getSqlStatementContext()).thenReturn(sqlStatementContext);
+        ShardingSphereMetaData metaData = mock(ShardingSphereMetaData.class);
         RuleMetaData ruleMetaData = mock(RuleMetaData.class);
         when(ruleMetaData.getSingleRule(SQLParserRule.class)).thenReturn(mock(SQLParserRule.class));
-        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(ruleMetaData);
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(EncryptShowCreateTableMergedResult.class));
+        when(metaData.getGlobalRuleMetaData()).thenReturn(ruleMetaData);
+        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(database, metaData);
+        assertThat(decorator.decorate(mock(MergedResult.class), queryContext), isA(EncryptShowCreateTableMergedResult.class));
     }
     
     @Test
     void assertMergedResultWithOtherStatement() {
         sqlStatementContext = mock(SQLStatementContext.class, RETURNS_DEEP_STUBS);
-        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(mock(RuleMetaData.class));
-        assertThat(decorator.decorate(mock(MergedResult.class), sqlStatementContext, Collections.emptyList(), rule), isA(MergedResult.class));
+        QueryContext queryContext = mock(QueryContext.class);
+        when(queryContext.getSqlStatementContext()).thenReturn(sqlStatementContext);
+        EncryptDALResultDecorator decorator = new EncryptDALResultDecorator(database, mock(ShardingSphereMetaData.class));
+        assertThat(decorator.decorate(mock(MergedResult.class), queryContext), isA(MergedResult.class));
     }
     
     private SQLStatementContext mockColumnInResultSetSQLStatementAttributeContext() {

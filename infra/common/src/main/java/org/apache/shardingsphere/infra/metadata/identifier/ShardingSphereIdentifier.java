@@ -19,6 +19,7 @@ package org.apache.shardingsphere.infra.metadata.identifier;
 
 import com.cedarsoftware.util.CaseInsensitiveMap.CaseInsensitiveString;
 import org.apache.shardingsphere.database.connector.core.metadata.database.enums.QuoteCharacter;
+import org.apache.shardingsphere.database.connector.core.metadata.identifier.DatabaseDialectIdentifierHandler;
 import org.apache.shardingsphere.database.connector.core.spi.DatabaseTypedSPILoader;
 import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.sql.parser.statement.core.value.identifier.IdentifierValue;
@@ -70,7 +71,8 @@ public final class ShardingSphereIdentifier {
         if (null == getValue() && null == ((ShardingSphereIdentifier) obj).getValue()) {
             return true;
         }
-        return isCaseSensitive ? String.valueOf(getValue()).equals(((ShardingSphereIdentifier) obj).getValue()) : value.equals(((ShardingSphereIdentifier) obj).value);
+        boolean shouldUseCaseSensitive = isCaseSensitive || ((ShardingSphereIdentifier) obj).isCaseSensitive;
+        return shouldUseCaseSensitive ? String.valueOf(getValue()).equals(((ShardingSphereIdentifier) obj).getValue()) : value.equals(((ShardingSphereIdentifier) obj).value);
     }
     
     @Override

@@ -17,29 +17,23 @@
 
 package org.apache.shardingsphere.infra.merge.engine.decorator;
 
-import org.apache.shardingsphere.infra.binder.context.statement.SQLStatementContext;
 import org.apache.shardingsphere.infra.merge.result.MergedResult;
-import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
+import org.apache.shardingsphere.infra.session.query.QueryContext;
 
 import java.sql.SQLException;
-import java.util.List;
 
 /**
  * Result decorator.
- * 
- * @param <T> type of ShardingSphere rule
  */
-public interface ResultDecorator<T extends ShardingSphereRule> {
+public interface ResultDecorator {
     
     /**
      * Decorate merged result.
      *
      * @param mergedResult merged result
-     * @param sqlStatementContext SQL statement context
-     * @param parameters parameters
-     * @param rule ShardingSphere rule
+     * @param queryContext query context
      * @return merged result
      * @throws SQLException SQL exception
      */
-    MergedResult decorate(MergedResult mergedResult, SQLStatementContext sqlStatementContext, List<Object> parameters, T rule) throws SQLException;
+    MergedResult decorate(MergedResult mergedResult, QueryContext queryContext) throws SQLException;
 }

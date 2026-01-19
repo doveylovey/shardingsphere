@@ -23,6 +23,7 @@ import org.apache.shardingsphere.database.exception.core.exception.syntax.databa
 import org.apache.shardingsphere.database.exception.core.exception.syntax.database.UnknownDatabaseException;
 import org.apache.shardingsphere.infra.config.mode.ModeConfiguration;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
+import org.apache.shardingsphere.infra.config.props.temporary.TemporaryConfigurationProperties;
 import org.apache.shardingsphere.infra.database.DatabaseTypeEngine;
 import org.apache.shardingsphere.infra.datanode.DataNode;
 import org.apache.shardingsphere.infra.instance.ComputeNodeInstance;
@@ -77,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -86,6 +88,7 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -108,6 +111,7 @@ class ContextManagerTest {
     @BeforeEach
     void setUp() throws SQLException {
         when(metaDataContexts.getMetaData().getProps()).thenReturn(new ConfigurationProperties(new Properties()));
+        when(metaDataContexts.getMetaData().getTemporaryProps()).thenReturn(new TemporaryConfigurationProperties(new Properties()));
         database = mockDatabase();
         when(metaDataContexts.getMetaData().containsDatabase("foo_db")).thenReturn(true);
         when(metaDataContexts.getMetaData().getDatabase("foo_db")).thenReturn(database);
@@ -185,7 +189,7 @@ class ContextManagerTest {
         setPersistServiceFacade(persistServiceFacade);
         MetaDataContextManager metaDataContextManager = mock(MetaDataContextManager.class, RETURNS_DEEP_STUBS);
         SwitchingResource switchingResource = new SwitchingResource(Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList(), Collections.emptyMap());
-        when(metaDataContextManager.getResourceSwitchManager().switchByAlterStorageUnit(any(ResourceMetaData.class), anyMap())).thenReturn(switchingResource);
+        when(metaDataContextManager.getResourceSwitchManager().switchByAlterStorageUnit(any(ResourceMetaData.class), anyMap(), anyBoolean())).thenReturn(switchingResource);
         setMetaDataContextManager(metaDataContextManager);
         when(metaDataContexts.getMetaData().getGlobalResourceMetaData()).thenReturn(mock(ResourceMetaData.class));
         try (
@@ -209,12 +213,13 @@ class ContextManagerTest {
         setPersistServiceFacade(mockPersistServiceFacade());
         MetaDataContextManager metaDataContextManager = mock(MetaDataContextManager.class, RETURNS_DEEP_STUBS);
         SwitchingResource switchingResource = new SwitchingResource(Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList(), Collections.emptyMap());
-        when(metaDataContextManager.getResourceSwitchManager().switchByAlterStorageUnit(any(ResourceMetaData.class), anyMap())).thenReturn(switchingResource);
+        when(metaDataContextManager.getResourceSwitchManager().switchByAlterStorageUnit(any(ResourceMetaData.class), anyMap(), anyBoolean())).thenReturn(switchingResource);
         setMetaDataContextManager(metaDataContextManager);
         try (
                 MockedConstruction<MetaDataContextsFactory> ignored = mockConstruction(MetaDataContextsFactory.class,
                         (mock, context) -> when(mock.createChangedDatabase("foo_db", false, switchingResource, Collections.emptyList(), metaDataContexts)).thenThrow(SQLException.class))) {
             contextManager.reloadDatabase(database);
+            verify(metaDataContexts, never()).update(any());
         }
     }
     
@@ -256,6 +261,8 @@ class ContextManagerTest {
         try (MockedStatic<GenericSchemaBuilder> schemaBuilderMock = mockStatic(GenericSchemaBuilder.class)) {
             schemaBuilderMock.when(() -> GenericSchemaBuilder.build(any(DatabaseType.class), any(GenericSchemaBuilderMaterial.class))).thenThrow(SQLException.class);
             contextManager.reloadSchema(database, "foo_schema", "foo_ds");
+            verify(database, never()).dropSchema(any());
+            verify(database, never()).addSchema(any());
         }
     }
     
@@ -289,11 +296,14 @@ class ContextManagerTest {
     
     @Test
     void assertReloadTableWithSQLException() {
-        setPersistServiceFacade(mockPersistServiceFacade());
+        PersistServiceFacade persistServiceFacade = mockPersistServiceFacade();
+        setPersistServiceFacade(persistServiceFacade);
         try (MockedStatic<GenericSchemaBuilder> schemaBuilderMock = mockStatic(GenericSchemaBuilder.class)) {
             schemaBuilderMock.when(() -> GenericSchemaBuilder.build(anySet(), any(DatabaseType.class), any(GenericSchemaBuilderMaterial.class))).thenThrow(SQLException.class);
             contextManager.reloadTable(database, "foo_schema", "foo_tbl");
             contextManager.reloadTable(database, "foo_schema", "foo_ds", "foo_tbl");
+            verify(persistServiceFacade.getMetaDataFacade().getDatabaseMetaDataFacade().getTable(), never()).persist(any(), any(), any());
+            verify(persistServiceFacade.getModeFacade().getMetaDataManagerService(), never()).dropTables(any(), any(), any());
         }
     }
     

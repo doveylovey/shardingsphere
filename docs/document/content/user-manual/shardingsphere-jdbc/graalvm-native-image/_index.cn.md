@@ -34,8 +34,31 @@ java.beans.Introspector was unintentionally initialized at build time. To see wh
 
 ### Maven 生态
 
-使用者需要主动使用 GraalVM Reachability Metadata 中央仓库。
 如下配置可供参考，以配置项目额外的 Maven Profiles，以 GraalVM Native Build Tools 的文档为准。
+
+```xml
+<project>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-reachability-metadata</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+一个更方便测试第三方依赖的配置可能如下，
 
 ```xml
 <project>
@@ -45,14 +68,18 @@ java.beans.Introspector was unintentionally initialized at build time. To see wh
             <artifactId>shardingsphere-jdbc</artifactId>
             <version>${shardingsphere.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-infra-reachability-metadata</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
     </dependencies>
-    
     <build>
         <plugins>
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
-                <version>0.11.0</version>
+                <version>0.11.3</version>
                 <extensions>true</extensions>
                 <configuration>
                     <buildArgs>
@@ -85,21 +112,28 @@ java.beans.Introspector was unintentionally initialized at build time. To see wh
 
 ### Gradle 生态
 
-使用者需要主动使用 GraalVM Reachability Metadata 中央仓库。
 如下配置可供参考，以配置项目额外的 Gradle Tasks，以 GraalVM Native Build Tools 的文档为准。
-由于 https://github.com/gradle/gradle/issues/17559 的限制，用户需要通过 Maven 依赖的形式引入 Metadata Repository 的 JSON 文件。
-参考 https://github.com/graalvm/native-build-tools/issues/572 。
 
 ```groovy
 plugins {
-   id 'org.graalvm.buildtools.native' version '0.11.0'
+   id 'org.graalvm.buildtools.native' version '0.11.3'
 }
+dependencies {
+   implementation 'org.apache.shardingsphere:shardingsphere-infra-reachability-metadata:${shardingsphere.version}'
+}
+```
 
+一个更方便测试第三方依赖的配置可能如下。由于 https://github.com/gradle/gradle/issues/17559 的限制，用户可能需要通过 Maven 依赖的形式引入 Metadata Repository 的 JSON 文件。参考 https://github.com/graalvm/native-build-tools/issues/572 。
+
+```groovy
+plugins {
+   id 'org.graalvm.buildtools.native' version '0.11.3'
+}
 dependencies {
    implementation 'org.apache.shardingsphere:shardingsphere-jdbc:${shardingsphere.version}'
-   implementation(group: 'org.graalvm.buildtools', name: 'graalvm-reachability-metadata', version: '0.11.0', classifier: 'repository', ext: 'zip')
+   implementation 'org.apache.shardingsphere:shardingsphere-infra-reachability-metadata:${shardingsphere.version}'
+   implementation(group: 'org.graalvm.buildtools', name: 'graalvm-reachability-metadata', version: '0.11.3', classifier: 'repository', ext: 'zip')
 }
-
 graalvmNative {
    binaries {
       main {
@@ -119,9 +153,10 @@ graalvmNative {
 }
 ```
 
-### 对于 sbt 等不被 GraalVM Native Build Tools 支持的构建工具
+### sbt
 
-此类需求需要在 https://github.com/graalvm/native-build-tools 打开额外的 issue 并提供对应构建工具的 Plugin 实现。
+对于 sbt 等不被 GraalVM Native Build Tools 支持的构建工具，
+需要在 https://github.com/graalvm/native-build-tools 打开额外的 issue 并提供对应构建工具的 Plugin 实现。
 
 ## 使用限制
 
@@ -249,6 +284,28 @@ Caused by: java.io.UnsupportedEncodingException: Codepage Cp1252 is not supporte
  [...]
 ```
 
+对于 Maven，可能的配置为，
+
+```xml
+<project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>-H:+AddAllCharsets</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
 5. 讨论在 ShardingSphere JDBC 的 GraalVM Native Image 下使用 XA 分布式事务的所需步骤，则需要引入额外的已知前提，
    - `org.apache.shardingsphere.transaction.xa.jta.datasource.swapper.DataSourceSwapper#loadXADataSource(String)` 会通过 `java.lang.Class#getDeclaredConstructors` 实例化各数据库驱动的 `javax.sql.XADataSource` 实现类。
    - 各数据库驱动的 `javax.sql.XADataSource` 实现类的全类名通过实现 `org.apache.shardingsphere.database.connector.core.metadata.database.metadata.option.transaction.DialectTransactionOption` 的 SPI，来存入 ShardingSphere 的元数据。
@@ -280,42 +337,13 @@ Caused by: java.io.UnsupportedEncodingException: Codepage Cp1252 is not supporte
 }
 ```
 
-6. 当需要通过 ShardingSphere JDBC 使用 ClickHouse 方言时，
-用户需要手动引入相关的可选模块和 classifier 为 `http` 的 ClickHouse JDBC 驱动。
-原则上，ShardingSphere 的 GraalVM Native Image 集成不希望使用 classifier 为 `all` 的 `com.clickhouse:clickhouse-jdbc`，
-因为 Uber Jar 会导致采集重复的 GraalVM Reachability Metadata。
-可能的配置例子如下，
-
-```xml
-<project>
-    <dependencies>
-      <dependency>
-         <groupId>org.apache.shardingsphere</groupId>
-         <artifactId>shardingsphere-jdbc</artifactId>
-         <version>${shardingsphere.version}</version>
-      </dependency>
-       <dependency>
-          <groupId>org.apache.shardingsphere</groupId>
-          <artifactId>shardingsphere-jdbc-dialect-clickhouse</artifactId>
-          <version>${shardingsphere.version}</version>
-      </dependency>
-       <dependency>
-          <groupId>com.clickhouse</groupId>
-          <artifactId>clickhouse-jdbc</artifactId>
-          <version>0.6.3</version>
-          <classifier>http</classifier>
-       </dependency>
-    </dependencies>
-</project>
-```
-
-7. ShardingSphere 的单元测试仅使用 Maven 模块 `io.github.linghengqian:hive-server2-jdbc-driver-thin` 来在 GraalVM Native Image 下验证 HiveServer2 集成的可用性。
+6. ShardingSphere 的单元测试仅使用 Maven 模块 `io.github.linghengqian:hive-server2-jdbc-driver-thin` 来在 GraalVM Native Image 下验证 HiveServer2 集成的可用性。
 如果开发者直接使用 `org.apache.hive:hive-jdbc`，则应自行处理依赖冲突和提供额外的 GraalVM Reachability Metadata 。
 
-8. 由于 https://github.com/oracle/graal/issues/7979 的影响，
+7. 由于 https://github.com/oracle/graal/issues/7979 的影响，
 对应 `com.oracle.database.jdbc:ojdbc8` Maven 模块的 Oracle JDBC Driver 无法在 GraalVM Native Image 下使用。
 
-9. 包括但不限于来自第三方依赖的 `com.mysql.cj.LocalizedErrorMessages`,
+8. 包括但不限于来自第三方依赖的 `com.mysql.cj.LocalizedErrorMessages`,
    `com.microsoft.sqlserver.jdbc.SQLServerResource`,
    `org.postgresql.translation.messages`,
    `org.opengauss.translation.messages` 等 `Resource Bundles` 在默认情况下会根据系统的默认语言环境加载 L10N 资源，
@@ -340,6 +368,35 @@ without it being registered as reachable. Add it to the resource metadata to sol
   com.mysql.cj.jdbc.NonRegisteringDriver.connect(NonRegisteringDriver.java:186)
 ```
 
-10. 受 `apache/calcite` 使用的 `janino-compiler/janino` 的影响，
+对于 Maven，可能的配置为，
+
+```xml
+<project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.11.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <buildArgs>
+                        <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                        <buildArg>-H:+IncludeAllLocales</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+9. 受 `apache/calcite` 使用的 `janino-compiler/janino` 的影响，
     ShardingSphere 的 `SQL Federation` 功能在 GraalVM Native Image 下不可用。
     这同样导致 ShardingSphere Proxy Native 无法使用 OpenGauss 集成。
+
+10. 受 https://github.com/oracle/graal/issues/11280 影响，
+    Etcd 的 Cluster 模式集成无法在通过 Windows 11 编译的 GraalVM Native Image 下使用，
+    且 Etcd 的 Cluster 模式会与 GraalVM Tracing Agent 产生冲突。
+    若开发者需要在通过 Linux 编译的 GraalVM Native Image 下使用 Etcd 的 Cluster 模式，
+    需要自行提供额外的 GraalVM Reachability Metadata 相关的 JSON。

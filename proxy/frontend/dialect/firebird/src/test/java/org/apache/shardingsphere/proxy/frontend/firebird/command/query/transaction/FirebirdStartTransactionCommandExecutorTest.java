@@ -30,7 +30,6 @@ import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.SQLException;
 import java.util.Collection;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -62,9 +61,9 @@ class FirebirdStartTransactionCommandExecutorTest {
     }
     
     @Test
-    void assertExecute() throws SQLException {
-        when(packet.getAutocommit()).thenReturn(true);
-        when(packet.getReadOnly()).thenReturn(true);
+    void assertExecute() {
+        when(packet.isAutoCommit()).thenReturn(true);
+        when(packet.isReadOnly()).thenReturn(true);
         when(packet.getIsolationLevel()).thenReturn(TransactionIsolationLevel.SERIALIZABLE);
         FirebirdStartTransactionCommandExecutor executor = new FirebirdStartTransactionCommandExecutor(packet, connectionSession);
         Collection<DatabasePacket> actual = executor.execute();

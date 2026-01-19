@@ -259,18 +259,6 @@ public final class ColumnSegmentBinder {
         return false;
     }
     
-    private static ColumnSegmentBoundInfo createColumnSegmentBoundInfo(final ColumnSegment segment, final ColumnSegment inputColumnSegment, final TableSourceType tableSourceType) {
-        IdentifierValue originalDatabase = null == inputColumnSegment ? null : inputColumnSegment.getColumnBoundInfo().getOriginalDatabase();
-        IdentifierValue originalSchema = null == inputColumnSegment ? null : inputColumnSegment.getColumnBoundInfo().getOriginalSchema();
-        IdentifierValue segmentOriginalTable = segment.getColumnBoundInfo().getOriginalTable();
-        IdentifierValue originalTable = Strings.isNullOrEmpty(segmentOriginalTable.getValue())
-                ? Optional.ofNullable(inputColumnSegment).map(optional -> optional.getColumnBoundInfo().getOriginalTable()).orElse(segmentOriginalTable)
-                : segmentOriginalTable;
-        IdentifierValue segmentOriginalColumn = segment.getColumnBoundInfo().getOriginalColumn();
-        IdentifierValue originalColumn = Optional.ofNullable(inputColumnSegment).map(optional -> optional.getColumnBoundInfo().getOriginalColumn()).orElse(segmentOriginalColumn);
-        return new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(originalDatabase, originalSchema), originalTable, originalColumn, tableSourceType);
-    }
-    
     /**
      * Bind using column segment.
      *
@@ -296,17 +284,38 @@ public final class ColumnSegmentBinder {
         List<ColumnSegmentInfo> result = new ArrayList<>(tableBinderContexts.size());
         for (TableSegmentBinderContext each : tableBinderContexts) {
             Optional<ProjectionSegment> projectionSegment = each.findProjectionSegmentByColumnLabel(columnName);
-            if (projectionSegment.isPresent() && projectionSegment.get() instanceof ColumnProjectionSegment) {
-                ColumnSegment columnSegment = ((ColumnProjectionSegment) projectionSegment.get()).getColumn();
-                result.add(new ColumnSegmentInfo(columnSegment, each.getTableSourceType()));
+            if (!projectionSegment.isPresent()) {
+                continue;
             }
+            ColumnSegment columnSegment = projectionSegment.get() instanceof ColumnProjectionSegment ? ((ColumnProjectionSegment) projectionSegment.get()).getColumn() : null;
+            result.add(new ColumnSegmentInfo(columnSegment, each.getTableSourceType()));
         }
         return result;
     }
     
+    /**
+     * Create column segment bound info.
+     *
+     * @param segment column segment
+     * @param inputColumnSegment input column segment
+     * @param tableSourceType table source type
+     * @return created column segment bound info
+     */
+    public static ColumnSegmentBoundInfo createColumnSegmentBoundInfo(final ColumnSegment segment, final ColumnSegment inputColumnSegment, final TableSourceType tableSourceType) {
+        IdentifierValue originalDatabase = null == inputColumnSegment ? null : inputColumnSegment.getColumnBoundInfo().getOriginalDatabase();
+        IdentifierValue originalSchema = null == inputColumnSegment ? null : inputColumnSegment.getColumnBoundInfo().getOriginalSchema();
+        IdentifierValue segmentOriginalTable = segment.getColumnBoundInfo().getOriginalTable();
+        IdentifierValue originalTable = Strings.isNullOrEmpty(segmentOriginalTable.getValue())
+                ? Optional.ofNullable(inputColumnSegment).map(optional -> optional.getColumnBoundInfo().getOriginalTable()).orElse(segmentOriginalTable)
+                : segmentOriginalTable;
+        IdentifierValue segmentOriginalColumn = segment.getColumnBoundInfo().getOriginalColumn();
+        IdentifierValue originalColumn = Optional.ofNullable(inputColumnSegment).map(optional -> optional.getColumnBoundInfo().getOriginalColumn()).orElse(segmentOriginalColumn);
+        return new ColumnSegmentBoundInfo(new TableSegmentBoundInfo(originalDatabase, originalSchema), originalTable, originalColumn, tableSourceType);
+    }
+    
     @RequiredArgsConstructor
     @Getter
-    static class ColumnSegmentInfo {
+    private static class ColumnSegmentInfo {
         
         private final ColumnSegment inputColumnSegment;
         

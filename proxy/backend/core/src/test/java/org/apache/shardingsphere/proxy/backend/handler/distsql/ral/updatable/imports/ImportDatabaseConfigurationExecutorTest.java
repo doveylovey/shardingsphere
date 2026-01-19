@@ -22,6 +22,7 @@ import org.apache.shardingsphere.database.exception.core.exception.syntax.databa
 import org.apache.shardingsphere.distsql.statement.type.ral.updatable.ImportDatabaseConfigurationStatement;
 import org.apache.shardingsphere.infra.config.props.ConfigurationProperties;
 import org.apache.shardingsphere.infra.config.props.ConfigurationPropertyKey;
+import org.apache.shardingsphere.infra.config.props.temporary.TemporaryConfigurationProperties;
 import org.apache.shardingsphere.infra.exception.kernel.metadata.MissingRequiredDatabaseException;
 import org.apache.shardingsphere.infra.exception.kernel.metadata.rule.DuplicateRuleException;
 import org.apache.shardingsphere.infra.metadata.database.ShardingSphereDatabase;
@@ -38,10 +39,10 @@ import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
 import java.net.URL;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,31 +53,31 @@ import static org.mockito.Mockito.when;
 class ImportDatabaseConfigurationExecutorTest {
     
     @Test
-    void assertImportDatabaseExecutorForSharding() throws SQLException {
+    void assertImportDatabaseExecutorForSharding() {
         ContextManager contextManager = mockContextManager("sharding_db");
         assertExecute(contextManager, "/conf/import/database-sharding.yaml");
     }
     
     @Test
-    void assertImportDatabaseExecutorForReadwriteSplitting() throws SQLException {
+    void assertImportDatabaseExecutorForReadwriteSplitting() {
         ContextManager contextManager = mockContextManager("readwrite_splitting_db");
         assertExecute(contextManager, "/conf/import/database-readwrite-splitting.yaml");
     }
     
     @Test
-    void assertImportDatabaseExecutorForEncrypt() throws SQLException {
+    void assertImportDatabaseExecutorForEncrypt() {
         ContextManager contextManager = mockContextManager("encrypt_db");
         assertExecute(contextManager, "/conf/import/database-encrypt.yaml");
     }
     
     @Test
-    void assertImportDatabaseExecutorForShadow() throws SQLException {
+    void assertImportDatabaseExecutorForShadow() {
         ContextManager contextManager = mockContextManager("shadow_db");
         assertExecute(contextManager, "/conf/import/database-shadow.yaml");
     }
     
     @Test
-    void assertImportDatabaseExecutorForMask() throws SQLException {
+    void assertImportDatabaseExecutorForMask() {
         ContextManager contextManager = mockContextManager("mask_db");
         assertExecute(contextManager, "/conf/import/database-mask.yaml");
     }
@@ -106,7 +107,7 @@ class ImportDatabaseConfigurationExecutorTest {
         assertThrows(ServiceProviderNotFoundException.class, () -> assertExecute(contextManager, "/conf/import/database-invalid-algorithm.yaml"));
     }
     
-    private void assertExecute(final ContextManager contextManager, final String filePath) throws SQLException {
+    private void assertExecute(final ContextManager contextManager, final String filePath) {
         ImportDatabaseConfigurationExecutor executor = new ImportDatabaseConfigurationExecutor();
         URL url = ImportDatabaseConfigurationExecutorTest.class.getResource(filePath);
         assertNotNull(url);
@@ -131,6 +132,7 @@ class ImportDatabaseConfigurationExecutorTest {
         when(result.getMetaDataContexts().getMetaData().getDatabase(databaseName)).thenReturn(database);
         when(result.getMetaDataContexts().getMetaData().getProps()).thenReturn(
                 new ConfigurationProperties(PropertiesBuilder.build(new Property(ConfigurationPropertyKey.PROXY_FRONTEND_DATABASE_PROTOCOL_TYPE.getKey(), "MySQL"))));
+        when(result.getMetaDataContexts().getMetaData().getTemporaryProps()).thenReturn(new TemporaryConfigurationProperties(new Properties()));
         return result;
     }
 }

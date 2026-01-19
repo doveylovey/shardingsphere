@@ -10,16 +10,11 @@ ShardingSphere 对 ClickHouse JDBC Driver 的支持位于可选模块中。
 
 ## 前提条件
 
-要在 ShardingSphere 的配置文件为数据节点使用类似 `jdbc:ch://localhost:8123/demo_ds_0` 的 `standardJdbcUrl`，
+要在 ShardingSphere 的配置文件为数据节点使用类似 `jdbc:ch://localhost:8123/demo_ds_0` 的 `jdbcUrl`，
 可能的 Maven 依赖关系如下，
 
 ```xml
 <dependencies>
-    <dependency>
-        <groupId>org.apache.shardingsphere</groupId>
-        <artifactId>shardingsphere-jdbc</artifactId>
-        <version>${shardingsphere.version}</version>
-    </dependency>
     <dependency>
         <groupId>org.apache.shardingsphere</groupId>
         <artifactId>shardingsphere-jdbc-dialect-clickhouse</artifactId>
@@ -28,8 +23,8 @@ ShardingSphere 对 ClickHouse JDBC Driver 的支持位于可选模块中。
     <dependency>
         <groupId>com.clickhouse</groupId>
         <artifactId>clickhouse-jdbc</artifactId>
-        <classifier>http</classifier>
-        <version>0.6.3</version>
+        <classifier>all</classifier>
+        <version>0.9.5</version>
     </dependency>
 </dependencies>
 ```
@@ -43,7 +38,7 @@ ShardingSphere 对 ClickHouse JDBC Driver 的支持位于可选模块中。
 ```yaml
 services:
   clickhouse-server:
-    image: clickhouse/clickhouse-server:25.6.5.41
+    image: clickhouse/clickhouse-server:25.12.1.649
     environment:
       CLICKHOUSE_SKIP_USER_SETUP: "1"
     ports:
@@ -53,15 +48,15 @@ services:
 ### 创建业务表
 
 通过第三方工具在 ClickHouse 内创建业务库与业务表。
-以 DBeaver Community 为例，若使用 Ubuntu 22.04.4，可通过 Snapcraft 快速安装，
+以 DBeaver Community 为例，若使用 Ubuntu 24.04，可通过 Snapcraft 快速安装，
 
 ```shell
 sudo apt update && sudo apt upgrade -y
-sudo snap install dbeaver-ce
+sudo snap install dbeaver-ce --classic
 snap run dbeaver-ce
 ```
 
-在 DBeaver Community 内，使用 `jdbc:ch://localhost:8123/default` 的 `standardJdbcUrl`，`default` 的`username` 连接至 ClickHouse，
+在 DBeaver Community 内，使用 `jdbc:ch://localhost:8123/default` 的 `jdbcUrl`，`default` 的`username` 连接至 ClickHouse，
 `password` 留空。
 执行如下 SQL，
 
@@ -73,7 +68,7 @@ CREATE DATABASE demo_ds_2;
 ```
 
 分别使用 `jdbc:ch://localhost:8123/demo_ds_0` ，
-`jdbc:ch://localhost:8123/demo_ds_1` 和 `jdbc:ch://localhost:8123/demo_ds_2` 的 `standardJdbcUrl` 连接至 ClickHouse 来执行如下 SQL，
+`jdbc:ch://localhost:8123/demo_ds_1` 和 `jdbc:ch://localhost:8123/demo_ds_2` 的 `jdbcUrl` 连接至 ClickHouse 来执行如下 SQL，
 
 ```sql
 -- noinspection SqlNoDataSourceInspectionForFile
@@ -92,26 +87,61 @@ TRUNCATE TABLE t_order;
 
 ### 在业务项目创建 ShardingSphere 数据源
 
-在业务项目引入`前提条件`涉及的依赖后，在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件`demo.yaml`，
+在业务项目引入`前提条件`涉及的依赖后，额外引入如下依赖，
+
+```xml
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-jdbc</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-data-source-pool-hikari</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-infra-url-classpath</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-standalone-mode-repository-memory</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-sharding-core</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shardingsphere</groupId>
+    <artifactId>shardingsphere-authority-simple</artifactId>
+    <version>${shardingsphere.version}</version>
+</dependency>
+```
+
+在业务项目的 classpath 上编写 ShardingSphere 数据源的配置文件 `demo.yaml`，
 
 ```yaml
 dataSources:
     ds_0:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: com.clickhouse.jdbc.ClickHouseDriver
-        standardJdbcUrl: jdbc:ch://localhost:8123/demo_ds_0
+        jdbcUrl: jdbc:ch://localhost:8123/demo_ds_0
         username: default
         password:
     ds_1:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: com.clickhouse.jdbc.ClickHouseDriver
-        standardJdbcUrl: jdbc:ch://localhost:8123/demo_ds_1
+        jdbcUrl: jdbc:ch://localhost:8123/demo_ds_1
         username: default
         password:
     ds_2:
         dataSourceClassName: com.zaxxer.hikari.HikariDataSource
         driverClassName: com.clickhouse.jdbc.ClickHouseDriver
-        standardJdbcUrl: jdbc:ch://localhost:8123/demo_ds_2
+        jdbcUrl: jdbc:ch://localhost:8123/demo_ds_2
         username: default
         password:
 rules:
@@ -167,24 +197,14 @@ public class ExampleUtils {
 ### SQL 限制
 
 ShardingSphere JDBC DataSource 尚不支持执行 ClickHouse 的 `create table`，`truncate table` 和 `drop table` 语句。
-用户应考虑为 ShardingSphere 提交包含单元测试的 PR。
+当前 ShardingSphere 对 ClickHouse 的 `INNER JOIN` 语法解析存在不足，
+对 `SELECT i.* FROM t_order o, t_order_item i WHERE o.order_id = i.order_id` 这类 SQL，它可能返回错误的查询结果。
 
 ### 分布式序列限制
 
-ClickHouse 自身的，对应分布式序列功能的列类型是 `UUID`，`UUID` 在 ClickHouse JDBC Driver 中接收为 `java.util.UUID`，
-参考 https://github.com/ClickHouse/ClickHouse/issues/56228 。 
-而 ShardingSphere 的 `SNOWFLAKE` 的分布式序列 SPI 实现对应的列类型是 `UInt64`，
-在 ShardingSphere JDBC Driver 中接收为 `java.lang.Long`。
-
-当为 ShardingSphere 配置连接至 ClickHouse 时， 若同时配置了 ShardingSphere 使用 `SNOWFLAKE` 的分布式序列 SPI 实现，
-ShardingSphere 的分布式序列功能使用的 ClickHouse 真实数据库中的列类型不应该被设置为 `UUID`。
-
-由于 `com.clickhouse:clickhouse-jdbc:0.6.3:http` Maven 模块的 `com.clickhouse.jdbc.ClickHouseConnection#prepareStatement(String, int)`
-故意在 `autoGeneratedKeys` 为 `java.sql.Statement.RETURN_GENERATED_KEYS` 时抛出异常，
-以阻止 ShardingSphere 正常代理 `com.clickhouse.jdbc.internal.ClickHouseConnectionImpl`，
-因此如果用户需要从 JDBC 业务代码获取 ShardingSphere 生成的分布式序列，需要将 `autoGeneratedKeys` 置为 `java.sql.Statement.NO_GENERATED_KEYS`。
-
-一个可能的示例如下，
+受 https://github.com/ClickHouse/ClickHouse/issues/21697 影响，
+由于 ClickHouse 不支持 `INSERT ... RETURNING` 语法，
+开发者无法在向 ShardingSphere 的逻辑数据源执行 `INSERT` SQL 后获得分布式序列。即，如下操作是不允许的，
 
 ```java
 import com.zaxxer.hikari.HikariConfig;
@@ -199,7 +219,7 @@ public class ExampleTest {
              Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(
                      "INSERT INTO t_order (user_id, order_type, address_id, status) VALUES (1, 1, 1, 'INSERT_TEST')",
-                     Statement.NO_GENERATED_KEYS
+                     Statement.RETURN_GENERATED_KEYS
              )) {
             preparedStatement.executeUpdate();
             try (ResultSet resultSet = preparedStatement.getGeneratedKeys()) {
@@ -227,9 +247,3 @@ ClickHouse 不支持 ShardingSphere 集成级别的本地事务，XA 事务或 S
 嵌入式 ClickHouse `chDB` 尚未发布 Java 客户端，
 ShardingSphere 不针对 SNAPSHOT 版本的 https://github.com/chdb-io/chdb-java 做集成测试。
 参考 https://github.com/chdb-io/chdb/issues/243 。
-
-### ClickHouse JDBC Driver V2 限制
-
-ClickHouse JDBC Driver V2 自 https://github.com/ClickHouse/clickhouse-java/pull/2368 所在的 `0.8.6` 里程碑开始，
-使用 `org.antlr:antlr4-maven-plugin:4.13.2`。这与 ShardingSphere 使用的 `org.antlr:antlr4-runtime:4.10.1` 产生冲突。
-ShardingSphere 仅使用 `com.clickhouse:clickhouse-jdbc:0.6.3:http` 测试 ClickHouse 集成。
