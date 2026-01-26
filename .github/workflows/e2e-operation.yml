@@ -19,6 +19,21 @@ name: E2E - Operation
 
 on:
   pull_request:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/e2e-operation.yml'
+      - '**/pom.xml'
+      - '**/src/main/**'
+      - '!examples/**'
+      - '!distribution/**'
+      - 'distribution/proxy/**'
+      - '!distribution/proxy/src/main/release-docs/**'
+      - '!test/**'
+      - 'test/pom.xml'
+      - 'test/e2e/fixture/**'
+      - 'test/e2e/env/**'
+      - 'test/e2e/operation/**'
+      - '!*.md'
   workflow_dispatch:
 
 concurrency:
@@ -50,7 +65,7 @@ jobs:
 
   e2e-operation:
     name: E2E - ${{ matrix.operation }} on ${{ matrix.image.version }}
-    if: github.repository == 'apache/shardingsphere'
+    if: github.repository == 'apache/shardingsphere' && needs.detect-changed-files.outputs.changed_operations != '[]' && needs.detect-changed-files.outputs.changed_operations != '["ignore"]'
     needs: [ detect-changed-files, global-environment ]
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -59,14 +74,21 @@ jobs:
       fail-fast: false
       matrix:
         operation: [ transaction, pipeline, showprocesslist ]
-        image: [ { type: "e2e.docker.database.mysql.images", version: "mysql:5.7" }, { type: "e2e.docker.database.postgresql.images", version: "postgres:12-alpine" }, { type: "e2e.docker.database.mariadb.images", version: "mariadb:11" } ]
+        image: [
+          { type: "e2e.docker.database.mysql.images", version: "mysql:5.7" },
+          { type: "e2e.docker.database.mariadb.images", version: "mariadb:11" },
+          { type: "e2e.docker.database.postgresql.images", version: "postgres:12-alpine" },
+          { type: "e2e.docker.database.opengauss.images", version: "opengauss/opengauss:3.1.0" }
+        ]
         exclude:
           - operation: transaction
             image: { type: "e2e.docker.database.mariadb.images", version: "mariadb:11" }
           - operation: showprocesslist
+            image: { type: "e2e.docker.database.mariadb.images", version: "mariadb:11" }
+          - operation: showprocesslist
             image: { type: "e2e.docker.database.postgresql.images", version: "postgres:12-alpine" }
           - operation: showprocesslist
-            image: { type: "e2e.docker.database.mariadb.images", version: "mariadb:11" }
+            image: { type: "e2e.docker.database.opengauss.images", version: "opengauss/opengauss:3.1.0" }
     steps:
       - env:
           changed_operations: ${{ needs.detect-changed-files.outputs.changed_operations }}
@@ -92,7 +114,7 @@ jobs:
         uses: actions/setup-java@v5.1.0
         with:
           distribution: 'temurin'
-          java-version: 11
+          java-version: 17
           cache: 'maven'
       - name: Build ${{ matrix.operation }} E2E Image
         if: (env.skip_current_step == 'false')

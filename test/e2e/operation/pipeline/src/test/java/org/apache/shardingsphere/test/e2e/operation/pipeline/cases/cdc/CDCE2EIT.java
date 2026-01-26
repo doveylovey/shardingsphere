@@ -69,7 +69,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,12 +96,13 @@ class CDCE2EIT {
     @EnabledIf("isEnabled")
     @ArgumentsSource(PipelineE2ETestCaseArgumentsProvider.class)
     void assertCDCDataImportSuccess(final PipelineTestParameter testParam) throws SQLException {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        // If run on NATIVE mode and database timezone is UTC, then: 1) set `e2e.timezone=UTC` in e2e-env.properties, 2) add this line of code in proxy Bootstrap main method.
+        // TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         try (PipelineContainerComposer containerComposer = new PipelineContainerComposer(testParam)) {
             PipelineE2EDistSQLFacade distSQLFacade = new PipelineE2EDistSQLFacade(containerComposer, new CDCJobType());
             distSQLFacade.alterPipelineRule();
             for (String each : Arrays.asList(PipelineContainerComposer.DS_0, PipelineContainerComposer.DS_1)) {
-                containerComposer.registerStorageUnit(each);
+                distSQLFacade.registerStorageUnit(each);
             }
             createOrderTableRule(containerComposer);
             distSQLFacade.createBroadcastRule("t_address");
@@ -123,13 +123,13 @@ class CDCE2EIT {
             }
             PipelineDataSource targetDataSource = createStandardDataSource(containerComposer, PipelineContainerComposer.DS_4);
             final CDCClient cdcClient = buildCDCClientAndStart(targetDataSource, containerComposer);
-            Awaitility.await().atMost(10L, TimeUnit.SECONDS).pollInterval(1L, TimeUnit.SECONDS).until(() -> !distSQLFacade.listJobIds().isEmpty());
+            Awaitility.waitAtMost(10L, TimeUnit.SECONDS).pollInterval(1L, TimeUnit.SECONDS).until(() -> !distSQLFacade.listJobIds().isEmpty());
             String jobId = distSQLFacade.listJobIds().get(0);
-            containerComposer.waitIncrementTaskFinished(String.format("SHOW STREAMING STATUS '%s'", jobId));
+            distSQLFacade.waitJobIncrementalStageFinished(jobId);
             DialectDatabaseMetaData dialectDatabaseMetaData = new DatabaseTypeRegistry(containerComposer.getDatabaseType()).getDialectDatabaseMetaData();
             String tableName = dialectDatabaseMetaData.getSchemaOption().isSchemaAvailable() ? String.join(".", PipelineContainerComposer.SCHEMA_NAME, SOURCE_TABLE_NAME) : SOURCE_TABLE_NAME;
             new E2EIncrementalTask(sourceDataSource, tableName, new SnowflakeKeyGenerateAlgorithm(), containerComposer.getDatabaseType(), 20).run();
-            containerComposer.waitIncrementTaskFinished(String.format("SHOW STREAMING STATUS '%s'", jobId));
+            distSQLFacade.waitJobIncrementalStageFinished(jobId);
             for (int i = 1; i <= 4; i++) {
                 int orderId = 10000 + i;
                 containerComposer.proxyExecuteWithLog(String.format("INSERT INTO %s (order_id, user_id, status) VALUES (%d, %d, 'OK')", tableName, orderId, i), 0);
@@ -142,16 +142,16 @@ class CDCE2EIT {
             assertDataMatched(sourceDataSource, targetDataSource, new QualifiedTable(null, "t_address"));
             assertDataMatched(sourceDataSource, targetDataSource, new QualifiedTable(null, "t_single"));
             cdcClient.close();
-            Awaitility.await().atMost(10L, TimeUnit.SECONDS).pollInterval(500L, TimeUnit.MILLISECONDS)
+            Awaitility.waitAtMost(10L, TimeUnit.SECONDS).pollInterval(500L, TimeUnit.MILLISECONDS)
                     .until(() -> distSQLFacade.listJobs().stream().noneMatch(each -> Boolean.parseBoolean(each.get("active").toString())));
-            containerComposer.proxyExecuteWithLog(String.format("DROP STREAMING '%s'", jobId), 0);
+            distSQLFacade.drop(jobId);
             assertTrue(distSQLFacade.listJobs().isEmpty());
         }
     }
     
     private void createOrderTableRule(final PipelineContainerComposer containerComposer) throws SQLException {
         containerComposer.proxyExecuteWithLog(CREATE_SHARDING_RULE_SQL, 0);
-        Awaitility.await().atMost(20L, TimeUnit.SECONDS).pollInterval(2L, TimeUnit.SECONDS).until(() -> !containerComposer.queryForListWithLog("SHOW SHARDING TABLE RULE t_order").isEmpty());
+        Awaitility.waitAtMost(20L, TimeUnit.SECONDS).pollInterval(2L, TimeUnit.SECONDS).until(() -> !containerComposer.queryForListWithLog("SHOW SHARDING TABLE RULE t_order").isEmpty());
     }
     
     private void initSchemaAndTable(final PipelineContainerComposer containerComposer, final Connection connection, final int seconds) throws SQLException {
@@ -174,7 +174,7 @@ class CDCE2EIT {
     
     private CDCClient buildCDCClientAndStart(final PipelineDataSource dataSource, final PipelineContainerComposer containerComposer) {
         DataSourceRecordConsumer recordConsumer = new DataSourceRecordConsumer(dataSource, containerComposer.getDatabaseType());
-        CDCClient result = new CDCClient(new CDCClientConfiguration("localhost", containerComposer.getContainerComposer().getProxyCDCPort(), 5000));
+        CDCClient result = new CDCClient(new CDCClientConfiguration("localhost", containerComposer.getContainerComposer().getProxyCDCPort(), 10000));
         result.connect(recordConsumer, new RetryStreamingExceptionHandler(result, 5, 5000), (ctx, serverErrorResult) -> log.error("Server error: {}", serverErrorResult.getErrorMessage()));
         result.login(new CDCLoginParameter(ProxyContainerConstants.USER, ProxyContainerConstants.PASSWORD));
         // TODO add full=false test case later
