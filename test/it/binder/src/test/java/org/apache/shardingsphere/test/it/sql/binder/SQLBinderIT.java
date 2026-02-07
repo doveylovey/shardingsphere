@@ -84,6 +84,7 @@ public abstract class SQLBinderIT {
     private SQLStatement bindSQLStatement(final String databaseType, final String sql, final List<Object> parameters) {
         HintValueContext hintValueContext = SQLHintUtils.extractHint(sql);
         SQLStatement sqlStatement = new SQLStatementVisitorEngine(databaseType).visit(new SQLParserEngine(databaseType, new CacheOption(128, 1024L)).parse(sql, false));
+        sqlStatement.buildAttributes();
         return new SQLBindEngine(mockMetaData(TypedSPILoader.getService(DatabaseType.class, databaseType)), "foo_db_1", hintValueContext).bind(sqlStatement).getSqlStatement();
     }
     
@@ -98,7 +99,7 @@ public abstract class SQLBinderIT {
         Collection<ShardingSphereSchema> result = new LinkedList<>();
         String defaultSchemaName = new DatabaseTypeRegistry(databaseType).getDefaultSchemaName(databaseName);
         Collection<ShardingSphereTable> tables = "foo_db_1".equalsIgnoreCase(databaseName) ? mockFooDB1Tables() : mockFooDB2Tables();
-        result.add(new ShardingSphereSchema(defaultSchemaName, tables, Collections.emptyList(), databaseType));
+        result.add(new ShardingSphereSchema(defaultSchemaName, databaseType, tables, Collections.emptyList()));
         return result;
     }
     

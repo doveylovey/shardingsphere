@@ -18,22 +18,16 @@
 package org.apache.shardingsphere.infra.binder.context.segment.table;
 
 import com.cedarsoftware.util.CaseInsensitiveSet;
-import lombok.AccessLevel;
+import com.google.common.base.Strings;
 import lombok.Getter;
 import lombok.ToString;
-import org.apache.shardingsphere.infra.binder.context.segment.select.subquery.SubqueryTableContext;
-import org.apache.shardingsphere.infra.binder.context.segment.select.subquery.engine.SubqueryTableContextEngine;
-import org.apache.shardingsphere.infra.binder.context.statement.type.dml.SelectStatementContext;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
-import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SubqueryTableSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.TableSegment;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -43,9 +37,6 @@ import java.util.Optional;
 @ToString
 public final class TablesContext {
     
-    @Getter(AccessLevel.NONE)
-    private final Collection<TableSegment> tables = new LinkedList<>();
-    
     private final Collection<SimpleTableSegment> simpleTables = new LinkedList<>();
     
     private final Collection<String> tableNames = new CaseInsensitiveSet<>();
@@ -54,53 +45,32 @@ public final class TablesContext {
     
     private final Collection<String> databaseNames = new CaseInsensitiveSet<>();
     
-    @Getter(AccessLevel.NONE)
-    private final Map<String, Collection<SubqueryTableContext>> subqueryTables = new HashMap<>();
-    
     public TablesContext(final SimpleTableSegment table) {
         this(null == table ? Collections.emptyList() : Collections.singletonList(table));
     }
     
-    public TablesContext(final Collection<SimpleTableSegment> tables) {
-        this(tables, Collections.emptyMap());
-    }
-    
-    public TablesContext(final Collection<? extends TableSegment> tables, final Map<Integer, SelectStatementContext> subqueryContexts) {
-        if (tables.isEmpty()) {
-            return;
-        }
-        this.tables.addAll(tables);
+    public TablesContext(final Collection<? extends TableSegment> tables) {
         for (TableSegment each : tables) {
-            if (each instanceof SimpleTableSegment) {
-                SimpleTableSegment simpleTableSegment = (SimpleTableSegment) each;
-                TableNameSegment tableName = simpleTableSegment.getTableName();
-                if (!"DUAL".equalsIgnoreCase(tableName.getIdentifier().getValue())) {
-                    simpleTables.add(simpleTableSegment);
-                    tableNames.add(tableName.getIdentifier().getValue());
-                    // TODO support bind with all statement contains table segment @duanzhengqiang
-                    tableName.getTableBoundInfo().ifPresent(optional -> schemaNames.add(optional.getOriginalSchema().getValue()));
-                    tableName.getTableBoundInfo().ifPresent(optional -> databaseNames.add(optional.getOriginalDatabase().getValue()));
-                }
+            if (!(each instanceof SimpleTableSegment)) {
+                continue;
             }
-            if (each instanceof SubqueryTableSegment) {
-                subqueryTables.putAll(createSubqueryTables(subqueryContexts, (SubqueryTableSegment) each));
+            SimpleTableSegment simpleTable = (SimpleTableSegment) each;
+            TableNameSegment tableName = simpleTable.getTableName();
+            if ("DUAL".equalsIgnoreCase(tableName.getIdentifier().getValue())) {
+                continue;
             }
+            handleSimpleTable(simpleTable, tableName);
         }
     }
     
-    private Map<String, Collection<SubqueryTableContext>> createSubqueryTables(final Map<Integer, SelectStatementContext> subqueryContexts, final SubqueryTableSegment subqueryTable) {
-        if (!subqueryContexts.containsKey(subqueryTable.getSubquery().getStartIndex())) {
-            return Collections.emptyMap();
-        }
-        SelectStatementContext subqueryContext = subqueryContexts.get(subqueryTable.getSubquery().getStartIndex());
-        Map<String, SubqueryTableContext> subqueryTableContexts = new SubqueryTableContextEngine().createSubqueryTableContexts(subqueryContext, subqueryTable.getAliasName().orElse(null));
-        Map<String, Collection<SubqueryTableContext>> result = new HashMap<>(subqueryTableContexts.size(), 1F);
-        for (SubqueryTableContext each : subqueryTableContexts.values()) {
-            if (null != each.getAliasName()) {
-                result.computeIfAbsent(each.getAliasName(), unused -> new LinkedList<>()).add(each);
-            }
-        }
-        return result;
+    private void handleSimpleTable(final SimpleTableSegment simpleTable, final TableNameSegment tableName) {
+        simpleTables.add(simpleTable);
+        tableNames.add(tableName.getIdentifier().getValue());
+        // TODO support bind with all statement contains table segment @duanzhengqiang
+        tableName.getTableBoundInfo().filter(optional -> !Strings.isNullOrEmpty(optional.getOriginalSchema().getValue()))
+                .ifPresent(optional -> schemaNames.add(optional.getOriginalSchema().getValue()));
+        tableName.getTableBoundInfo().filter(optional -> !Strings.isNullOrEmpty(optional.getOriginalDatabase().getValue()))
+                .ifPresent(optional -> databaseNames.add(optional.getOriginalDatabase().getValue()));
     }
     
     /**

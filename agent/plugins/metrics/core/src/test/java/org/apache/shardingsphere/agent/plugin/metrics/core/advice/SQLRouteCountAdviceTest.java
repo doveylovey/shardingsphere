@@ -62,7 +62,7 @@ class SQLRouteCountAdviceTest {
         ((MetricsCollectorFixture) MetricsCollectorRegistry.get(config, "FIXTURE")).reset();
     }
     
-    @ParameterizedTest(name = "[{index}] type={0}")
+    @ParameterizedTest(name = "{0}")
     @MethodSource("routeContexts")
     void assertRoute(final String type, final QueryContext queryContext) {
         advice.beforeMethod(new TargetAdviceObjectFixture(), mock(TargetAdviceMethod.class), new Object[]{queryContext, new ConnectionContext(Collections::emptySet)}, "FIXTURE");
@@ -78,6 +78,7 @@ class SQLRouteCountAdviceTest {
     }
     
     private static QueryContext createQueryContext(final SQLStatement sqlStatement) {
+        sqlStatement.buildAttributes();
         return new QueryContext(new CommonSQLStatementContext(sqlStatement), "", Collections.emptyList(), new HintValueContext(), mockConnectionContext(), mock(ShardingSphereMetaData.class));
     }
     

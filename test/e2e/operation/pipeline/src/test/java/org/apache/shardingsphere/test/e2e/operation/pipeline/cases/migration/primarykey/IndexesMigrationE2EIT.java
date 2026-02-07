@@ -60,15 +60,17 @@ import static org.mockito.Mockito.mock;
  * 4) multiple columns unique key, first column type is BIGINT.
  */
 @PipelineE2ESettings(fetchSingle = true, database = {
-        @PipelineE2EDatabaseSettings(type = "MySQL", scenarioFiles = "env/common/none.xml"),
-        @PipelineE2EDatabaseSettings(type = "PostgreSQL", scenarioFiles = "env/common/none.xml")})
+        @PipelineE2EDatabaseSettings(type = "MySQL"),
+        @PipelineE2EDatabaseSettings(type = "PostgreSQL")})
 class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
     
-    private static final String ORDER_TABLE_SHARDING_RULE_FORMAT = "CREATE SHARDING TABLE RULE t_order(\n"
-            + "STORAGE_UNITS(ds_2,ds_3,ds_4),\n"
-            + "SHARDING_COLUMN=%s,\n"
-            + "TYPE(NAME=\"hash_mod\",PROPERTIES(\"sharding-count\"=\"6\"))\n"
-            + ");";
+    private static final String ORDER_TABLE_SHARDING_RULE_FORMAT = """
+            CREATE SHARDING TABLE RULE t_order(
+            STORAGE_UNITS(ds_2,ds_3,ds_4),
+            SHARDING_COLUMN=%s,
+            TYPE(NAME="hash_mod",PROPERTIES("sharding-count"="6"))
+            )
+            """;
     
     private static final String SOURCE_TABLE_NAME = "t_order";
     
@@ -99,7 +101,7 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
                 }
                 Object orderId = keyGenerateAlgorithm.generateKeys(mock(AlgorithmSQLContext.class), 1).iterator().next();
                 insertOneOrder(containerComposer, orderId);
-                containerComposer.assertOrderRecordExist(dataSource, "t_order", orderId);
+                containerComposer.assertRecordExists(dataSource, "t_order", orderId);
             };
             assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, incrementalTaskFn);
         }
@@ -176,7 +178,7 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
                 doCreateUpdateDelete(containerComposer, keyGenerateAlgorithm.generateKeys(mock(AlgorithmSQLContext.class), 1).iterator().next());
-                containerComposer.assertOrderRecordExist(dataSource, "t_order", uniqueKey);
+                containerComposer.assertRecordExists(dataSource, "t_order", uniqueKey);
             });
         }
     }
@@ -199,7 +201,7 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             assertMigrationSuccess(containerComposer, sql, "user_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
                 doCreateUpdateDelete(containerComposer, keyGenerateAlgorithm.generateKeys(mock(AlgorithmSQLContext.class), 1).iterator().next());
-                containerComposer.assertOrderRecordExist(dataSource, "t_order", uniqueKey);
+                containerComposer.assertRecordExists(dataSource, "t_order", uniqueKey);
             });
         }
     }
@@ -224,7 +226,7 @@ class IndexesMigrationE2EIT extends AbstractMigrationE2EIT {
             assertMigrationSuccess(containerComposer, sql, "order_id", keyGenerateAlgorithm, consistencyCheckAlgorithmType, dataSource -> {
                 insertOneOrder(containerComposer, uniqueKey);
                 // TODO Select by byte[] from proxy doesn't work, so unhex function is used for now
-                containerComposer.assertOrderRecordExist(dataSource, String.format("SELECT 1 FROM t_order WHERE order_id=UNHEX('%s')", Hex.encodeHexString(uniqueKey)));
+                containerComposer.assertRecordExists(dataSource, String.format("SELECT 1 FROM t_order WHERE order_id=UNHEX('%s')", Hex.encodeHexString(uniqueKey)));
             });
         }
     }

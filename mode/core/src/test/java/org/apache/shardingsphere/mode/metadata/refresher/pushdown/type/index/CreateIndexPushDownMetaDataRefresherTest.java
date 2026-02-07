@@ -66,9 +66,8 @@ class CreateIndexPushDownMetaDataRefresherTest {
     @SuppressWarnings("unchecked")
     @Test
     void assertRefreshCreateIndex() {
-        ShardingSphereSchema schema = new ShardingSphereSchema(
-                "foo_schema", Collections.singleton(new ShardingSphereTable("foo_tbl", Collections.emptyList(), Collections.emptyList(), Collections.emptyList())), Collections.emptyList(),
-                databaseType);
+        ShardingSphereSchema schema = new ShardingSphereSchema("foo_schema", databaseType,
+                Collections.singleton(new ShardingSphereTable("foo_tbl", Collections.emptyList(), Collections.emptyList(), Collections.emptyList())), Collections.emptyList());
         ShardingSphereDatabase database = createDatabase(Collections.singleton(schema));
         refresher.refresh(metaDataManagerPersistService, database, "logic_ds", "foo_schema", databaseType, createCreateIndexStatement(), new ConfigurationProperties(new Properties()));
         ArgumentCaptor<Collection<ShardingSphereTable>> alteredTablesCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -84,12 +83,14 @@ class CreateIndexPushDownMetaDataRefresherTest {
         result.setTable(new SimpleTableSegment(new TableNameSegment(0, 0, new IdentifierValue("foo_tbl"))));
         result.setIndex(new IndexSegment(0, 0, new IndexNameSegment(0, 0, new IdentifierValue("idx_foo"))));
         result.getColumns().add(new ColumnSegment(0, 0, new IdentifierValue("order_id")));
+        result.buildAttributes();
         return result;
     }
     
     @Test
     void assertRefreshThrowsWhenIndexCountInvalid() {
         CreateIndexStatement sqlStatement = new CreateIndexStatement(databaseType);
+        sqlStatement.buildAttributes();
         assertThrows(IllegalArgumentException.class, () -> refresher.refresh(metaDataManagerPersistService,
                 createDatabase(Collections.emptyList()), "logic_ds", "foo_schema", databaseType, sqlStatement, new ConfigurationProperties(new Properties())));
         verifyNoInteractions(metaDataManagerPersistService);

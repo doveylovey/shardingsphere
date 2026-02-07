@@ -17,7 +17,7 @@
 
 package org.apache.shardingsphere.sql.parser.statement.mysql.dal.show.view;
 
-import com.sphereex.dbplusengine.sql.parser.statement.core.statement.attribute.type.ViewInResultSetSQLStatementAttribute;
+import org.apache.shardingsphere.sql.parser.statement.core.statement.attribute.type.ViewInResultSetSQLStatementAttribute;
 import lombok.Getter;
 import org.apache.shardingsphere.database.connector.core.type.DatabaseType;
 import org.apache.shardingsphere.sql.parser.statement.core.segment.generic.table.SimpleTableSegment;
@@ -33,13 +33,16 @@ public final class MySQLShowCreateViewStatement extends DALStatement {
     
     private final SimpleTableSegment viewName;
     
+    private SQLStatementAttributes attributes;
+    
     public MySQLShowCreateViewStatement(final DatabaseType databaseType, final SimpleTableSegment viewName) {
         super(databaseType);
         this.viewName = viewName;
     }
     
     @Override
-    public SQLStatementAttributes getAttributes() {
-        return new SQLStatementAttributes(new DatabaseSelectRequiredSQLStatementAttribute(), new ViewInResultSetSQLStatementAttribute(2, getViewName().getTableName().getIdentifier().getValue()));
+    public void buildAttributes() {
+        attributes =
+                new SQLStatementAttributes(new DatabaseSelectRequiredSQLStatementAttribute(), new ViewInResultSetSQLStatementAttribute(2, getViewName().getTableName().getIdentifier().getValue()));
     }
 }

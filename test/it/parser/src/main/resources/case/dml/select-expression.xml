@@ -120,6 +120,28 @@
         </where>
     </select>
 
+    <select sql-case-id="select_where_is_nan_oracle">
+        <from>
+            <simple-table name="t_order" start-index="14" stop-index="20" />
+        </from>
+        <projections distinct-row="false" start-index="7" stop-index="7">
+            <shorthand-projection start-index="7" stop-index="7" />
+        </projections>
+        <where start-index="22" stop-index="38">
+            <expr>
+                <binary-operation-expression start-index="28" stop-index="38">
+                    <left>
+                        <column name="flag" start-index="28" stop-index="31" />
+                    </left>
+                    <operator>IS</operator>
+                    <right>
+                        <literal-expression value="NAN" start-index="36" stop-index="38" />
+                    </right>
+                </binary-operation-expression>
+            </expr>
+        </where>
+    </select>
+
     <select sql-case-id="select_case_when_with_mul_condition">
         <projections start-index="7" stop-index="52">
             <expression-projection text="case 1*0 when &quot;a&quot; then &quot;true&quot; else &quot;false&quot; END" start-index="7" stop-index="52">
@@ -3152,6 +3174,43 @@
             </subquery-table>
         </from>
     </select>
+
+    <select sql-case-id="select_nchar_literal_oracle">
+        <projections start-index="7" stop-index="12">
+            <expression-projection text="abc" start-index="7" stop-index="12">
+                <expr>
+                    <literal-expression value="abc" start-index="7" stop-index="12" />
+                </expr>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="dual" start-index="19" stop-index="22" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_datetime_escape_literal_oracle">
+        <projections start-index="7" stop-index="32">
+            <expression-projection text="{ts '2020-01-01 10:00:00'}" start-index="7" stop-index="32">
+                <expr>
+                    <common-expression text="{ts '2020-01-01 10:00:00'}" start-index="7" stop-index="32" />
+                </expr>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="dual" start-index="39" stop-index="42" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_nested_attribute_oracle">
+        <projections start-index="7" stop-index="20">
+            <column-projection name="c.address.city" start-index="7" stop-index="20">
+                <owner name="c" start-index="7" stop-index="7" />
+            </column-projection>
+        </projections>
+        <from>
+            <simple-table name="contacts" alias="c" start-index="27" stop-index="36" />
+        </from>
+    </select>
     
     <select sql-case-id="select_inet_function">
         <projections start-index="7" stop-index="55">
@@ -3472,5 +3531,95 @@
                 </binary-operation-expression>
             </expr>
         </where>
+    </select>
+
+    <select sql-case-id="select_hex_literal_oracle">
+        <projections start-index="7" stop-index="9">
+            <expression-projection text="0x1" start-index="7" stop-index="9">
+                <expr>
+                    <common-expression text="0x1" start-index="7" stop-index="9" />
+                </expr>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="dual" start-index="16" stop-index="19" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_bit_literal_oracle">
+        <projections start-index="7" stop-index="11">
+            <expression-projection text="0b101" start-index="7" stop-index="11">
+                <expr>
+                    <common-expression text="0b101" start-index="7" stop-index="11" />
+                </expr>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="dual" start-index="18" stop-index="21" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_binary_prefix_oracle">
+        <projections start-index="7" stop-index="16">
+            <column-projection name="col" start-index="14" stop-index="16" />
+        </projections>
+        <from>
+            <simple-table name="dual" start-index="23" stop-index="26" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_interval_day_to_second_precision_oracle">
+        <projections start-index="7" stop-index="53">
+            <expression-projection text="(SYSTIMESTAMP - order_date) DAY(2) TO SECOND(3)" start-index="7" stop-index="53">
+                <function>
+                    <interval-expression start-index="8" stop-index="53">
+                        <left>
+                            <column name="SYSTIMESTAMP" start-index="8" stop-index="19" />
+                        </left>
+                        <operator>-</operator>
+                        <right>
+                            <column name="order_date" start-index="23" stop-index="32" />
+                        </right>
+                        <interval-day-to-second-expr start-index="35" stop-index="53">
+                            <day>DAY</day>
+                            <to>TO</to>
+                            <second>SECOND</second>
+                            <leading-field-precision>2</leading-field-precision>
+                            <fractional-second-precision>3</fractional-second-precision>
+                        </interval-day-to-second-expr>
+                    </interval-expression>
+                </function>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="orders" start-index="60" stop-index="65" />
+        </from>
+    </select>
+
+    <select sql-case-id="select_interval_year_to_month_precision_oracle">
+        <projections start-index="7" stop-index="47">
+            <expression-projection text="(hire_date - start_date) YEAR(3) TO MONTH" start-index="7" stop-index="47">
+                <function>
+                    <interval-expression start-index="8" stop-index="47">
+                        <left>
+                            <column name="hire_date" start-index="8" stop-index="16" />
+                        </left>
+                        <operator>-</operator>
+                        <right>
+                            <column name="start_date" start-index="20" stop-index="29" />
+                        </right>
+                        <interval-year-to-month-expr start-index="32" stop-index="47">
+                            <year>YEAR</year>
+                            <to>TO</to>
+                            <month>MONTH</month>
+                            <leading-field-precision>3</leading-field-precision>
+                        </interval-year-to-month-expr>
+                    </interval-expression>
+                </function>
+            </expression-projection>
+        </projections>
+        <from>
+            <simple-table name="employees" start-index="54" stop-index="62" />
+        </from>
     </select>
 </sql-parser-test-cases>

@@ -35,6 +35,7 @@ import org.apache.shardingsphere.database.connector.mysql.type.MySQLDatabaseType
 import org.apache.shardingsphere.database.connector.opengauss.type.OpenGaussDatabaseType;
 import org.apache.shardingsphere.database.connector.postgresql.type.PostgreSQLDatabaseType;
 import org.apache.shardingsphere.infra.exception.ShardingSpherePreconditions;
+import org.apache.shardingsphere.infra.metadata.database.schema.QualifiedTable;
 import org.apache.shardingsphere.infra.spi.ShardingSphereServiceLoader;
 import org.apache.shardingsphere.infra.util.props.PropertiesBuilder;
 import org.apache.shardingsphere.infra.util.props.PropertiesBuilder.Property;
@@ -48,7 +49,6 @@ import org.apache.shardingsphere.test.e2e.env.container.storage.type.DockerStora
 import org.apache.shardingsphere.test.e2e.env.container.util.StorageContainerUtils;
 import org.apache.shardingsphere.test.e2e.env.runtime.E2ETestEnvironment;
 import org.apache.shardingsphere.test.e2e.env.runtime.type.RunEnvironment.Type;
-import org.apache.shardingsphere.test.e2e.operation.pipeline.command.ExtraSQLCommand;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.container.compose.PipelineBaseContainerComposer;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.container.compose.docker.PipelineDockerContainerComposer;
 import org.apache.shardingsphere.test.e2e.operation.pipeline.framework.container.compose.natived.PipelineNativeContainerComposer;
@@ -57,7 +57,6 @@ import org.apache.shardingsphere.test.e2e.operation.pipeline.util.ProxyDatabaseT
 import org.awaitility.Awaitility;
 
 import javax.sql.DataSource;
-import javax.xml.bind.JAXB;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -71,9 +70,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,8 +101,6 @@ public final class PipelineContainerComposer implements AutoCloseable {
     
     private final PipelineBaseContainerComposer containerComposer;
     
-    private final ExtraSQLCommand extraSQLCommand;
-    
     private final DatabaseType databaseType;
     
     private final String username;
@@ -131,7 +126,6 @@ public final class PipelineContainerComposer implements AutoCloseable {
             username = E2ETestEnvironment.getInstance().getNativeDatabaseEnvironment().getUser();
             password = E2ETestEnvironment.getInstance().getNativeDatabaseEnvironment().getPassword();
         }
-        extraSQLCommand = JAXB.unmarshal(Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(testParam.getScenario())), ExtraSQLCommand.class);
         containerComposer.start();
         sourceDataSource = StorageContainerUtils.generateDataSource(getActualJdbcUrlTemplate(DS_0, false), username, password, 2);
         proxyDataSource = StorageContainerUtils.generateDataSource(
@@ -264,7 +258,7 @@ public final class PipelineContainerComposer implements AutoCloseable {
      * @return storage units names
      */
     public List<String> showStorageUnitsName() {
-        List<String> result = queryForListWithLog(proxyDataSource, "SHOW STORAGE UNITS").stream().map(each -> String.valueOf(each.get("name"))).collect(Collectors.toList());
+        List<String> result = queryForListWithLog(proxyDataSource, "SHOW STORAGE UNITS").stream().map(each -> String.valueOf(each.get("name"))).toList();
         log.info("Show storage units name: {}", result);
         return result;
     }
@@ -312,28 +306,31 @@ public final class PipelineContainerComposer implements AutoCloseable {
     /**
      * Create schema.
      *
-     * @param connection connection
+     * @param dataSource data source
      * @param seconds sleep seconds
      * @throws SQLException SQL exception
      */
-    public void createSchema(final Connection connection, final int seconds) throws SQLException {
+    public void createSchema(final DataSource dataSource, final int seconds) throws SQLException {
         if (!new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getSchemaOption().isSchemaAvailable()) {
             return;
         }
-        try (Statement statement = connection.createStatement()) {
+        try (
+                Connection connection = dataSource.getConnection();
+                Statement statement = connection.createStatement()) {
             statement.execute(String.format("CREATE SCHEMA %s", SCHEMA_NAME));
         }
         sleepSeconds(seconds);
     }
     
     /**
-     * Create source order table.
+     * Create qualified table with schema.
      *
-     * @param sourceTableName source table name
-     * @throws SQLException SQL exception
+     * @param tableName table name
+     * @return qualified table
      */
-    public void createSourceOrderTable(final String sourceTableName) throws SQLException {
-        sourceExecuteWithLog(extraSQLCommand.getCreateTableOrder(sourceTableName));
+    public QualifiedTable createQualifiedTableWithSchema(final String tableName) {
+        String schemaName = new DatabaseTypeRegistry(databaseType).getDialectDatabaseMetaData().getSchemaOption().isSchemaAvailable() ? SCHEMA_NAME : null;
+        return new QualifiedTable(schemaName, tableName);
     }
     
     /**
@@ -360,15 +357,6 @@ public final class PipelineContainerComposer implements AutoCloseable {
      */
     public void createSourceCommentOnList(final String schema, final String sourceTableName) throws SQLException {
         sourceExecuteWithLog(String.format("COMMENT ON COLUMN %s.%s.user_id IS 'user id'", schema, sourceTableName));
-    }
-    
-    /**
-     * Create source order item table.
-     *
-     * @throws SQLException SQL exception
-     */
-    public void createSourceOrderItemTable() throws SQLException {
-        sourceExecuteWithLog(extraSQLCommand.getCreateTableOrderItem());
     }
     
     /**
@@ -480,29 +468,29 @@ public final class PipelineContainerComposer implements AutoCloseable {
     }
     
     /**
-     * Assert order record exists in proxy.
+     * Assert record exists.
      *
      * @param dataSource data source
      * @param tableName table name
      * @param orderId order id
      */
-    public void assertOrderRecordExist(final DataSource dataSource, final String tableName, final Object orderId) {
+    public void assertRecordExists(final DataSource dataSource, final String tableName, final Object orderId) {
         String sql;
         if (orderId instanceof String) {
             sql = String.format("SELECT 1 FROM %s WHERE order_id = '%s' AND user_id>0", tableName, orderId);
         } else {
             sql = String.format("SELECT 1 FROM %s WHERE order_id = %s AND user_id>0", tableName, orderId);
         }
-        assertOrderRecordExist(dataSource, sql);
+        assertRecordExists(dataSource, sql);
     }
     
     /**
-     * Assert proxy order record exist.
+     * Assert record exists.
      *
      * @param dataSource data source
      * @param sql SQL
      */
-    public void assertOrderRecordExist(final DataSource dataSource, final String sql) {
+    public void assertRecordExists(final DataSource dataSource, final String sql) {
         boolean recordExist = false;
         for (int i = 0; i < 5; i++) {
             List<Map<String, Object>> result = queryForListWithLog(dataSource, sql);
@@ -512,7 +500,7 @@ public final class PipelineContainerComposer implements AutoCloseable {
             }
             sleepSeconds(2);
         }
-        assertTrue(recordExist, "Order record does not exist");
+        assertTrue(recordExist, "Record does not exist");
     }
     
     /**
